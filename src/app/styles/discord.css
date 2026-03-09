@@ -1,0 +1,70 @@
+/* ──────────────────────────────────────────
+   Discord-specific UI styles
+   (embed previews, message containers, etc.)
+   ────────────────────────────────────────── */
+
+@layer components {
+  .discord-embed {
+    @apply rounded border-l-4 bg-[#2f3136] p-4;
+  }
+
+  .discord-embed-author {
+    @apply flex items-center gap-2 text-sm font-medium text-white;
+  }
+
+  .discord-embed-title {
+    @apply mt-2 font-semibold text-white;
+  }
+
+  .discord-embed-description {
+    @apply mt-1 text-sm text-[#dcddde];
+  }
+
+  .discord-embed-field {
+    @apply mt-2;
+  }
+
+  .discord-embed-field-name {
+    @apply text-xs font-semibold text-white;
+  }
+
+  .discord-embed-field-value {
+    @apply text-sm text-[#dcddde];
+  }
+
+  .discord-embed-footer {
+    @apply mt-3 flex items-center gap-2 text-xs text-[#72767d];
+  }
+
+  .discord-embed-image {
+    @apply mt-3 max-w-full rounded;
+  }
+
+  .discord-container {
+    @apply rounded-lg bg-[#2f3136] p-4;
+  }
+
+  .discord-button {
+    @apply inline-flex items-center justify-center rounded px-4 py-2 text-sm font-medium;
+  }
+
+  .discord-button-primary {
+    @apply bg-discord-blurple text-white hover:bg-discord-blurple/80;
+  }
+
+  .discord-button-secondary {
+    @apply bg-[#4f545c] text-white hover:bg-[#4f545c]/80;
+  }
+
+  .discord-button-success {
+    @apply bg-discord-green text-white hover:bg-discord-green/80;
+  }
+
+  .discord-button-danger {
+    @apply bg-discord-red text-white hover:bg-discord-red/80;
+  }
+
+  .discord-message-bg {
+    @apply bg-[#36393f];
+  }
+}
