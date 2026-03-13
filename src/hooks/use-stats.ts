@@ -1,14 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api-client";
+import { api } from "@/lib/api-client";
+import { queryKeys } from "@/lib/query-keys";
 import type { FactionStats } from "@/types/stats";
 
 export function useStats(factionId: string) {
   return useQuery<FactionStats>({
-    queryKey: ["stats", factionId],
-    queryFn: async () => {
-      const { data } = await apiClient.get(`/factions/${factionId}/stats/overview`);
-      return data;
-    },
+    queryKey: queryKeys.stats.overview(factionId),
+    queryFn: ({ signal }) => api.stats.overview(factionId, { signal }),
     enabled: !!factionId,
   });
 }

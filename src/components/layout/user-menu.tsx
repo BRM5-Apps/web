@@ -1,30 +1,74 @@
 "use client";
 
-import { useSession, signOut } from "next-auth/react";
+import { signOut } from "next-auth/react";
+import Link from "next/link";
+import { LogOut, User, CreditCard } from "lucide-react";
+import { useAuth } from "@/providers/auth-provider";
+import { useFactionStore } from "@/stores/faction-store";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export function UserMenu() {
-  const { data: session } = useSession();
+  const { user, isAuthenticated } = useAuth();
+  const { activeFaction } = useFactionStore();
 
-  if (!session?.user) return null;
+  if (!isAuthenticated || !user) return null;
 
   return (
-    <div className="flex items-center gap-3 rounded-md px-3 py-2">
-      {session.user.image && (
-        <img
-          src={session.user.image}
-          alt={session.user.name ?? "User"}
-          className="h-8 w-8 rounded-full"
-        />
-      )}
-      <div className="flex-1 truncate">
-        <p className="text-sm font-medium truncate">{session.user.name}</p>
-      </div>
-      <button
-        onClick={() => signOut({ callbackUrl: "/login" })}
-        className="text-xs text-muted-foreground hover:text-foreground"
-      >
-        Sign out
-      </button>
-    </div>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+          <Avatar className="h-8 w-8">
+            <AvatarImage src={user.avatarUrl} alt={user.username} />
+            <AvatarFallback>{user.username.charAt(0).toUpperCase()}</AvatarFallback>
+          </Avatar>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-56" align="end" forceMount>
+        <DropdownMenuLabel className="font-normal">
+          <div className="flex flex-col space-y-1">
+            <p className="text-sm font-medium leading-none">{user.username}</p>
+            {activeFaction && (
+              <p className="text-xs leading-none text-muted-foreground">
+                {activeFaction.name}
+              </p>
+            )}
+          </div>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href="/dashboard/profile">
+            <User className="mr-2 h-4 w-4" />
+            My Profile
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/dashboard/billing">
+            <CreditCard className="mr-2 h-4 w-4" />
+            Billing
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={async () => {
+            // Clear backend API token cookie, then end NextAuth session.
+            await fetch("/api/auth/clear", { method: "POST" });
+            await signOut({ callbackUrl: "/" });
+          }}
+          className="text-destructive focus:text-destructive"
+        >
+          <LogOut className="mr-2 h-4 w-4" />
+          Sign out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

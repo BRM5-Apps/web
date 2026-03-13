@@ -13,6 +13,9 @@ const config: Config = {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -52,6 +55,9 @@ const config: Config = {
           foreground: "hsl(var(--sidebar-foreground))",
           accent: "hsl(var(--sidebar-accent))",
         },
+        faction: {
+          DEFAULT: "hsl(var(--faction-accent))",
+        },
         discord: {
           blurple: "#5865F2",
           green: "#57F287",
@@ -60,6 +66,12 @@ const config: Config = {
           red: "#ED4245",
           dark: "#2C2F33",
           darker: "#23272A",
+        },
+        status: {
+          online: "hsl(var(--status-online))",
+          idle: "hsl(var(--status-idle))",
+          dnd: "hsl(var(--status-dnd))",
+          offline: "hsl(var(--status-offline))",
         },
       },
       borderRadius: {

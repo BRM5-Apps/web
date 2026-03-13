@@ -1,7 +1,15 @@
 import type { NextAuthOptions } from "next-auth";
+import type {} from "@/types/next-auth";
 import DiscordProvider from "next-auth/providers/discord";
 
 export const authOptions: NextAuthOptions = {
+  // Ensure JWT-based sessions and a signed (not encrypted) JWT so the Go API
+  // can validate it with the shared NEXTAUTH_SECRET.
+  jwt: {
+    // Explicitly disable JWE encryption; produce an HMAC-signed JWS token.
+    // Backend validates with HS* using NEXTAUTH_SECRET.
+    encryption: false,
+  },
   providers: [
     DiscordProvider({
       clientId: process.env.DISCORD_CLIENT_ID!,
@@ -12,46 +20,41 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, account }) {
-      // On initial sign-in, exchange the Discord token with our Go API
-      if (account) {
-        try {
-          const res = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL}/auth/discord`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ code: account.access_token }),
-            }
-          );
-          const data = await res.json();
-          token.accessToken = data.token;
-        } catch {
-          // Auth exchange failed — token will be undefined
-        }
+    async jwt({ token, account, profile }) {
+      // On initial sign-in, enrich token with Discord identity only.
+      // Backend token exchange happens via /api/auth/exchange after login.
+      if (account && profile) {
+        token.discordId = account.providerAccountId;
+        token.username = (profile as { username?: string }).username ?? profile.name ?? "";
+        token.avatar = (profile as { avatar?: string }).avatar ?? null;
+        token.discordAccessToken = account.access_token;
       }
       return token;
     },
     async session({ session, token }) {
-      session.accessToken = token.accessToken as string;
+      // We rely on a cookie for backend token; keep session lightweight.
+      session.backendToken = undefined;
+      session.discordId = token.discordId as string | undefined;
+      session.username = token.username as string | undefined;
+      session.avatar = token.avatar as string | null | undefined;
+      session.authError = undefined;
       return session;
+    },
+    async redirect({ url, baseUrl }) {
+      // Allow relative callback URLs
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      // Allow callbacks to the same origin
+      if (new URL(url).origin === baseUrl) return url;
+      return `${baseUrl}/dashboard`;
     },
   },
   pages: {
     signIn: "/login",
+    error: "/login",
   },
   secret: process.env.NEXTAUTH_SECRET,
+  session: {
+    strategy: "jwt",
+    maxAge: 7 * 24 * 60 * 60, // 7 days
+  },
 };
-
-// Extend NextAuth types
-declare module "next-auth" {
-  interface Session {
-    accessToken?: string;
-  }
-}
-
-declare module "next-auth/jwt" {
-  interface JWT {
-    accessToken?: string;
-  }
-}

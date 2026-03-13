@@ -1,21 +1,48 @@
 "use client";
 
-import { useEffect } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { Button } from "@/components/ui/button";
 
 export default function CallbackPage() {
-  const searchParams = useSearchParams();
+  const { status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [error, setError] = useState<string | null>(null);
+
+  const callbackError = searchParams.get("error");
 
   useEffect(() => {
-    const code = searchParams.get("code");
-    if (code) {
-      signIn("discord", { callbackUrl: "/dashboard" });
-    } else {
-      router.replace("/login");
+    if (callbackError) {
+      setError(
+        callbackError === "access_denied"
+          ? "Discord sign-in was cancelled."
+          : "An error occurred during sign-in."
+      );
+      return;
     }
-  }, [searchParams, router]);
+
+    if (status === "authenticated") {
+      router.replace("/dashboard");
+    }
+  }, [status, callbackError, router]);
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center gap-6">
+        <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-6 py-4 text-sm text-destructive">
+          {error}
+        </div>
+        <Button
+          variant="outline"
+          onClick={() => router.replace("/login")}
+        >
+          Back to Login
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center gap-4">

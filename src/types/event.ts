@@ -28,10 +28,12 @@ export interface EventType {
 }
 
 export interface EventButton {
+  id: string;
+  eventId: string;
   label: string;
   style: "primary" | "secondary" | "success" | "danger";
   customId: string;
-  action: string;
+  action: "rsvp" | "join" | "leave";
   position: number;
 }
 
@@ -39,16 +41,42 @@ export interface EventRSVP {
   id: string;
   eventId: string;
   userId: string;
-  status: string;
+  eventButtonId: string;
+  respondedAt: string;
+  updatedAt: string;
 }
 
 export interface EventRequest {
   id: string;
   factionId: string;
-  userId: string;
-  eventTypeId: string;
+  requestedById: string;
   title: string;
   description?: string;
-  scheduledAt: string;
   status: "pending" | "approved" | "denied";
+  createdAt: string;
+}
+
+export interface EventLog {
+  id: string;
+  eventId?: string;
+  factionId?: string;
+  factionHubId?: string;
+  loggedById: string;
+  vcChannelId?: string;
+  eventStartedAt: string;
+  eventEndedAt: string;
+  thresholdPercent: number;
+  createdAt: string;
+}
+
+export interface EventAttendance {
+  id: string;
+  eventLogId: string;
+  userId: string;
+  joinedVcAt?: string;
+  leftVcAt?: string;
+  totalSeconds?: number;
+  attendancePercent?: number;
+  metThreshold: boolean;
+  createdAt: string;
 }
