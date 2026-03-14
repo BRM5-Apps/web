@@ -10,16 +10,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { ContainerPreview, type DiscordContainerComponent } from "@/components/discord-preview/container-preview";
+import { type DiscordButtonStyle } from "@/components/discord-preview/button-preview";
 import { type DiscordTheme } from "@/components/discord-preview/discord-theme";
 import { JsonImportDialog } from "@/components/templates/json-import";
 import type { ContainerTemplate } from "@/types/template";
 import { cn } from "@/lib/utils";
 import { Plus, Rows, Square, Text, Image, Minus, Save, Upload, Download, Sun, Moon } from "lucide-react";
 
-type ButtonStyle = "primary" | "secondary" | "success" | "danger" | "link";
-
 type ActionItem =
-  | { type: "button"; label: string; style: ButtonStyle; emoji?: string; disabled?: boolean }
+  | { type: "button"; label: string; style: DiscordButtonStyle; emoji?: string; disabled?: boolean }
   | { type: "select"; placeholder?: string; disabled?: boolean };
 
 type ContainerItem = DiscordContainerComponent;
@@ -276,13 +275,12 @@ function NodeConfig({ node, onChange }: { node: ContainerItem; onChange: (n: Con
                   <select
                     className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm outline-none"
                     value={c.style}
-                    onChange={(e) => onChange({ ...node, components: node.components.map((x, xi) => (xi === i ? { ...c, style: e.target.value as ButtonStyle } : x)) })}
+                    onChange={(e) => onChange({ ...node, components: node.components.map((x, xi) => (xi === i ? { ...c, style: e.target.value as DiscordButtonStyle } : x)) })}
                   >
                     <option value="primary">Primary</option>
                     <option value="secondary">Secondary</option>
                     <option value="success">Success</option>
                     <option value="danger">Danger</option>
-                    <option value="link">Link</option>
                   </select>
                 </div>
               </div>
