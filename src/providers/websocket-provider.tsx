@@ -40,7 +40,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handlersRef = useRef<Map<WsEventType, Set<Handler>>>(new Map());
 
-  const subscribe = useCallback(<T>(type: WsEventType, handler: (payload: T) => void) => {
+  const subscribe = useCallback(<T,>(type: WsEventType, handler: (payload: T) => void) => {
     const set = handlersRef.current.get(type) ?? new Set<Handler>();
     set.add(handler as Handler);
     handlersRef.current.set(type, set);
