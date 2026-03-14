@@ -24,6 +24,7 @@ function WsStatusDot() {
     disconnected: "bg-muted-foreground",
   }[status];
   return (
+    // ring-sidebar = sidebar bg color used as gap ring between dot and avatar
     <span
       title={`WebSocket: ${status}`}
       className={cn("absolute bottom-0 right-0 h-2 w-2 rounded-full ring-1 ring-sidebar", dotClass)}
@@ -67,33 +68,80 @@ function NavItems({ expanded }: { expanded: boolean }) {
                   : pathname.startsWith(fullHref);
               const Icon = item.icon;
 
+              // Filter children by permission
+              const visibleChildren = item.children
+                ? item.children.filter(
+                    (child) => !child.permission || hasPermission(child.permission)
+                  )
+                : [];
+
               return (
-                <Tooltip key={item.href} delayDuration={0}>
-                  <TooltipTrigger asChild>
-                    <Link
-                      href={fullHref}
-                      className={cn(
-                        "flex items-center rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors duration-100",
-                        isActive
-                          ? "bg-white/8 text-foreground"
-                          : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
-                      )}
-                    >
-                      <Icon className="h-4 w-4 flex-shrink-0" />
-                      <span
+                <div key={item.href}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Link
+                        href={fullHref}
                         className={cn(
-                          "overflow-hidden whitespace-nowrap transition-all duration-150",
-                          expanded ? "max-w-[200px] opacity-100 ml-2" : "max-w-0 opacity-0"
+                          "flex items-center rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors duration-100",
+                          isActive
+                            ? "bg-sidebar-accent text-foreground"
+                            : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground"
                         )}
                       >
-                        {item.label}
-                      </span>
-                    </Link>
-                  </TooltipTrigger>
-                  {!expanded && (
-                    <TooltipContent side="right">{item.label}</TooltipContent>
+                        <Icon className="h-4 w-4 flex-shrink-0" />
+                        <span
+                          className={cn(
+                            "overflow-hidden whitespace-nowrap transition-all duration-150",
+                            expanded ? "max-w-[200px] opacity-100 ml-2" : "max-w-0 opacity-0"
+                          )}
+                        >
+                          {item.label}
+                        </span>
+                      </Link>
+                    </TooltipTrigger>
+                    {!expanded && (
+                      <TooltipContent side="right">{item.label}</TooltipContent>
+                    )}
+                  </Tooltip>
+
+                  {/* Nested children — rendered when expanded */}
+                  {visibleChildren.length > 0 && (
+                    <div
+                      className={cn(
+                        "overflow-hidden transition-all duration-150",
+                        expanded ? "max-h-96" : "max-h-0"
+                      )}
+                    >
+                      {visibleChildren.map((child) => {
+                        const childHref = `${basePath}${child.href}`;
+                        const isChildActive = pathname.startsWith(childHref);
+                        const ChildIcon = child.icon;
+                        return (
+                          <Link
+                            key={child.href}
+                            href={childHref}
+                            className={cn(
+                              "flex items-center rounded-md pl-7 pr-3 py-1.5 text-[13px] font-medium transition-colors duration-100",
+                              isChildActive
+                                ? "bg-sidebar-accent text-foreground"
+                                : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground"
+                            )}
+                          >
+                            <ChildIcon className="h-4 w-4 flex-shrink-0" />
+                            <span
+                              className={cn(
+                                "overflow-hidden whitespace-nowrap transition-all duration-150",
+                                expanded ? "max-w-[200px] opacity-100 ml-2" : "max-w-0 opacity-0"
+                              )}
+                            >
+                              {child.label}
+                            </span>
+                          </Link>
+                        );
+                      })}
+                    </div>
                   )}
-                </Tooltip>
+                </div>
               );
             })}
           </div>
@@ -107,18 +155,19 @@ function NavItems({ expanded }: { expanded: boolean }) {
 
 function SidebarContent({ expanded }: { expanded: boolean }) {
   const router = useRouter();
-  const { activeFaction } = useFactionStore();
+  const { activeFaction, activeFactionId } = useFactionStore();
   const { user } = useAuth();
 
   return (
     <div className="flex h-full flex-col">
       {/* Server switcher */}
-      <button
-        onClick={() => router.push("/select-server")}
-        className="flex items-center gap-2 border-b border-border px-3 py-3 text-left hover:bg-white/5 transition-colors duration-100"
-      >
-        <Tooltip delayDuration={0}>
-          <TooltipTrigger asChild>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={() => router.push("/select-server")}
+            className="flex items-center gap-2 border-b border-border px-3 py-3 w-full text-left hover:bg-sidebar-accent/60 transition-colors duration-100"
+          >
+            {/* icon */}
             <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-muted">
               {activeFaction?.iconUrl ? (
                 <img
@@ -132,26 +181,26 @@ function SidebarContent({ expanded }: { expanded: boolean }) {
                 </span>
               )}
             </div>
-          </TooltipTrigger>
-          {!expanded && (
-            <TooltipContent side="right">
-              {activeFaction?.name ?? "Select server"}
-            </TooltipContent>
-          )}
-        </Tooltip>
-
-        <span
-          className={cn(
-            "flex flex-1 items-center justify-between overflow-hidden whitespace-nowrap transition-all duration-150",
-            expanded ? "max-w-[200px] opacity-100" : "max-w-0 opacity-0"
-          )}
-        >
-          <span className="truncate text-[13px] font-semibold text-foreground">
+            {/* label — only visible when expanded */}
+            <span
+              className={cn(
+                "flex flex-1 items-center justify-between overflow-hidden whitespace-nowrap transition-all duration-150",
+                expanded ? "max-w-[200px] opacity-100" : "max-w-0 opacity-0"
+              )}
+            >
+              <span className="truncate text-[13px] font-semibold text-foreground">
+                {activeFaction?.name ?? "Select server"}
+              </span>
+              <ChevronRight className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+            </span>
+          </button>
+        </TooltipTrigger>
+        {!expanded && (
+          <TooltipContent side="right">
             {activeFaction?.name ?? "Select server"}
-          </span>
-          <ChevronRight className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
-        </span>
-      </button>
+          </TooltipContent>
+        )}
+      </Tooltip>
 
       {/* Nav items */}
       <ScrollArea className="flex-1">
@@ -185,7 +234,7 @@ function SidebarContent({ expanded }: { expanded: boolean }) {
             {user?.username ?? ""}
           </span>
           <Link
-            href="/faction/settings"
+            href={activeFactionId ? `/faction/${activeFactionId}/settings` : "/select-server"}
             onClick={(e) => e.stopPropagation()}
             className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors"
           >
@@ -246,7 +295,7 @@ function MobileSidebar() {
 
 export function Sidebar() {
   return (
-    <TooltipProvider>
+    <TooltipProvider delayDuration={0}>
       <DesktopSidebar />
       <MobileSidebar />
     </TooltipProvider>
