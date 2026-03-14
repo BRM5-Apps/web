@@ -34,7 +34,11 @@ function WsStatusDot() {
 
 // ─── Nav items ────────────────────────────────────────────────────────────────
 
-function NavItems({ expanded }: { expanded: boolean }) {
+interface NavItemsProps {
+  expanded: boolean;
+}
+
+function NavItems({ expanded }: NavItemsProps) {
   const pathname = usePathname();
   const { activeFactionId } = useFactionStore();
   const { hasPermission } = usePermissions(activeFactionId ?? "");
@@ -153,7 +157,11 @@ function NavItems({ expanded }: { expanded: boolean }) {
 
 // ─── Sidebar content (shared between desktop + mobile Sheet) ─────────────────
 
-function SidebarContent({ expanded }: { expanded: boolean }) {
+interface SidebarContentProps {
+  expanded: boolean;
+}
+
+function SidebarContent({ expanded }: SidebarContentProps) {
   const router = useRouter();
   const { activeFaction, activeFactionId } = useFactionStore();
   const { user } = useAuth();

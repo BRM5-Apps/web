@@ -9,12 +9,12 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { ContainerPreview } from "@/components/discord-preview/container-preview";
+import { ContainerPreview, type DiscordContainerComponent } from "@/components/discord-preview/container-preview";
 import { type DiscordTheme } from "@/components/discord-preview/discord-theme";
 import { JsonImportDialog } from "@/components/templates/json-import";
 import type { ContainerTemplate } from "@/types/template";
-import { Plus, Rows, Square, List, Text, Image, Minus, Save, Upload, Download, Sun, Moon } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Plus, Rows, Square, Text, Image, Minus, Save, Upload, Download, Sun, Moon } from "lucide-react";
 
 type ButtonStyle = "primary" | "secondary" | "success" | "danger" | "link";
 
@@ -22,12 +22,7 @@ type ActionItem =
   | { type: "button"; label: string; style: ButtonStyle; emoji?: string; disabled?: boolean }
   | { type: "select"; placeholder?: string; disabled?: boolean };
 
-type ContainerItem =
-  | { type: "action_row"; components: ActionItem[] }
-  | { type: "text_display"; content: string }
-  | { type: "section"; text: string }
-  | { type: "separator" }
-  | { type: "media_gallery"; items: Array<{ url: string }> };
+type ContainerItem = DiscordContainerComponent;
 
 const containerSchema = z.object({
   name: z.string().min(1, "Required"),
@@ -46,7 +41,7 @@ export function ContainerBuilder({ template, onSave, isSaving }: ContainerBuilde
     defaultValues: { name: template?.name ?? "", accentColor: template?.accentColor ?? "" },
   });
 
-  const [components, setComponents] = useState<ContainerItem[]>(() => (Array.isArray(template?.components) ? (template!.components as any) : []));
+  const [components, setComponents] = useState<ContainerItem[]>(() => (Array.isArray(template?.components) ? (template!.components as DiscordContainerComponent[]) : []));
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [jsonOpen, setJsonOpen] = useState(false);
   const [discordTheme, setDiscordTheme] = useState<DiscordTheme>("dark");
@@ -130,7 +125,7 @@ export function ContainerBuilder({ template, onSave, isSaving }: ContainerBuilde
           </div>
           <div className="flex gap-2 pt-1">
             <Button variant="outline" size="sm" onClick={() => setJsonOpen(true)}><Upload className="mr-2 h-4 w-4" /> Import JSON</Button>
-            <Button variant="outline" size="sm" onClick={() => navigator.clipboard.writeText(toJson())}><Download className="mr-2 h-4 w-4" /> Export JSON</Button>
+            <Button variant="outline" size="sm" onClick={() => navigator.clipboard.writeText(toJson()).catch(() => {})}><Download className="mr-2 h-4 w-4" /> Export JSON</Button>
           </div>
           <Button className="w-full" onClick={() => onSave?.({ name: form.getValues("name") ?? "", accentColor: form.getValues("accentColor") || undefined, components })} disabled={isSaving}>
             <Save className="mr-2 h-4 w-4" /> Save Template
@@ -146,7 +141,7 @@ export function ContainerBuilder({ template, onSave, isSaving }: ContainerBuilde
         ) : (
           <div className="space-y-3">
             {components.map((c, i) => (
-              <div key={i} className={`rounded-md border p-3 ${selectedIndex === i ? "ring-2 ring-primary" : ""}`} onClick={() => setSelectedIndex(i)}>
+              <div key={i} className={cn("rounded-md border p-3", selectedIndex === i && "ring-2 ring-primary")} onClick={() => setSelectedIndex(i)}>
                 <div className="mb-2 flex items-center justify-between text-sm text-muted-foreground">
                   <span>
                     {c.type === "action_row" ? "Action Row" : c.type === "text_display" ? "Text" : c.type === "section" ? "Section" : c.type === "media_gallery" ? "Media Gallery" : "Separator"}
@@ -218,7 +213,7 @@ export function ContainerBuilder({ template, onSave, isSaving }: ContainerBuilde
             )}
           </Button>
         </div>
-        <ContainerPreview components={components as any} accentColor={form.watch("accentColor") || undefined} discordTheme={discordTheme} />
+        <ContainerPreview components={components} accentColor={form.watch("accentColor") || undefined} discordTheme={discordTheme} />
       </Card>
 
       <JsonImportDialog

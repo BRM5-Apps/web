@@ -58,7 +58,7 @@ export function MessagePreview({
             {botAvatarUrl ? (
               <img src={botAvatarUrl} alt={botName} className="h-[40px] w-[40px] rounded-full object-cover" />
             ) : (
-              <div className="flex h-[40px] w-[40px] items-center justify-center rounded-full bg-[#5865F2] text-[14px] font-semibold text-white">
+              <div className="flex h-[40px] w-[40px] items-center justify-center rounded-full bg-discord-blurple text-[14px] font-semibold text-white">
                 {initials(botName)}
               </div>
             )}

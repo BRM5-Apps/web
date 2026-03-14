@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { z } from "zod";
-import { useForm, FormProvider, useFormContext, useFieldArray } from "react-hook-form";
+import { useForm, FormProvider, useFormContext } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,12 +12,11 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Skeleton } from "@/components/ui/skeleton";
 import { EmbedPreview } from "@/components/discord-preview/embed-preview";
 import { type DiscordTheme } from "@/components/discord-preview/discord-theme";
 import { JsonImportDialog } from "@/components/templates/json-import";
 import { FieldEditor } from "@/components/templates/field-editor";
-import { Plus, Trash2, GripVertical, Variable, Upload, Download, Save, Sun, Moon } from "lucide-react";
+import { Plus, Variable, Upload, Download, Save, Sun, Moon } from "lucide-react";
 import type { EmbedTemplate } from "@/types/template";
 
 // ── Variables ──
@@ -188,7 +187,7 @@ export function EmbedBuilder({ template, isSaving, onSave }: EmbedBuilderProps) 
             </Button>
           </div>
           <div className="flex items-start gap-6">
-            <div className="hidden h-10 w-10 shrink-0 rounded-full bg-[#34363c] sm:block" />
+            <div className="hidden h-10 w-10 shrink-0 rounded-full bg-muted sm:block" />
             <div className="min-w-0 flex-1">
               <EmbedPreview
                 title={values.title}
@@ -218,7 +217,7 @@ export function EmbedBuilder({ template, isSaving, onSave }: EmbedBuilderProps) 
             const next = fromAnyJson(data);
             form.reset(next);
             setJsonOpen(false);
-          } catch (e) {
+          } catch (_e) {
             // handled inside dialog as well
           }
         }}
@@ -247,70 +246,108 @@ function toApiPayload(values: EmbedFormData) {
   } as Partial<EmbedTemplate> & { name: string };
 }
 
+interface RawEmbed {
+  title?: unknown;
+  description?: unknown;
+  color?: unknown;
+  url?: unknown;
+  name?: unknown;
+  fields?: Array<{ name?: unknown; value?: unknown; inline?: unknown }>;
+  imageUrl?: unknown;
+  thumbnailUrl?: unknown;
+  footer?: unknown;
+  authorName?: unknown;
+  authorIconUrl?: unknown;
+  isDefault?: unknown;
+  author?: { name?: unknown; url?: unknown; icon_url?: unknown };
+  image?: { url?: unknown };
+  thumbnail?: { url?: unknown };
+  embeds?: Array<unknown>;
+}
+
+function str(v: unknown): string {
+  return typeof v === "string" ? v : "";
+}
+
 function fromAnyJson(data: unknown): EmbedFormData {
   // Try to interpret common embed shapes
-  const asTpl = data as Partial<EmbedTemplate> & { embeds?: any[] };
-  if (asTpl.embeds && Array.isArray(asTpl.embeds) && asTpl.embeds.length > 0) {
-    // Discord message with embeds array
-    const e = asTpl.embeds[0] ?? {};
-    return normalizeFromDiscord(e);
-  }
-  if (typeof asTpl === "object" && asTpl) {
+  if (typeof data !== "object" || data === null) {
     return {
-      name: (asTpl as any).name ?? "Imported Embed",
-      title: (asTpl as any).title ?? "",
+      name: "Imported Embed",
+      title: "",
       url: "",
-      description: (asTpl as any).description ?? "",
-      color: (asTpl as any).color ?? "#4f545c",
-      fields: (asTpl as any).fields ?? [],
-      imageUrl: (asTpl as any).imageUrl ?? "",
-      thumbnailUrl: (asTpl as any).thumbnailUrl ?? "",
-      footerText: (asTpl as any).footer ?? "",
+      description: "",
+      color: "#4f545c",
+      fields: [],
+      imageUrl: "",
+      thumbnailUrl: "",
+      footerText: "",
       footerIconUrl: "",
-      authorName: (asTpl as any).authorName ?? "",
-      authorIconUrl: (asTpl as any).authorIconUrl ?? "",
+      authorName: "",
+      authorIconUrl: "",
       authorUrl: "",
       timestamp: false,
-      isDefault: Boolean((asTpl as any).isDefault ?? false),
+      isDefault: false,
     };
   }
+  const asTpl = data as RawEmbed;
+  if (Array.isArray(asTpl.embeds) && asTpl.embeds.length > 0) {
+    // Discord message with embeds array
+    return normalizeFromDiscord(asTpl.embeds[0] ?? {});
+  }
   return {
-    name: "Imported Embed",
-    title: "",
+    name: str(asTpl.name) || "Imported Embed",
+    title: str(asTpl.title),
     url: "",
-    description: "",
-    color: "#4f545c",
-    fields: [],
-    imageUrl: "",
-    thumbnailUrl: "",
-    footerText: "",
+    description: str(asTpl.description),
+    color: str(asTpl.color) || "#4f545c",
+    fields: Array.isArray(asTpl.fields)
+      ? asTpl.fields.map((f) => ({
+          name: str(f.name),
+          value: str(f.value),
+          inline: Boolean(f.inline),
+        }))
+      : [],
+    imageUrl: str(asTpl.imageUrl),
+    thumbnailUrl: str(asTpl.thumbnailUrl),
+    footerText: str(asTpl.footer),
     footerIconUrl: "",
-    authorName: "",
-    authorIconUrl: "",
+    authorName: str(asTpl.authorName),
+    authorIconUrl: str(asTpl.authorIconUrl),
     authorUrl: "",
     timestamp: false,
-    isDefault: false,
+    isDefault: Boolean(asTpl.isDefault ?? false),
   };
 }
 
-function normalizeFromDiscord(e: any): EmbedFormData {
+function normalizeFromDiscord(e: unknown): EmbedFormData {
+  const raw = (typeof e === "object" && e !== null ? e : {}) as RawEmbed;
+  const colorRaw = raw.color;
+  const color =
+    typeof colorRaw === "number"
+      ? `#${colorRaw.toString(16).padStart(6, "0")}`
+      : str(colorRaw) || "#4f545c";
+  const footer = (typeof raw.footer === "object" && raw.footer !== null ? raw.footer : {}) as {
+    text?: unknown;
+    icon_url?: unknown;
+  };
   return {
     name: "Imported Embed",
-    title: e.title ?? "",
-    url: e.url ?? "",
-    description: e.description ?? "",
-    color: typeof e.color === "number" ? `#${e.color.toString(16).padStart(6, "0")}` : e.color ?? "#4f545c",
-    fields: Array.isArray(e.fields)
-      ? e.fields.map((f: any) => ({ name: f.name ?? "", value: f.value ?? "", inline: Boolean(f.inline) }))
+    title: str(raw.title),
+    url: str(raw.url),
+    description: str(raw.description),
+    color,
+    fields: Array.isArray(raw.fields)
+      ? raw.fields.map((f) => ({ name: str(f.name), value: str(f.value), inline: Boolean(f.inline) }))
       : [],
-    imageUrl: e.image?.url ?? "",
-    thumbnailUrl: e.thumbnail?.url ?? "",
-    footerText: e.footer?.text ?? "",
-    footerIconUrl: e.footer?.icon_url ?? "",
-    authorName: e.author?.name ?? "",
-    authorIconUrl: e.author?.icon_url ?? "",
-    authorUrl: e.author?.url ?? "",
-    timestamp: Boolean(e.timestamp),
+    imageUrl: typeof raw.image === "object" && raw.image !== null ? str(raw.image.url) : "",
+    thumbnailUrl: typeof raw.thumbnail === "object" && raw.thumbnail !== null ? str(raw.thumbnail.url) : "",
+    footerText: str(footer.text),
+    footerIconUrl: str(footer.icon_url),
+    authorName: typeof raw.author === "object" && raw.author !== null ? str(raw.author.name) : "",
+    authorIconUrl: typeof raw.author === "object" && raw.author !== null ? str(raw.author.icon_url) : "",
+    authorUrl: typeof raw.author === "object" && raw.author !== null ? str(raw.author.url) : "",
+    timestamp: false,
     isDefault: false,
   };
 }
