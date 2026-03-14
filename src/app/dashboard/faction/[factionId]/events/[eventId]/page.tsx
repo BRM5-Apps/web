@@ -1,12 +1,13 @@
-export default function EventDetailPage({
+export default async function EventDetailPage({
   params,
 }: {
-  params: { factionId: string; eventId: string };
+  params: Promise<{ factionId: string; eventId: string }>;
 }) {
+  const { eventId } = await params;
   return (
     <div className="page-header">
       <h1 className="page-title">Event Details</h1>
-      <p className="page-description">Event ID: {params.eventId}</p>
+      <p className="page-description">Event ID: {eventId}</p>
     </div>
   );
 }

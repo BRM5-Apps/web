@@ -159,6 +159,15 @@ export const api = {
 
   // ── Factions ──
   factions: {
+    byGuildIds: async (guildIds: string[], opts?: RequestOptions): Promise<Faction[]> => {
+      if (guildIds.length === 0) return [];
+      const result = await apiClient.get<{ factions: Faction[] }>(
+        "/factions/by-guild-ids",
+        { guildIds: guildIds.join(",") },
+        opts
+      );
+      return result.factions ?? [];
+    },
     list: async (opts?: RequestOptions) => {
       // Backend returns { items: [{ faction, rankId }] } for the
       // authenticated user's factions. Normalize to a plain Faction[]

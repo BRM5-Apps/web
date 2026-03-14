@@ -11,7 +11,7 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const session = await getServerSession(authOptions);
-  const hasBackendCookie = Boolean(cookies().get("backendToken")?.value);
+  const hasBackendCookie = Boolean((await cookies()).get("backendToken")?.value);
 
   if (!session || !hasBackendCookie) {
     redirect("/login");

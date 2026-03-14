@@ -3,13 +3,8 @@ import type {} from "@/types/next-auth";
 import DiscordProvider from "next-auth/providers/discord";
 
 export const authOptions: NextAuthOptions = {
-  // Ensure JWT-based sessions and a signed (not encrypted) JWT so the Go API
-  // can validate it with the shared NEXTAUTH_SECRET.
-  jwt: {
-    // Explicitly disable JWE encryption; produce an HMAC-signed JWS token.
-    // Backend validates with HS* using NEXTAUTH_SECRET.
-    encryption: false,
-  },
+  // JWT-based sessions; next-auth v4+ produces HMAC-signed tokens by default.
+  // The Go API validates with the shared NEXTAUTH_SECRET.
   providers: [
     DiscordProvider({
       clientId: process.env.DISCORD_CLIENT_ID!,

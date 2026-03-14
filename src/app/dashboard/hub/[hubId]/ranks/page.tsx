@@ -1,7 +1,7 @@
 export default function HubRanksPage({
   params,
 }: {
-  params: { hubId: string };
+  params: Promise<{ hubId: string }>;
 }) {
   return (
     <div className="page-header">

@@ -46,7 +46,7 @@ export const navConfig: NavSection[] = [
   {
     label: "Management",
     items: [
-      { href: "/faction", icon: Shield, label: "Factions" },
+      { href: "/faction", icon: Shield, label: "Servers" },
     ],
   },
 ];

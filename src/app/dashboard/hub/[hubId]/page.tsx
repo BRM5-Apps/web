@@ -1,12 +1,13 @@
-export default function HubOverviewPage({
+export default async function HubOverviewPage({
   params,
 }: {
-  params: { hubId: string };
+  params: Promise<{ hubId: string }>;
 }) {
+  const { hubId } = await params;
   return (
     <div className="page-header">
       <h1 className="page-title">Hub Overview</h1>
-      <p className="page-description">Hub ID: {params.hubId}</p>
+      <p className="page-description">Hub ID: {hubId}</p>
     </div>
   );
 }

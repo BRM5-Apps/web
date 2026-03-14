@@ -31,11 +31,11 @@ export function FactionSwitcher() {
       ? factions
       : (factions as any)?.items?.map((item: any) => item.faction) ?? [];
 
-  const filteredFactions = factionList.filter((f) =>
+  const filteredFactions = factionList.filter((f: any) =>
     f.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  const activeFaction = factionList.find((f) => f.id === activeFactionId);
+  const activeFaction = factionList.find((f: any) => f.id === activeFactionId);
 
   function handleSelect(factionId: string) {
     const faction = factions?.find((f) => f.id === factionId);
@@ -52,7 +52,7 @@ export function FactionSwitcher() {
           disabled={isLoading}
         >
           <span className="truncate">
-            {activeFaction?.name ?? "Select faction"}
+            {activeFaction?.name ?? "Select server"}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -62,7 +62,7 @@ export function FactionSwitcher() {
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search factions..."
+              placeholder="Search servers..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-8 h-9"
@@ -73,10 +73,10 @@ export function FactionSwitcher() {
         <ScrollArea className="max-h-[300px]">
           {filteredFactions.length === 0 ? (
             <div className="py-6 text-center text-sm text-muted-foreground">
-              No factions found
+              No servers found
             </div>
           ) : (
-            filteredFactions.map((faction) => (
+            filteredFactions.map((faction: any) => (
               <DropdownMenuItem
                 key={faction.id}
                 onClick={() => handleSelect(faction.id)}
@@ -110,11 +110,11 @@ export function FactionSwitcher() {
         </ScrollArea>
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          onClick={() => router.push("/dashboard/create-faction")}
+          onClick={() => router.push("/faction")}
           className="gap-2 px-3 py-2"
         >
           <Plus className="h-4 w-4" />
-          Create Faction
+          Browse Servers
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -108,6 +108,13 @@ export const queryKeys = {
       [...queryKeys.units.all(factionId), unitId] as const,
   },
 
+  // ── Discord Guilds (admin guilds + faction status) ──
+  discordGuilds: {
+    adminGuilds: () => ["discord", "guilds", "admin"] as const,
+    factionsByGuildIds: (guildIds: string[]) =>
+      ["factions", "by-guild-ids", guildIds] as const,
+  },
+
   // ── Billing ──
   billing: {
     subscription: (factionId: string) =>

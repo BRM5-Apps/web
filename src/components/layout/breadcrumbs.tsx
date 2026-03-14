@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 const segmentLabels: Record<string, string> = {
   dashboard: "Dashboard",
-  faction: "Faction",
+  faction: "Servers",
   members: "Members",
   ranks: "Ranks",
   units: "Units",

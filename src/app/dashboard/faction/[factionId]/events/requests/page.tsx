@@ -1,7 +1,7 @@
 export default function EventRequestsPage({
   params,
 }: {
-  params: { factionId: string };
+  params: Promise<{ factionId: string }>;
 }) {
   return (
     <div className="page-header">

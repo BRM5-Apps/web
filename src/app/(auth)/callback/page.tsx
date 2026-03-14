@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 
-export default function CallbackPage() {
+function CallbackContent() {
   const { status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -49,5 +49,19 @@ export default function CallbackPage() {
       <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       <p className="text-muted-foreground">Completing sign-in…</p>
     </div>
+  );
+}
+
+export default function CallbackPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        </div>
+      }
+    >
+      <CallbackContent />
+    </Suspense>
   );
 }

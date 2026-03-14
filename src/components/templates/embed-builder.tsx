@@ -70,7 +70,7 @@ export function EmbedBuilder({ template, isSaving, onSave }: EmbedBuilderProps) 
     url: "",
     description: template?.description ?? "",
     color: template?.color ?? "#4f545c",
-    fields: template?.fields ?? [],
+    fields: (template?.fields ?? []).map((f) => ({ ...f, inline: f.inline ?? false })),
     imageUrl: template?.imageUrl ?? "",
     thumbnailUrl: template?.thumbnailUrl ?? "",
     footerText: template?.footer ?? "",

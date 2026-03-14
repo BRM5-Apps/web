@@ -183,13 +183,13 @@ function SidebarContent({ collapsed }: { collapsed: boolean }) {
                 )}
               </div>
             </TooltipTrigger>
-            <TooltipContent side="right">{activeFaction?.name ?? "FactionHub"}</TooltipContent>
+            <TooltipContent side="right">{activeFaction?.name ?? "BRM5"}</TooltipContent>
           </Tooltip>
         ) : (
           <>
-            <Image src="/images/logo.svg" alt="FactionHub" width={28} height={28} />
+            <Image src="/images/logo.svg" alt="BRM5" width={28} height={28} />
             <span className="font-semibold text-sidebar-foreground truncate">
-              {activeFaction?.name ?? "FactionHub"}
+              {activeFaction?.name ?? "BRM5"}
             </span>
           </>
         )}
