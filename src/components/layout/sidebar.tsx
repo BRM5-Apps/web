@@ -1,32 +1,46 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import Image from "next/image";
-import { ChevronLeft, ChevronRight, Menu, ChevronDown } from "lucide-react";
 import { useState } from "react";
-import { factionNavConfig, type NavItemConfig } from "@/config/nav";
-import { useSidebarStore } from "@/stores/sidebar-store";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { Settings, Menu, ChevronRight } from "lucide-react";
+import { factionNavConfig } from "@/config/nav";
 import { useFactionStore } from "@/stores/faction-store";
 import { usePermissions } from "@/hooks/use-permissions";
+import { useAuth } from "@/providers/auth-provider";
+import { useWebSocket } from "@/hooks/use-websocket";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
-import { FactionSwitcher } from "./faction-switcher";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
-function SidebarNav({ collapsed }: { collapsed: boolean }) {
+// ─── WS status dot ────────────────────────────────────────────────────────────
+
+function WsStatusDot() {
+  const { status } = useWebSocket();
+  const dotClass = {
+    connected: "bg-emerald-500",
+    connecting: "bg-amber-400 animate-pulse",
+    disconnected: "bg-muted-foreground",
+  }[status];
+  return (
+    <span
+      title={`WebSocket: ${status}`}
+      className={cn("absolute bottom-0 right-0 h-2 w-2 rounded-full ring-1 ring-sidebar", dotClass)}
+    />
+  );
+}
+
+// ─── Nav items ────────────────────────────────────────────────────────────────
+
+function NavItems({ expanded }: { expanded: boolean }) {
   const pathname = usePathname();
   const { activeFactionId } = useFactionStore();
   const { hasPermission } = usePermissions(activeFactionId ?? "");
-
   const basePath = activeFactionId ? `/faction/${activeFactionId}` : "";
 
   return (
-    <nav className="flex-1 space-y-1 p-3">
+    <nav className="flex-1 space-y-0.5 px-2 py-3">
       {factionNavConfig.map((section) => {
         const visibleItems = section.items.filter(
           (item) => !item.permission || hasPermission(item.permission)
@@ -34,23 +48,54 @@ function SidebarNav({ collapsed }: { collapsed: boolean }) {
         if (visibleItems.length === 0) return null;
 
         return (
-          <div key={section.label} className="space-y-1">
-            {!collapsed && (
-              <p className="px-3 pt-4 pb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {section.label}
-              </p>
-            )}
-            {collapsed && <Separator className="my-2" />}
-            {visibleItems.map((item) => (
-              <SidebarNavItem
-                key={item.href}
-                item={item}
-                basePath={basePath}
-                pathname={pathname}
-                collapsed={collapsed}
-                hasPermission={hasPermission}
-              />
-            ))}
+          <div key={section.label}>
+            {/* Section label — only visible when expanded */}
+            <span
+              className={cn(
+                "block px-3 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground transition-all duration-150 overflow-hidden whitespace-nowrap",
+                expanded ? "max-w-[200px] opacity-100" : "max-w-0 opacity-0"
+              )}
+            >
+              {section.label}
+            </span>
+
+            {visibleItems.map((item) => {
+              const fullHref = `${basePath}${item.href}`;
+              const isActive =
+                item.href === ""
+                  ? pathname === basePath || pathname === `${basePath}/`
+                  : pathname.startsWith(fullHref);
+              const Icon = item.icon;
+
+              return (
+                <Tooltip key={item.href} delayDuration={0}>
+                  <TooltipTrigger asChild>
+                    <Link
+                      href={fullHref}
+                      className={cn(
+                        "flex items-center rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors duration-100",
+                        isActive
+                          ? "bg-white/8 text-foreground"
+                          : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                      )}
+                    >
+                      <Icon className="h-4 w-4 flex-shrink-0" />
+                      <span
+                        className={cn(
+                          "overflow-hidden whitespace-nowrap transition-all duration-150",
+                          expanded ? "max-w-[200px] opacity-100 ml-2" : "max-w-0 opacity-0"
+                        )}
+                      >
+                        {item.label}
+                      </span>
+                    </Link>
+                  </TooltipTrigger>
+                  {!expanded && (
+                    <TooltipContent side="right">{item.label}</TooltipContent>
+                  )}
+                </Tooltip>
+              );
+            })}
           </div>
         );
       })}
@@ -58,215 +103,152 @@ function SidebarNav({ collapsed }: { collapsed: boolean }) {
   );
 }
 
-function SidebarNavItem({
-  item,
-  basePath,
-  pathname,
-  collapsed,
-  hasPermission,
-}: {
-  item: NavItemConfig;
-  basePath: string;
-  pathname: string;
-  collapsed: boolean;
-  hasPermission: (key: string) => boolean;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const fullHref = `${basePath}${item.href}`;
-  const isActive = item.href === ""
-    ? pathname === basePath || pathname === `${basePath}/`
-    : pathname.startsWith(fullHref);
-  const Icon = item.icon;
+// ─── Sidebar content (shared between desktop + mobile Sheet) ─────────────────
 
-  const hasChildren = item.children && item.children.length > 0;
+function SidebarContent({ expanded }: { expanded: boolean }) {
+  const router = useRouter();
+  const { activeFaction } = useFactionStore();
+  const { user } = useAuth();
 
-  if (collapsed) {
-    return (
-      <Tooltip delayDuration={0}>
-        <TooltipTrigger asChild>
-          <Link
-            href={fullHref}
-            className={cn(
-              "flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground mx-auto",
-              isActive && "bg-accent text-accent-foreground"
-            )}
-          >
-            <Icon className="h-4 w-4" />
-          </Link>
-        </TooltipTrigger>
-        <TooltipContent side="right">
-          {item.label}
-        </TooltipContent>
-      </Tooltip>
-    );
-  }
+  return (
+    <div className="flex h-full flex-col">
+      {/* Server switcher */}
+      <button
+        onClick={() => router.push("/select-server")}
+        className="flex items-center gap-2 border-b border-border px-3 py-3 text-left hover:bg-white/5 transition-colors duration-100"
+      >
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-muted">
+              {activeFaction?.iconUrl ? (
+                <img
+                  src={activeFaction.iconUrl}
+                  alt={activeFaction.name}
+                  className="h-8 w-8 rounded-md object-cover"
+                />
+              ) : (
+                <span className="text-xs font-bold text-foreground">
+                  {activeFaction?.name?.charAt(0) ?? "B"}
+                </span>
+              )}
+            </div>
+          </TooltipTrigger>
+          {!expanded && (
+            <TooltipContent side="right">
+              {activeFaction?.name ?? "Select server"}
+            </TooltipContent>
+          )}
+        </Tooltip>
 
-  if (hasChildren) {
-    return (
-      <div>
-        <button
-          onClick={() => setExpanded(!expanded)}
+        <span
           className={cn(
-            "nav-link w-full justify-between",
-            isActive && "nav-link-active"
+            "flex flex-1 items-center justify-between overflow-hidden whitespace-nowrap transition-all duration-150",
+            expanded ? "max-w-[200px] opacity-100" : "max-w-0 opacity-0"
           )}
         >
-          <span className="flex items-center gap-3">
-            <Icon className="h-4 w-4" />
-            <span>{item.label}</span>
+          <span className="truncate text-[13px] font-semibold text-foreground">
+            {activeFaction?.name ?? "Select server"}
           </span>
-          <ChevronDown className={cn("h-3 w-3 transition-transform", expanded && "rotate-180")} />
-        </button>
-        {expanded && (
-          <div className="ml-4 mt-1 space-y-1 border-l border-border pl-3">
-            {item.children!
-              .filter((child) => !child.permission || hasPermission(child.permission))
-              .map((child) => {
-                const childHref = `${basePath}${child.href}`;
-                const childActive = pathname.startsWith(childHref);
-                const ChildIcon = child.icon;
-                return (
-                  <Link
-                    key={child.href}
-                    href={childHref}
-                    className={cn("nav-link", childActive && "nav-link-active")}
-                  >
-                    <ChildIcon className="h-3.5 w-3.5" />
-                    <span>{child.label}</span>
-                  </Link>
-                );
-              })}
-          </div>
-        )}
-      </div>
-    );
-  }
+          <ChevronRight className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+        </span>
+      </button>
 
-  return (
-    <Link href={fullHref} className={cn("nav-link", isActive && "nav-link-active")}>
-      <Icon className="h-4 w-4" />
-      <span>{item.label}</span>
-      {item.badge && (
-        <Badge variant="secondary" className="ml-auto text-[10px] px-1.5 py-0">
-          {item.badge}
-        </Badge>
-      )}
-    </Link>
-  );
-}
-
-function SidebarContent({ collapsed }: { collapsed: boolean }) {
-  const { activeFaction } = useFactionStore();
-  const { isCollapsed, toggle } = useSidebarStore();
-
-  return (
-    <>
-      {/* Faction header */}
-      <div className={cn(
-        "flex h-[var(--header-height)] items-center border-b",
-        collapsed ? "justify-center px-2" : "gap-2 px-4"
-      )}>
-        {collapsed ? (
-          <Tooltip delayDuration={0}>
-            <TooltipTrigger asChild>
-              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
-                {activeFaction?.iconUrl ? (
-                  <img
-                    src={activeFaction.iconUrl}
-                    alt={activeFaction.name}
-                    className="h-6 w-6 rounded"
-                  />
-                ) : (
-                  <span className="text-xs font-bold text-primary">
-                    {activeFaction?.name?.charAt(0) ?? "F"}
-                  </span>
-                )}
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="right">{activeFaction?.name ?? "BRM5"}</TooltipContent>
-          </Tooltip>
-        ) : (
-          <>
-            <Image src="/images/logo.svg" alt="BRM5" width={28} height={28} />
-            <span className="font-semibold text-sidebar-foreground truncate">
-              {activeFaction?.name ?? "BRM5"}
-            </span>
-          </>
-        )}
-      </div>
-
-      {/* Navigation */}
+      {/* Nav items */}
       <ScrollArea className="flex-1">
-        <SidebarNav collapsed={collapsed} />
+        <NavItems expanded={expanded} />
       </ScrollArea>
 
-      {/* Bottom section */}
-      <div className="border-t p-3 space-y-2">
-        {!collapsed && <FactionSwitcher />}
-        <Button
-          variant="ghost"
-          size={collapsed ? "icon" : "sm"}
-          onClick={toggle}
-          className={cn("w-full", collapsed && "mx-auto")}
-        >
-          {isCollapsed ? (
-            <ChevronRight className="h-4 w-4" />
+      {/* User row */}
+      <div className="flex items-center gap-2 border-t border-border px-3 py-3">
+        <div className="relative flex-shrink-0">
+          {user?.avatarUrl ? (
+            <img
+              src={user.avatarUrl}
+              alt={user.username}
+              className="h-8 w-8 rounded-full object-cover"
+            />
           ) : (
-            <>
-              <ChevronLeft className="h-4 w-4 mr-2" />
-              <span>Collapse</span>
-            </>
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-bold text-foreground">
+              {user?.username?.charAt(0)?.toUpperCase() ?? "?"}
+            </div>
           )}
-        </Button>
+          <WsStatusDot />
+        </div>
+
+        <span
+          className={cn(
+            "flex flex-1 items-center justify-between overflow-hidden whitespace-nowrap transition-all duration-150",
+            expanded ? "max-w-[200px] opacity-100" : "max-w-0 opacity-0"
+          )}
+        >
+          <span className="truncate text-[13px] font-medium text-foreground">
+            {user?.username ?? ""}
+          </span>
+          <Link
+            href="/faction/settings"
+            onClick={(e) => e.stopPropagation()}
+            className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Settings className="h-4 w-4" />
+          </Link>
+        </span>
       </div>
-    </>
+    </div>
   );
 }
 
-export function Sidebar() {
-  const { isCollapsed } = useSidebarStore();
+// ─── Desktop sidebar ──────────────────────────────────────────────────────────
+
+function DesktopSidebar() {
+  const [expanded, setExpanded] = useState(false);
 
   return (
-    <TooltipProvider>
-      {/* Desktop sidebar */}
-      <aside
-        className={cn(
-          "fixed inset-y-0 left-0 z-30 hidden flex-col border-r bg-sidebar transition-[width] duration-300 md:flex",
-          isCollapsed ? "w-[var(--sidebar-collapsed-width)]" : "w-[var(--sidebar-width)]"
-        )}
-      >
-        <SidebarContent collapsed={isCollapsed} />
-      </aside>
-
-      {/* Mobile sidebar */}
-      <div className="md:hidden">
-        <MobileSidebar />
-      </div>
-    </TooltipProvider>
+    <aside
+      className={cn(
+        "fixed left-0 top-0 z-40 hidden h-screen flex-col bg-sidebar",
+        "transition-[width] duration-150 ease-out md:flex",
+        expanded ? "w-56" : "w-14"
+      )}
+      onMouseEnter={() => setExpanded(true)}
+      onMouseLeave={() => setExpanded(false)}
+    >
+      <SidebarContent expanded={expanded} />
+    </aside>
   );
 }
+
+// ─── Mobile sidebar ───────────────────────────────────────────────────────────
 
 function MobileSidebar() {
   const [open, setOpen] = useState(false);
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="fixed left-4 top-3 z-40 md:hidden"
-        >
-          <Menu className="h-5 w-5" />
-          <span className="sr-only">Toggle menu</span>
-        </Button>
-      </SheetTrigger>
-      <SheetContent side="left" className="w-[var(--sidebar-width)] p-0">
-        <SheetTitle className="sr-only">Navigation</SheetTitle>
-        <div className="flex h-full flex-col">
-          <SidebarContent collapsed={false} />
-        </div>
-      </SheetContent>
-    </Sheet>
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="fixed left-3 top-3 z-50 flex h-9 w-9 items-center justify-center rounded-md bg-sidebar text-foreground md:hidden"
+        aria-label="Open navigation"
+      >
+        <Menu className="h-5 w-5" />
+      </button>
+
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent side="left" className="w-56 p-0 bg-sidebar border-r border-border">
+          <SheetTitle className="sr-only">Navigation</SheetTitle>
+          <SidebarContent expanded={true} />
+        </SheetContent>
+      </Sheet>
+    </>
+  );
+}
+
+// ─── Public export ────────────────────────────────────────────────────────────
+
+export function Sidebar() {
+  return (
+    <TooltipProvider>
+      <DesktopSidebar />
+      <MobileSidebar />
+    </TooltipProvider>
   );
 }
