@@ -11,9 +11,10 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ContainerPreview } from "@/components/discord-preview/container-preview";
+import { type DiscordTheme } from "@/components/discord-preview/discord-theme";
 import { JsonImportDialog } from "@/components/templates/json-import";
 import type { ContainerTemplate } from "@/types/template";
-import { Plus, Rows, Square, List, Text, Image, Minus, Save, Upload, Download } from "lucide-react";
+import { Plus, Rows, Square, List, Text, Image, Minus, Save, Upload, Download, Sun, Moon } from "lucide-react";
 
 type ButtonStyle = "primary" | "secondary" | "success" | "danger" | "link";
 
@@ -48,6 +49,7 @@ export function ContainerBuilder({ template, onSave, isSaving }: ContainerBuilde
   const [components, setComponents] = useState<ContainerItem[]>(() => (Array.isArray(template?.components) ? (template!.components as any) : []));
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [jsonOpen, setJsonOpen] = useState(false);
+  const [discordTheme, setDiscordTheme] = useState<DiscordTheme>("dark");
 
   function addActionRow() {
     setComponents((prev) => [...prev, { type: "action_row", components: [] }]);
@@ -200,8 +202,23 @@ export function ContainerBuilder({ template, onSave, isSaving }: ContainerBuilde
 
       {/* Live Preview */}
       <Card className="p-4">
-        <div className="mb-2 text-sm font-medium text-muted-foreground">Live Preview</div>
-        <ContainerPreview components={components as any} accentColor={form.watch("accentColor") || undefined} />
+        <div className="mb-3 flex items-center justify-between">
+          <div className="text-sm font-medium text-muted-foreground">Live Preview</div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setDiscordTheme((prev) => (prev === "dark" ? "light" : "dark"))}
+            aria-label="Toggle Discord theme"
+          >
+            {discordTheme === "dark" ? (
+              <><Sun className="mr-1.5 h-4 w-4" /> Light</>
+            ) : (
+              <><Moon className="mr-1.5 h-4 w-4" /> Dark</>
+            )}
+          </Button>
+        </div>
+        <ContainerPreview components={components as any} accentColor={form.watch("accentColor") || undefined} discordTheme={discordTheme} />
       </Card>
 
       <JsonImportDialog

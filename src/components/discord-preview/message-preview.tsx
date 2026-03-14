@@ -2,6 +2,7 @@ import { format } from "date-fns";
 import { ContainerPreview, type ContainerData } from "@/components/discord-preview/container-preview";
 import { DiscordMarkdown } from "@/components/discord-preview/discord-markdown";
 import { EmbedPreview, type EmbedData } from "@/components/discord-preview/embed-preview";
+import { discordThemes, type DiscordTheme } from "@/components/discord-preview/discord-theme";
 import { cn } from "@/lib/utils";
 
 interface MessagePreviewProps {
@@ -11,6 +12,7 @@ interface MessagePreviewProps {
   content?: string;
   embed?: EmbedData;
   container?: ContainerData;
+  discordTheme?: DiscordTheme;
   className?: string;
 }
 
@@ -35,19 +37,22 @@ export function MessagePreview({
   content,
   embed,
   container,
+  discordTheme = "dark",
   className,
 }: MessagePreviewProps) {
+  const t = discordThemes[discordTheme];
   const timeLabel = formatHeaderTimestamp(timestamp);
 
   return (
     <div
       className={cn(
-        "w-full rounded-[8px] bg-[#313338] p-[16px]",
+        "w-full rounded-[8px] p-[16px]",
         "font-['gg_sans','Whitney','Helvetica Neue',Helvetica,Arial,sans-serif]",
         className
       )}
+      style={{ backgroundColor: t.messageBg }}
     >
-      <div className="rounded-[6px] p-[2px_8px] transition-colors hover:bg-[#2e3035]">
+      <div className="rounded-[6px] p-[2px_8px] transition-colors">
         <div className="grid grid-cols-[40px_1fr] gap-[12px]">
           <div className="pt-[2px]">
             {botAvatarUrl ? (
@@ -61,13 +66,13 @@ export function MessagePreview({
 
           <div className="min-w-0">
             <div className="mb-[2px] flex items-baseline gap-[6px]">
-              <span className="text-[16px] font-semibold leading-[1.375] text-[#f2f3f5]">{botName}</span>
-              <span className="text-[12px] leading-[1.333] text-[#949ba4]">{timeLabel}</span>
+              <span className="text-[16px] font-semibold leading-[1.375]" style={{ color: t.botName }}>{botName}</span>
+              <span className="text-[12px] leading-[1.333]" style={{ color: t.timestamp }}>{timeLabel}</span>
             </div>
 
             {content ? <DiscordMarkdown content={content} className="mb-[8px]" /> : null}
-            {embed ? <EmbedPreview {...embed} className="mb-[8px]" /> : null}
-            {container ? <ContainerPreview container={container} /> : null}
+            {embed ? <EmbedPreview {...embed} discordTheme={discordTheme} className="mb-[8px]" /> : null}
+            {container ? <ContainerPreview container={container} discordTheme={discordTheme} /> : null}
           </div>
         </div>
       </div>

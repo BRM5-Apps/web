@@ -14,9 +14,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmbedPreview } from "@/components/discord-preview/embed-preview";
+import { type DiscordTheme } from "@/components/discord-preview/discord-theme";
 import { JsonImportDialog } from "@/components/templates/json-import";
 import { FieldEditor } from "@/components/templates/field-editor";
-import { Plus, Trash2, GripVertical, Variable, Upload, Download, Save } from "lucide-react";
+import { Plus, Trash2, GripVertical, Variable, Upload, Download, Save, Sun, Moon } from "lucide-react";
 import type { EmbedTemplate } from "@/types/template";
 
 // ── Variables ──
@@ -84,6 +85,7 @@ export function EmbedBuilder({ template, isSaving, onSave }: EmbedBuilderProps) 
 
   const form = useForm<EmbedFormData>({ resolver: zodResolver(embedSchema), defaultValues, mode: "onBlur" });
   const [jsonOpen, setJsonOpen] = useState(false);
+  const [discordTheme, setDiscordTheme] = useState<DiscordTheme>("dark");
 
   const values = form.watch();
 
@@ -169,7 +171,22 @@ export function EmbedBuilder({ template, isSaving, onSave }: EmbedBuilderProps) 
 
         {/* Right: Live Preview */}
         <div className="rounded-md border p-4">
-          <div className="mb-3 text-sm font-medium text-muted-foreground">Live Preview</div>
+          <div className="mb-3 flex items-center justify-between">
+            <div className="text-sm font-medium text-muted-foreground">Live Preview</div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setDiscordTheme((prev) => (prev === "dark" ? "light" : "dark"))}
+              aria-label="Toggle Discord theme"
+            >
+              {discordTheme === "dark" ? (
+                <><Sun className="mr-1.5 h-4 w-4" /> Light</>
+              ) : (
+                <><Moon className="mr-1.5 h-4 w-4" /> Dark</>
+              )}
+            </Button>
+          </div>
           <div className="flex items-start gap-6">
             <div className="hidden h-10 w-10 shrink-0 rounded-full bg-[#34363c] sm:block" />
             <div className="min-w-0 flex-1">
@@ -184,6 +201,7 @@ export function EmbedBuilder({ template, isSaving, onSave }: EmbedBuilderProps) 
                 thumbnail={values.thumbnailUrl ? { url: values.thumbnailUrl } : undefined}
                 author={values.authorName ? { name: values.authorName, iconUrl: values.authorIconUrl || undefined, url: values.authorUrl || undefined } : undefined}
                 timestamp={values.timestamp ? new Date() : undefined}
+                discordTheme={discordTheme}
               />
             </div>
           </div>

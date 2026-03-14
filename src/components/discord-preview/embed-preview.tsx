@@ -1,5 +1,6 @@
 import { format } from "date-fns";
 import { DiscordMarkdown } from "@/components/discord-preview/discord-markdown";
+import { discordThemes, type DiscordTheme } from "@/components/discord-preview/discord-theme";
 import { cn } from "@/lib/utils";
 
 interface EmbedField {
@@ -38,6 +39,7 @@ export interface EmbedData {
 
 interface EmbedPreviewProps extends EmbedData {
   className?: string;
+  discordTheme?: DiscordTheme;
   // Backward-compatible props
   imageUrl?: string;
   thumbnailUrl?: string;
@@ -79,6 +81,7 @@ export function EmbedPreview({
   author,
   timestamp,
   className,
+  discordTheme = "dark",
   imageUrl,
   thumbnailUrl,
   footerText,
@@ -87,6 +90,7 @@ export function EmbedPreview({
   authorIconUrl,
   authorUrl,
 }: EmbedPreviewProps) {
+  const t = discordThemes[discordTheme];
   const leftColor = resolveColor(color);
   const resolvedAuthor = author ?? (authorName ? { name: authorName, iconUrl: authorIconUrl, url: authorUrl } : undefined);
   const resolvedFooter = footer ?? (footerText ? { text: footerText, iconUrl: footerIconUrl } : undefined);
@@ -97,10 +101,11 @@ export function EmbedPreview({
   return (
     <div
       className={cn(
-        "w-full max-w-[520px] overflow-hidden rounded-[4px] border border-[#202225] bg-[#2b2d31]",
+        "w-full max-w-[520px] overflow-hidden rounded-[4px]",
         "font-['gg_sans','Whitney','Helvetica Neue',Helvetica,Arial,sans-serif]",
         className
       )}
+      style={{ backgroundColor: t.embedBg, borderColor: t.embedBorder, borderWidth: "1px", borderStyle: "solid" }}
     >
       <div className="flex">
         <div className="w-[4px] shrink-0" style={{ backgroundColor: leftColor }} />
@@ -108,7 +113,7 @@ export function EmbedPreview({
           <div className={cn("grid gap-[8px]", resolvedThumbnail ? "grid-cols-[1fr_80px]" : "grid-cols-1")}>
             <div className="min-w-0">
               {resolvedAuthor ? (
-                <div className="mb-[8px] flex items-center gap-[8px] text-[12px] leading-[16px] text-[#ffffff]">
+                <div className="mb-[8px] flex items-center gap-[8px] text-[12px] leading-[16px]" style={{ color: t.textPrimary }}>
                   {resolvedAuthor.iconUrl ? (
                     <img src={resolvedAuthor.iconUrl} alt="" className="h-[20px] w-[20px] rounded-full object-cover" />
                   ) : null}
@@ -125,23 +130,29 @@ export function EmbedPreview({
               {title ? (
                 <div className="mb-[8px] text-[16px] font-semibold leading-[1.25]">
                   {url ? (
-                    <a href={url} target="_blank" rel="noreferrer" className="text-[#00A8FC] hover:underline">
+                    <a href={url} target="_blank" rel="noreferrer" className="hover:underline" style={{ color: t.textLink }}>
                       {title}
                     </a>
                   ) : (
-                    <span className="text-[#f2f3f5]">{title}</span>
+                    <span style={{ color: t.textPrimary }}>{title}</span>
                   )}
                 </div>
               ) : null}
 
-              {description ? <DiscordMarkdown content={description} className="mb-[8px]" /> : null}
+              {description ? (
+                <div style={{ color: t.textSecondary }}>
+                  <DiscordMarkdown content={description} className="mb-[8px]" />
+                </div>
+              ) : null}
 
               {fields.length > 0 ? (
                 <div className="grid grid-cols-3 gap-x-[8px] gap-y-[8px]">
                   {fields.map((field, index) => (
                     <div key={`${field.name}-${index}`} className={cn("min-w-0", field.inline ? "col-span-1" : "col-span-3")}>
-                      <div className="mb-[2px] text-[12px] font-semibold leading-[16px] text-[#f2f3f5]">{field.name}</div>
-                      <DiscordMarkdown content={field.value} className="text-[12px] leading-[16px]" />
+                      <div className="mb-[2px] text-[12px] font-semibold leading-[16px]" style={{ color: t.textPrimary }}>{field.name}</div>
+                      <div style={{ color: t.textSecondary }}>
+                        <DiscordMarkdown content={field.value} className="text-[12px] leading-[16px]" />
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -162,7 +173,7 @@ export function EmbedPreview({
           ) : null}
 
           {resolvedFooter || formattedTimestamp ? (
-            <div className="mt-[12px] flex items-center gap-[8px] text-[12px] leading-[16px] text-[#b5bac1]">
+            <div className="mt-[12px] flex items-center gap-[8px] text-[12px] leading-[16px]" style={{ color: t.textSecondary }}>
               {resolvedFooter?.iconUrl ? (
                 <img src={resolvedFooter.iconUrl} alt="" className="h-[20px] w-[20px] rounded-full object-cover" />
               ) : null}
