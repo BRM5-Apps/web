@@ -2,17 +2,16 @@
 
 import { useRouter } from "next/navigation";
 import { Plus, AlertCircle } from "lucide-react";
-import { useFactions } from "@/hooks/use-faction";
+import { useAdminGuildsWithFactions, type GuildWithFactionStatus } from "@/hooks/use-admin-guilds";
 import { useFactionStore } from "@/stores/faction-store";
 import { useAuth } from "@/providers/auth-provider";
 import { cn } from "@/lib/utils";
-import type { Faction } from "@/types/faction";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface ServerCardProps {
-  faction: Faction;
-  onSelect: (faction: Faction) => void;
+  guild: GuildWithFactionStatus;
+  onSelect: (guild: GuildWithFactionStatus) => void;
 }
 
 // ─── Top bar ──────────────────────────────────────────────────────────────────
@@ -51,10 +50,44 @@ function TopBar() {
 
 // ─── Server card ──────────────────────────────────────────────────────────────
 
-function ServerCard({ faction, onSelect }: ServerCardProps) {
+const BOT_INSTALL_URL = process.env.NEXT_PUBLIC_BOT_INSTALL_URL ?? "#";
+
+function ServerCard({ guild, onSelect }: ServerCardProps) {
+  const iconUrl = guild.icon
+    ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png?size=128`
+    : null;
+
+  if (!guild.hasBot) {
+    return (
+      <a
+        href={`${BOT_INSTALL_URL}${BOT_INSTALL_URL.includes("?") ? "&" : "?"}guild_id=${guild.id}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={cn(
+          "flex flex-col items-start gap-3 rounded-lg border border-border bg-card p-4 text-left",
+          "opacity-50 transition-opacity duration-150 hover:opacity-70"
+        )}
+      >
+        <div className="flex items-center gap-3">
+          {iconUrl ? (
+            <img src={iconUrl} alt={guild.name} className="h-12 w-12 rounded-lg object-cover flex-shrink-0" />
+          ) : (
+            <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-muted text-lg font-bold text-foreground">
+              {guild.name.charAt(0).toUpperCase()}
+            </div>
+          )}
+          <div className="min-w-0">
+            <p className="truncate text-[13px] font-semibold text-foreground">{guild.name}</p>
+            <p className="text-xs text-muted-foreground">Add Bot</p>
+          </div>
+        </div>
+      </a>
+    );
+  }
+
   return (
     <button
-      onClick={() => onSelect(faction)}
+      onClick={() => onSelect(guild)}
       className={cn(
         "flex flex-col items-start gap-3 rounded-lg border border-border bg-card p-4 text-left",
         "transition-all duration-150",
@@ -62,23 +95,17 @@ function ServerCard({ faction, onSelect }: ServerCardProps) {
       )}
     >
       <div className="flex items-center gap-3">
-        {faction.iconUrl ? (
-          <img
-            src={faction.iconUrl}
-            alt={faction.name}
-            className="h-12 w-12 rounded-lg object-cover flex-shrink-0"
-          />
+        {iconUrl ? (
+          <img src={iconUrl} alt={guild.name} className="h-12 w-12 rounded-lg object-cover flex-shrink-0" />
         ) : (
           <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-muted text-lg font-bold text-foreground">
-            {faction.name.charAt(0).toUpperCase()}
+            {guild.name.charAt(0).toUpperCase()}
           </div>
         )}
         <div className="min-w-0">
-          <p className="truncate text-[13px] font-semibold text-foreground">
-            {faction.name}
-          </p>
+          <p className="truncate text-[13px] font-semibold text-foreground">{guild.name}</p>
           <p className="text-xs text-muted-foreground capitalize">
-            {faction.subscriptionTier}
+            {guild.faction?.subscriptionTier ?? "Free"}
           </p>
         </div>
       </div>
@@ -89,11 +116,9 @@ function ServerCard({ faction, onSelect }: ServerCardProps) {
 // ─── Add server card ──────────────────────────────────────────────────────────
 
 function AddServerCard() {
-  const installUrl = process.env.NEXT_PUBLIC_BOT_INSTALL_URL ?? "#";
-
   return (
     <a
-      href={installUrl}
+      href={BOT_INSTALL_URL}
       target="_blank"
       rel="noopener noreferrer"
       className={cn(
@@ -113,12 +138,13 @@ function AddServerCard() {
 
 export default function SelectServerPage() {
   const router = useRouter();
-  const { data: factions, isLoading, isError, refetch } = useFactions();
+  const { data: guilds, isLoading, isError } = useAdminGuildsWithFactions();
   const { setActiveFaction } = useFactionStore();
 
-  function handleSelect(faction: Faction) {
-    setActiveFaction(faction.id, faction);
-    router.push(`/faction/${faction.id}`);
+  function handleSelect(guild: GuildWithFactionStatus) {
+    if (!guild.faction) return;
+    setActiveFaction(guild.faction.id, guild.faction);
+    router.push(`/faction/${guild.faction.id}`);
   }
 
   return (
@@ -135,11 +161,8 @@ export default function SelectServerPage() {
           <div className="mt-8">
             {isLoading && (
               <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="h-24 animate-pulse rounded-lg border border-border bg-card"
-                  />
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="h-24 animate-pulse rounded-lg border border-border bg-card" />
                 ))}
               </div>
             )}
@@ -150,30 +173,20 @@ export default function SelectServerPage() {
                 <p className="text-[13px] text-muted-foreground">
                   Could not load your servers.
                 </p>
-                <button
-                  onClick={() => refetch()}
-                  className="rounded-md border border-border px-4 py-2 text-[13px] font-medium text-foreground transition-colors hover:bg-white/5"
-                >
-                  Try again
-                </button>
               </div>
             )}
 
             {!isLoading && !isError && (
               <>
-                {factions && factions.length === 0 && (
+                {guilds && guilds.length === 0 && (
                   <p className="mb-6 text-[13px] text-muted-foreground">
-                    No servers found. Add the BRM5 bot to your Discord server to get started.
+                    No eligible servers found. You need Manage Server permission to use FactionHub.
                   </p>
                 )}
 
                 <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-                  {factions?.map((faction) => (
-                    <ServerCard
-                      key={faction.id}
-                      faction={faction}
-                      onSelect={handleSelect}
-                    />
+                  {guilds?.map((guild) => (
+                    <ServerCard key={guild.id} guild={guild} onSelect={handleSelect} />
                   ))}
                   <AddServerCard />
                 </div>

@@ -1,8 +1,9 @@
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
 
-// Discord's ADMINISTRATOR permission bit
+// Discord permission bits
 const ADMINISTRATOR = BigInt(0x8);
+const MANAGE_GUILD = BigInt(0x20);
 
 export interface DiscordGuild {
   id: string;
@@ -39,10 +40,12 @@ export async function GET(request: NextRequest) {
 
   const guilds: DiscordGuild[] = await res.json();
 
-  // Filter to guilds where the user has the ADMINISTRATOR permission (bit 0x8)
-  const adminGuilds = guilds.filter(
-    (g) => (BigInt(g.permissions) & ADMINISTRATOR) === ADMINISTRATOR
-  );
+  // Filter to guilds where the user is owner, has ADMINISTRATOR, or has MANAGE_GUILD
+  const adminGuilds = guilds.filter((g) => {
+    if (g.owner) return true;
+    const perms = BigInt(g.permissions);
+    return (perms & ADMINISTRATOR) === ADMINISTRATOR || (perms & MANAGE_GUILD) === MANAGE_GUILD;
+  });
 
   return NextResponse.json(adminGuilds);
 }
