@@ -1,7 +1,6 @@
 "use client";
 
 import { Search, Bell } from "lucide-react";
-import { ThemeToggle } from "./theme-toggle";
 import { UserMenu } from "./user-menu";
 import { Breadcrumbs } from "./breadcrumbs";
 import { Button } from "@/components/ui/button";
@@ -45,8 +44,7 @@ export function Header() {
           title={`WebSocket: ${status}`}
           className={`h-2 w-2 rounded-full ${statusDot[status]}`}
         />
-        <ThemeToggle />
-        <UserMenu />
+<UserMenu />
       </div>
     </header>
   );
