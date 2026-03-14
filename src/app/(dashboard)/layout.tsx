@@ -5,12 +5,9 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/providers/auth-provider";
 import { useFactions } from "@/hooks/use-faction";
 import { useFactionStore } from "@/stores/faction-store";
-import { useSidebarStore } from "@/stores/sidebar-store";
 import { usePermissions } from "@/hooks/use-permissions";
 import { Sidebar } from "@/components/layout/sidebar";
-import { Header } from "@/components/layout/header";
 import { Loading } from "@/components/shared/loading";
-import { cn } from "@/lib/utils";
 import { WebSocketProvider } from "@/providers/websocket-provider";
 
 export default function DashboardLayout({
@@ -21,8 +18,7 @@ export default function DashboardLayout({
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { data: factions, isLoading: factionsLoading } = useFactions();
-  const { activeFactionId, setActiveFaction, setFactionData, setUserPermissions } = useFactionStore();
-  const { isCollapsed } = useSidebarStore();
+  const { activeFactionId, setFactionData, setUserPermissions } = useFactionStore();
 
   // Load permissions when faction changes
   const { permissions } = usePermissions(activeFactionId ?? "");
@@ -62,19 +58,11 @@ export default function DashboardLayout({
   if (!isAuthenticated) return null;
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar />
-      <WebSocketProvider>
-        <div
-          className={cn(
-            "flex flex-1 flex-col transition-[margin] duration-300",
-            isCollapsed ? "md:ml-[var(--sidebar-collapsed-width)]" : "md:ml-[var(--sidebar-width)]"
-          )}
-        >
-          <Header />
-          <main className="flex-1 overflow-y-auto p-6">{children}</main>
-        </div>
-      </WebSocketProvider>
-    </div>
+    <WebSocketProvider>
+      <div className="flex h-screen overflow-hidden">
+        <Sidebar />
+        <main className="flex-1 overflow-y-auto pl-14 p-6">{children}</main>
+      </div>
+    </WebSocketProvider>
   );
 }
