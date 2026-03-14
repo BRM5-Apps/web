@@ -13,7 +13,7 @@ export default function DashboardPage() {
     if (activeFactionId) {
       router.replace(`/faction/${activeFactionId}`);
     } else {
-      router.replace("/faction");
+      router.replace("/select-server");
     }
   }, [activeFactionId, router]);
 
