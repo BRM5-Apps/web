@@ -11,7 +11,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { Loading } from "@/components/shared/loading";
 import { cn } from "@/lib/utils";
-import { Shield } from "lucide-react";
+import { WebSocketProvider } from "@/providers/websocket-provider";
 
 export default function DashboardLayout({
   children,
@@ -51,7 +51,7 @@ export default function DashboardLayout({
     }
   }, [authLoading, isAuthenticated, router]);
 
-  if (authLoading || factionsLoading) {
+  if (authLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loading />
@@ -61,41 +61,20 @@ export default function DashboardLayout({
 
   if (!isAuthenticated) return null;
 
-  // No factions — show empty state
-  if (factions && factions.length === 0) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-center space-y-4 max-w-md">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-            <Shield className="h-8 w-8 text-primary" />
-          </div>
-          <h2 className="text-2xl font-bold">No Factions Yet</h2>
-          <p className="text-muted-foreground">
-            You are not a member of any faction. Join a faction through Discord or create one to get started.
-          </p>
-          <button
-            onClick={() => router.push("/dashboard/create-faction")}
-            className="inline-flex items-center justify-center rounded-md bg-primary px-6 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-          >
-            Create a Faction
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar />
-      <div
-        className={cn(
-          "flex flex-1 flex-col transition-[margin] duration-300",
-          isCollapsed ? "md:ml-[var(--sidebar-collapsed-width)]" : "md:ml-[var(--sidebar-width)]"
-        )}
-      >
-        <Header />
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
-      </div>
+      <WebSocketProvider>
+        <div
+          className={cn(
+            "flex flex-1 flex-col transition-[margin] duration-300",
+            isCollapsed ? "md:ml-[var(--sidebar-collapsed-width)]" : "md:ml-[var(--sidebar-width)]"
+          )}
+        >
+          <Header />
+          <main className="flex-1 overflow-y-auto p-6">{children}</main>
+        </div>
+      </WebSocketProvider>
     </div>
   );
 }
