@@ -390,31 +390,60 @@ export function PreviewPanel({ items }: PreviewPanelProps) {
       </div>
 
       {/* Preview area */}
-      <ScrollArea
-        className="flex-1"
-        style={{ maxHeight: "calc(100vh - 240px)" }}
-      >
+      <div className="flex-1">
         <div
           className="min-h-[200px] p-4"
           style={{ backgroundColor: tokens.messageBg }}
         >
-          {items.length === 0 ? (
-            <div
-              className="flex flex-col items-center gap-2 py-12 text-center text-sm"
-              style={{ color: tokens.textMuted }}
-            >
-              <span className="text-3xl opacity-20">⬜</span>
-              <p>Your component preview will appear here</p>
+          {/* Discord message chrome */}
+          <div className="flex gap-3">
+            {/* Avatar */}
+            <div className="flex-shrink-0">
+              <div
+                className="flex h-10 w-10 items-center justify-center rounded-full text-white text-sm font-bold select-none"
+                style={{ backgroundColor: "#5865F2" }}
+              >
+                B
+              </div>
             </div>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {items.map((item) => (
-                <PreviewItem key={item.id} item={item} theme={theme} />
-              ))}
+
+            {/* Message body */}
+            <div className="flex-1 min-w-0">
+              {/* Header row */}
+              <div className="flex items-baseline gap-2 mb-1">
+                <span className="text-sm font-semibold" style={{ color: tokens.botName }}>
+                  BRM5 Bot
+                </span>
+                <span
+                  className="inline-flex items-center rounded px-1 py-0 text-[10px] font-semibold uppercase tracking-wide"
+                  style={{ backgroundColor: "#5865F2", color: "#fff" }}
+                >
+                  BOT
+                </span>
+                <span className="text-xs" style={{ color: tokens.timestamp }}>
+                  Today at {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                </span>
+              </div>
+
+              {/* Component content */}
+              {items.length === 0 ? (
+                <div
+                  className="flex flex-col items-start gap-1 text-sm"
+                  style={{ color: tokens.textMuted }}
+                >
+                  <p className="italic">Your component preview will appear here</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {items.map((item) => (
+                    <PreviewItem key={item.id} item={item} theme={theme} />
+                  ))}
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }

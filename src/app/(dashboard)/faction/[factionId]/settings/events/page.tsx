@@ -8,7 +8,7 @@ export default function EventSettingsPage() {
   useParams<{ factionId: string }>();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-2xl">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Event Settings</h1>
         <p className="text-muted-foreground">Configure event types, defaults, and scheduling rules.</p>

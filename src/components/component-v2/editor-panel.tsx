@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ButtonEditDialog } from "./button-edit-dialog";
+import { LinkButtonEditDialog } from "./link-button-edit-dialog";
 import { SelectMenuEditDialog } from "./select-menu-edit-dialog";
 import type {
   C2TopLevelItem,
@@ -177,7 +178,7 @@ function topLevelTypeLabel(type: C2TopLevelItem["type"]): string {
 interface TextChildEditorProps {
   child: C2Text;
   onChange: (updated: C2Text) => void;
-  onAddAccessory?: (type: "link_button" | "thumbnail") => void;
+  onAddAccessory?: (type: "button" | "link_button" | "thumbnail") => void;
 }
 
 function TextChildEditor({ child, onChange, onAddAccessory }: TextChildEditorProps) {
@@ -215,6 +216,12 @@ function TextChildEditor({ child, onChange, onAddAccessory }: TextChildEditorPro
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="bg-[#2b2d31] border-[#3f4147] text-white">
+            <DropdownMenuItem
+              onClick={() => onAddAccessory("button")}
+              className="text-xs cursor-pointer"
+            >
+              Button
+            </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => onAddAccessory("link_button")}
               className="text-xs cursor-pointer"
@@ -665,7 +672,7 @@ interface SectionEditorProps {
   section: C2Section;
   index: number;
   total: number;
-  onChange: (updated: C2Section) => void;
+  onChange: (updated: C2Section | C2Text) => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
   onDuplicate: () => void;
@@ -683,6 +690,8 @@ function SectionEditor({
   onDelete,
 }: SectionEditorProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const [linkBtnDialogOpen, setLinkBtnDialogOpen] = useState(false);
+  const [btnAccessoryDialogOpen, setBtnAccessoryDialogOpen] = useState(false);
 
   function updateContent(contentIdx: number, value: string) {
     onChange({
@@ -703,7 +712,9 @@ function SectionEditor({
   }
 
   function removeAccessory() {
-    onChange({ ...section, accessory: undefined });
+    // Revert the section back to a plain text block with the combined content
+    const combinedContent = section.contents.map((c) => c.content).join("\n\n");
+    onChange({ id: section.id, type: "text", content: combinedContent });
   }
 
   function updateThumbnailUrl(url: string) {
@@ -712,6 +723,10 @@ function SectionEditor({
   }
 
   function updateLinkButton(updated: C2LinkButton) {
+    onChange({ ...section, accessory: updated });
+  }
+
+  function updateButtonAccessory(updated: C2Button) {
     onChange({ ...section, accessory: updated });
   }
 
@@ -781,8 +796,8 @@ function SectionEditor({
       {/* Body */}
       {!collapsed && (
         <div className="p-3">
-          <div className="grid grid-cols-2 gap-3">
-            {/* Left: Content blocks */}
+          <div className="flex flex-col gap-3">
+            {/* Content blocks */}
             <div className="space-y-2">
               <span className="text-xs font-medium text-gray-400">Content</span>
               {section.contents.map((c, contentIdx) => (
@@ -835,7 +850,7 @@ function SectionEditor({
               ))}
             </div>
 
-            {/* Right: Accessory */}
+            {/* Accessory */}
             {section.accessory ? (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -853,38 +868,56 @@ function SectionEditor({
                   </button>
                 </div>
 
+                {section.accessory.type === "button" && (
+                  <>
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setBtnAccessoryDialogOpen(true)}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setBtnAccessoryDialogOpen(true); }}
+                      className="flex items-center gap-2 rounded bg-[#1e1f22] px-2 py-1.5 cursor-pointer hover:bg-[#3f4147] group"
+                    >
+                      <span className="h-3 w-3 rounded-sm bg-[#5865F2] flex-shrink-0" />
+                      <span className="flex-1 text-sm text-white truncate">
+                        {section.accessory.label || "Button"}
+                      </span>
+                      <span className="text-xs text-gray-500 capitalize">{section.accessory.style}</span>
+                    </div>
+                    <ButtonEditDialog
+                      open={btnAccessoryDialogOpen}
+                      onOpenChange={setBtnAccessoryDialogOpen}
+                      button={section.accessory as C2Button}
+                      onChange={updateButtonAccessory}
+                    />
+                  </>
+                )}
+
                 {section.accessory.type === "link_button" && (
-                  <div className="rounded border border-[#5865F2]/40 bg-[#5865F2]/10 p-2 space-y-1.5">
-                    <div className="flex items-center gap-2 text-sm text-[#5865F2]">
-                      <ExternalLink className="h-4 w-4 flex-shrink-0" />
-                      <span className="font-medium truncate">
+                  <>
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setLinkBtnDialogOpen(true)}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setLinkBtnDialogOpen(true); }}
+                      className="flex items-center gap-2 rounded bg-[#1e1f22] px-2 py-1.5 cursor-pointer hover:bg-[#3f4147] group"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5 text-[#5865F2] flex-shrink-0" />
+                      <span className="flex-1 text-sm text-white truncate">
                         {section.accessory.label || "Link Button"}
                       </span>
+                      {section.accessory.url && (
+                        <span className="text-xs text-gray-500 truncate max-w-[120px]">
+                          {section.accessory.url}
+                        </span>
+                      )}
                     </div>
-                    <input
-                      value={section.accessory.label}
-                      maxLength={80}
-                      onChange={(e) =>
-                        updateLinkButton({
-                          ...(section.accessory as C2LinkButton),
-                          label: e.target.value,
-                        })
-                      }
-                      className="w-full rounded bg-[#1e1f22] border border-[#3f4147] px-2 py-1 text-xs text-white outline-none"
-                      placeholder="Label"
+                    <LinkButtonEditDialog
+                      open={linkBtnDialogOpen}
+                      onOpenChange={setLinkBtnDialogOpen}
+                      btn={section.accessory as C2LinkButton}
+                      onChange={updateLinkButton}
                     />
-                    <input
-                      value={section.accessory.url}
-                      onChange={(e) =>
-                        updateLinkButton({
-                          ...(section.accessory as C2LinkButton),
-                          url: e.target.value,
-                        })
-                      }
-                      className="w-full rounded bg-[#1e1f22] border border-[#3f4147] px-2 py-1 text-xs text-white outline-none"
-                      placeholder="https://example.com"
-                    />
-                  </div>
+                  </>
                 )}
 
                 {section.accessory.type === "thumbnail" && (
@@ -1035,7 +1068,11 @@ function ChildItemEditor({
                 label: `Section ${index + 1}`,
                 contents: [{ id: uid(), content: child.content }],
                 accessory:
-                  accessoryType === "link_button" ? makeLinkButton() : makeThumbnail(),
+                  accessoryType === "button"
+                    ? makeButton()
+                    : accessoryType === "link_button"
+                    ? makeLinkButton()
+                    : makeThumbnail(),
               };
               onChange(section);
             }}
@@ -1362,7 +1399,11 @@ function NonContainerTopLevelEditor({
             label: "Section",
             contents: [{ id: uid(), content: item.content }],
             accessory:
-              accessoryType === "link_button" ? makeLinkButton() : makeThumbnail(),
+              accessoryType === "button"
+                ? makeButton()
+                : accessoryType === "link_button"
+                ? makeLinkButton()
+                : makeThumbnail(),
           };
           onChange(section);
         }}
@@ -1631,7 +1672,7 @@ export function EditorPanel({ items, onChange, factionId }: EditorPanelProps) {
   }
 
   return (
-    <ScrollArea className="h-full" style={{ maxHeight: "calc(100vh - 200px)" }}>
+    <div>
       <div className="space-y-3 p-4">
         {items.length === 0 && (
           <div className="flex flex-col items-center gap-2 py-10 text-center text-gray-500">
@@ -1661,6 +1702,6 @@ export function EditorPanel({ items, onChange, factionId }: EditorPanelProps) {
           sectionCount={items.filter((i) => i.type === "section").length}
         />
       </div>
-    </ScrollArea>
+    </div>
   );
 }

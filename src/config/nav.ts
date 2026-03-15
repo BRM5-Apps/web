@@ -8,8 +8,6 @@ import {
   Code,
   MessageSquare,
   Gavel,
-  Ban,
-  Lock,
   BarChart3,
   Trophy,
   Settings,
@@ -18,6 +16,9 @@ import {
   ShieldCheck,
   ListChecks,
   CreditCard,
+  MessageSquarePlus,
+  LayoutTemplate,
+  Clock,
   type LucideIcon,
 } from "lucide-react";
 
@@ -84,14 +85,15 @@ export const factionNavConfig: NavSection[] = [
           { href: "/templates/text", icon: FileText, label: "Text", permission: "templates.view" },
         ],
       },
+      { href: "/message-builder", icon: MessageSquarePlus, label: "Message Builder", permission: "templates.view" },
+      { href: "/modal-builder", icon: LayoutTemplate, label: "Modal Builder", permission: "templates.view" },
+      { href: "/schedule", icon: Clock, label: "Schedule", permission: "templates.view" },
     ],
   },
   {
     label: "Moderation",
     items: [
-      { href: "/moderation/punishments", icon: Gavel, label: "Punishments", permission: "moderation.view" },
-      { href: "/moderation/blacklist", icon: Ban, label: "Blacklist", permission: "moderation.view" },
-      { href: "/moderation/promo-locks", icon: Lock, label: "Promo Locks", permission: "moderation.view" },
+      { href: "/moderation", icon: Gavel, label: "Moderation", permission: "moderation.view" },
     ],
   },
   {

@@ -62,7 +62,7 @@ export default function TemplatesOverviewPage() {
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {embeds.data?.map((tpl) => (
                 <Card key={tpl.id} className="group relative overflow-hidden p-4">
-                  <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                  <div className="absolute right-2 top-2 z-10 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                     <PermissionGate permission={PERMISSION_KEYS.TEMPLATES_MANAGE}>
                       <Button variant="ghost" size="icon" asChild>
                         <Link href={`./embeds?id=${tpl.id}`} aria-label="Edit template">
@@ -81,7 +81,7 @@ export default function TemplatesOverviewPage() {
                       </Button>
                     </PermissionGate>
                   </div>
-                  <div className="mb-3 flex items-center justify-between">
+                  <div className="mb-3 flex items-center justify-between pr-16">
                     <div className="min-w-0">
                       <div className="truncate font-medium">{tpl.name}</div>
                       <div className="truncate text-xs text-muted-foreground">Created {formatDate(tpl.createdAt)}</div>
@@ -113,7 +113,7 @@ export default function TemplatesOverviewPage() {
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {containers.data?.map((tpl) => (
                 <Card key={tpl.id} className="group relative overflow-hidden p-4">
-                  <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                  <div className="absolute right-2 top-2 z-10 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                     <PermissionGate permission={PERMISSION_KEYS.TEMPLATES_MANAGE}>
                       <Button variant="ghost" size="icon" aria-label="Edit template" asChild>
                         <Link href={`./containers?id=${tpl.id}`}>
@@ -132,14 +132,14 @@ export default function TemplatesOverviewPage() {
                       </Button>
                     </PermissionGate>
                   </div>
-                  <div className="mb-3 flex items-center justify-between">
+                  <div className="mb-3 flex items-center justify-between pr-16">
                     <div className="min-w-0">
                       <div className="truncate font-medium">{tpl.name}</div>
                       <div className="truncate text-xs text-muted-foreground">Created {formatDate(tpl.createdAt)}</div>
                     </div>
                     {false && <Badge>Default</Badge>}
                   </div>
-                  <ContainerPreview components={tpl.components as any} accentColor={tpl.accentColor} />
+                  <ContainerPreview components={tpl.template_data?.components as any} />
                 </Card>
               ))}
             </div>
@@ -153,7 +153,7 @@ export default function TemplatesOverviewPage() {
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {texts.data?.map((tpl) => (
                 <Card key={tpl.id} className="group relative overflow-hidden p-4">
-                  <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                  <div className="absolute right-2 top-2 z-10 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                     <PermissionGate permission={PERMISSION_KEYS.TEMPLATES_MANAGE}>
                       <Button variant="ghost" size="icon" asChild aria-label="Edit template">
                         <Link href={`./text?id=${tpl.id}`}>
@@ -172,7 +172,7 @@ export default function TemplatesOverviewPage() {
                       </Button>
                     </PermissionGate>
                   </div>
-                  <div className="mb-3 flex items-center justify-between">
+                  <div className="mb-3 flex items-center justify-between pr-16">
                     <div className="min-w-0">
                       <div className="truncate font-medium">{tpl.name}</div>
                       <div className="truncate text-xs text-muted-foreground">Created {formatDate(tpl.createdAt)}</div>

@@ -16,6 +16,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ChevronUp, ChevronDown, Copy, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAllTemplates } from "@/hooks/use-templates";
@@ -177,30 +185,32 @@ interface SendOutputFieldsProps {
 function SendOutputFields({ action, onChange, factionId }: SendOutputFieldsProps) {
   const templates = useAllTemplates(factionId ?? "");
 
-  const templateOptions: { id: string; label: string; kind: SendOutputTemplateType }[] = [
-    ...templates.texts.map((t) => ({ id: t.id, label: t.name, kind: "text" as const })),
-    ...templates.embeds.map((t) => ({ id: t.id, label: t.name, kind: "embed" as const })),
-    ...templates.containers.map((t) => ({ id: t.id, label: t.name, kind: "container" as const })),
-    ...templates.modals.map((t) => ({ id: t.id, label: t.name, kind: "modal" as const })),
-  ];
+  // Groups: only show modal group when outputKind === "modal", else show text/embed/container
+  const groups: { kind: SendOutputTemplateType; label: string; items: { id: string; name: string }[] }[] =
+    action.outputKind === "modal"
+      ? [{ kind: "modal", label: "Modals", items: templates.modals }]
+      : [
+          { kind: "text", label: "Text Templates", items: templates.texts },
+          { kind: "embed", label: "Embed Templates", items: templates.embeds },
+          { kind: "container", label: "Container Templates", items: templates.containers },
+        ];
 
-  // Filter by output kind: modals only for "modal", rest for "message"
-  const filtered = action.outputKind === "modal"
-    ? templateOptions.filter((t) => t.kind === "modal")
-    : templateOptions.filter((t) => t.kind !== "modal");
+  const allFiltered = groups.flatMap((g) => g.items.map((t) => ({ ...t, kind: g.kind })));
 
   function handleKindChange(kind: SendOutputKind) {
     onChange({ ...action, outputKind: kind, templateId: undefined, templateType: undefined });
   }
 
   function handleTemplateChange(id: string) {
-    const found = filtered.find((t) => t.id === id);
+    const found = allFiltered.find((t) => t.id === id);
     onChange({
       ...action,
       templateId: id || undefined,
       templateType: found?.kind ?? undefined,
     });
   }
+
+  const hasTemplates = allFiltered.length > 0;
 
   return (
     <div className="space-y-2">
@@ -224,32 +234,41 @@ function SendOutputFields({ action, onChange, factionId }: SendOutputFieldsProps
       </div>
 
       {/* Template selector */}
-      {factionId ? (
-        <select
-          value={action.templateId ?? ""}
-          onChange={(e) => handleTemplateChange(e.target.value)}
-          className="w-full rounded bg-[#1e1f22] border border-[#3f4147] px-2 py-1.5 text-sm text-gray-300 outline-none"
-          disabled={templates.isLoading}
-        >
-          <option value="">
-            {templates.isLoading ? "Loading templates…" : "Select template…"}
-          </option>
-          {filtered.map((t) => (
-            <option key={t.id} value={t.id}>
-              [{t.kind}] {t.label}
-            </option>
-          ))}
-        </select>
-      ) : (
-        <Input
-          value={action.templateId ?? ""}
-          onChange={(e) =>
-            onChange({ ...action, templateId: e.target.value || undefined })
-          }
-          placeholder="Template ID…"
-          className="bg-[#1e1f22] border-[#3f4147] text-white"
-        />
-      )}
+      <Select
+        value={action.templateId ?? ""}
+        onValueChange={handleTemplateChange}
+        disabled={templates.isLoading || !hasTemplates}
+      >
+        <SelectTrigger className="w-full bg-[#1e1f22] border-[#3f4147] text-gray-300 focus:ring-[#5865F2] focus:ring-offset-0">
+          <SelectValue
+            placeholder={
+              templates.isLoading
+                ? "Loading templates…"
+                : !hasTemplates
+                ? `No ${action.outputKind === "modal" ? "modal" : "message"} templates saved yet`
+                : "Choose a template…"
+            }
+          />
+        </SelectTrigger>
+        <SelectContent className="bg-[#2b2d31] border-[#3f4147] text-white">
+          {groups.map((group) =>
+            group.items.length > 0 ? (
+              <SelectGroup key={group.kind}>
+                <div className="px-2 py-1 text-xs text-gray-400 font-medium">{group.label}</div>
+                {group.items.map((t) => (
+                  <SelectItem
+                    key={t.id}
+                    value={t.id}
+                    className="focus:bg-[#5865F2] focus:text-white cursor-pointer"
+                  >
+                    {t.name}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            ) : null
+          )}
+        </SelectContent>
+      </Select>
 
       {/* Hidden (ephemeral) — only relevant for messages */}
       {action.outputKind === "message" && (
@@ -738,7 +757,7 @@ export function FlowEditor({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-2xl bg-[#2b2d31] border-[#3f4147] text-white max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-white">Edit Flow</DialogTitle>
+          <DialogTitle className="text-white">Edit Actions</DialogTitle>
         </DialogHeader>
 
         {errors.length > 0 && (
@@ -753,7 +772,7 @@ export function FlowEditor({
         )}
 
         <div className="rounded border border-yellow-700/50 bg-yellow-900/20 p-2 text-xs text-yellow-200">
-          ℹ Flows have a maximum of 10 non-check/stop actions
+          ℹ Actions have a maximum of 10 non-check/stop actions
         </div>
 
         <div className="space-y-2">

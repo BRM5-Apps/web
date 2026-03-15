@@ -8,7 +8,7 @@ export default function FactionSettingsPage() {
   useParams<{ factionId: string }>();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-2xl">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Faction Settings</h1>
         <p className="text-muted-foreground">Configure general faction settings and preferences.</p>

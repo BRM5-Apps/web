@@ -1,17 +1,18 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { ChevronDown, Copy, Check, Play, RotateCcw } from "lucide-react";
 import { EditorPanel } from "./editor-panel";
 import { PreviewPanel } from "./preview-panel";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { toDiscordJSON, fromDiscordJSON } from "./discord-json-converter";
 import type { C2TopLevelItem } from "./types";
 
 export interface ComponentV2BuilderV2Props {
-  onSave?: (name: string, items: C2TopLevelItem[]) => void;
+  onSave?: (items: C2TopLevelItem[]) => void;
   isSaving?: boolean;
   submitRef?: React.MutableRefObject<(() => void) | null>;
   factionId?: string;
+  initialItems?: C2TopLevelItem[];
 }
 
 export function ComponentV2BuilderV2({
@@ -19,45 +20,81 @@ export function ComponentV2BuilderV2({
   isSaving: _isSaving,
   submitRef,
   factionId,
+  initialItems,
 }: ComponentV2BuilderV2Props) {
-  const [items, setItems] = useState<C2TopLevelItem[]>([]);
-  const [name, setName] = useState("");
+  const [items, setItems] = useState<C2TopLevelItem[]>(initialItems ?? []);
+  const [jsonExpanded, setJsonExpanded] = useState(false);
+  const [jsonText, setJsonText] = useState("");
+  const [isDirty, setIsDirty] = useState(false);
+  const [parseError, setParseError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const itemsRef = useRef(items);
   itemsRef.current = items;
-  const nameRef = useRef(name);
-  nameRef.current = name;
   const onSaveRef = useRef(onSave);
   onSaveRef.current = onSave;
 
   useEffect(() => {
     if (!submitRef) return;
-    submitRef.current = () => onSaveRef.current?.(nameRef.current, itemsRef.current);
-    return () => {
-      submitRef.current = null;
-    };
+    submitRef.current = () => onSaveRef.current?.(itemsRef.current);
+    return () => { submitRef.current = null; };
   }, [submitRef]);
+
+  // Sync items -> jsonText when not manually edited
+  useEffect(() => {
+    if (!isDirty) {
+      setJsonText(JSON.stringify(toDiscordJSON(items), null, 2));
+    }
+  }, [items, isDirty]);
+
+  const handleJsonChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setJsonText(e.target.value);
+    setIsDirty(true);
+    setParseError(null);
+  }, []);
+
+  const handleApply = useCallback(() => {
+    try {
+      const parsed = JSON.parse(jsonText);
+      const newItems = fromDiscordJSON(parsed);
+      setItems(newItems);
+      setIsDirty(false);
+      setParseError(null);
+    } catch (e) {
+      setParseError(e instanceof Error ? e.message : "Invalid JSON");
+    }
+  }, [jsonText]);
+
+  const handleReset = useCallback(() => {
+    setJsonText(JSON.stringify(toDiscordJSON(items), null, 2));
+    setIsDirty(false);
+    setParseError(null);
+  }, [items]);
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(jsonText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback for older browsers
+      const textarea = document.createElement("textarea");
+      textarea.value = jsonText;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }, [jsonText]);
 
   return (
     <div className="space-y-4">
-      {/* Template name */}
-      <div className="flex items-center gap-3">
-        <Label htmlFor="cv2-template-name" className="shrink-0 text-sm text-muted-foreground">
-          Template Name
-        </Label>
-        <Input
-          id="cv2-template-name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="e.g. Welcome Message"
-          className="max-w-xs"
-        />
-      </div>
-
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Left: Editor */}
         <div>
-          <div className="mb-2 flex items-center justify-between">
+          <div className="mb-2">
             <h2 className="text-sm font-semibold text-foreground">Components</h2>
           </div>
           <div className="rounded-lg border border-border bg-card overflow-hidden">
@@ -74,6 +111,83 @@ export function ComponentV2BuilderV2({
             <PreviewPanel items={items} />
           </div>
         </div>
+      </div>
+
+      {/* JSON Editor */}
+      <div className="rounded-lg border border-border overflow-hidden">
+        <div className="flex w-full items-center justify-between bg-card hover:bg-muted/50 transition-colors">
+          <button
+            type="button"
+            className="flex flex-1 items-center gap-2 px-4 py-3 text-left"
+            onClick={() => setJsonExpanded(!jsonExpanded)}
+          >
+            <span className="text-sm font-semibold text-foreground">JSON Editor</span>
+            {isDirty && (
+              <span className="inline-flex items-center rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-500">
+                Modified
+              </span>
+            )}
+          </button>
+          <div className="flex items-center gap-2 pr-3">
+            {jsonExpanded && (
+              <>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={handleCopy}
+                >
+                  {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                  {copied ? "Copied" : "Copy"}
+                </button>
+                {isDirty && (
+                  <>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary hover:bg-primary/20 transition-colors"
+                      onClick={handleApply}
+                    >
+                      <Play className="h-3.5 w-3.5" />
+                      Apply
+                    </button>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1.5 rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                      onClick={handleReset}
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                      Reset
+                    </button>
+                  </>
+                )}
+              </>
+            )}
+            <button
+              type="button"
+              className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+              onClick={() => setJsonExpanded(!jsonExpanded)}
+              aria-label={jsonExpanded ? "Collapse JSON editor" : "Expand JSON editor"}
+            >
+              <ChevronDown
+                className={`h-4 w-4 transition-transform ${jsonExpanded ? "rotate-180" : ""}`}
+              />
+            </button>
+          </div>
+        </div>
+
+        {jsonExpanded && (
+          <div className="border-t border-border bg-card p-4">
+            <textarea
+              className="w-full min-h-[320px] resize-y rounded-md border border-border bg-background p-3 font-mono text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              value={jsonText}
+              onChange={handleJsonChange}
+              placeholder="Paste Discord Component V2 JSON here..."
+              spellCheck={false}
+            />
+            {parseError && (
+              <p className="mt-2 text-sm text-destructive">{parseError}</p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

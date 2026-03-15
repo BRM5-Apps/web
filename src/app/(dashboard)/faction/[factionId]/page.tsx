@@ -21,6 +21,8 @@ import {
   CreditCard,
   MessageSquarePlus,
   LayoutTemplate,
+  BarChart3,
+  Clock,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -89,8 +91,22 @@ const featureCards: FeatureCardConfig[] = [
     title: "Moderation",
     description: "Manage punishments, blacklists, and promotion locks for your server.",
     icon: Gavel,
-    href: "/moderation/punishments",
+    href: "/moderation",
     accent: "text-red-500 bg-red-500/10",
+  },
+  {
+    title: "Scheduled Messages",
+    description: "Automate message delivery to Discord channels on a recurring schedule.",
+    icon: Clock,
+    href: "/schedule",
+    accent: "text-sky-500 bg-sky-500/10",
+  },
+  {
+    title: "Analytics",
+    description: "View faction stats, activity trends, and member leaderboard rankings.",
+    icon: BarChart3,
+    href: "/stats",
+    accent: "text-amber-500 bg-amber-500/10",
   },
   {
     title: "Settings",
@@ -249,7 +265,7 @@ export default function ServerOverviewPage() {
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 sm:gap-5">
         <FactionStatsRow factionId={factionId} />
         <StatCard label="Subscription" value={faction.subscriptionTier} isLoading={isLoading} />
       </div>
@@ -258,7 +274,7 @@ export default function ServerOverviewPage() {
       <QuickActions factionId={factionId} />
 
       {/* Feature grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-5">
         {featureCards.map((feature) => (
           <FeatureCard
             key={feature.href}

@@ -32,38 +32,38 @@ export function UserMenu() {
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56" align="end" forceMount>
+      <DropdownMenuContent className="w-56 bg-[#2B2D31] border-[#3F4147]" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{user.username}</p>
+            <p className="text-sm font-medium leading-none text-[#F1F1F2]">{user.username}</p>
             {activeFaction && (
-              <p className="text-xs leading-none text-muted-foreground">
+              <p className="text-xs leading-none text-[#949BA4]">
                 {activeFaction.name}
               </p>
             )}
           </div>
         </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
+        <DropdownMenuSeparator className="bg-[#3F4147]" />
+        <DropdownMenuItem asChild className="text-[#DBDEE1] hover:bg-[#35373C] focus:bg-[#35373C] cursor-pointer">
           <Link href="/dashboard/profile">
             <User className="mr-2 h-4 w-4" />
             My Profile
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuItem asChild>
+        <DropdownMenuItem asChild className="text-[#DBDEE1] hover:bg-[#35373C] focus:bg-[#35373C] cursor-pointer">
           <Link href="/dashboard/billing">
             <CreditCard className="mr-2 h-4 w-4" />
             Billing
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
+        <DropdownMenuSeparator className="bg-[#3F4147]" />
         <DropdownMenuItem
           onClick={async () => {
             // Clear backend API token cookie, then end NextAuth session.
             await fetch("/api/auth/clear", { method: "POST" });
             await signOut({ callbackUrl: "/" });
           }}
-          className="text-destructive focus:text-destructive"
+          className="text-destructive focus:text-destructive hover:bg-[#35373C] focus:bg-[#35373C] cursor-pointer"
         >
           <LogOut className="mr-2 h-4 w-4" />
           Sign out

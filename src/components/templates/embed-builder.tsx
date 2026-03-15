@@ -105,13 +105,26 @@ export function EmbedBuilder({ template, isSaving, onSave, submitRef }: EmbedBui
         {/* Left: Form */}
         <Card className="p-4">
           <div className="space-y-5">
-            <Section title="Template">
-              <TextField name="name" label="Template Name" placeholder="Welcome Message" />
-              <div className="flex items-center justify-between pt-1">
-                <Label htmlFor="isDefault" className="text-sm text-muted-foreground">Default</Label>
+            {/* ── Template name — prominent ── */}
+            <div className="rounded-md border border-primary/40 bg-primary/5 px-3 py-3">
+              <Label htmlFor="name" className="text-xs font-semibold uppercase tracking-wider text-primary">
+                Template Name <span className="text-destructive">*</span>
+              </Label>
+              <div className="mt-1.5 flex items-center gap-2">
+                <Input
+                  id="name"
+                  value={form.watch("name") ?? ""}
+                  onChange={(e) => form.setValue("name", e.target.value)}
+                  placeholder="e.g. Welcome Message"
+                  className="border-primary/30 focus-visible:ring-primary"
+                />
+              </div>
+              <p className="mt-1 text-[11px] text-muted-foreground">Your template will be saved under this name.</p>
+              <div className="mt-2 flex items-center justify-between">
+                <Label htmlFor="isDefault" className="text-xs text-muted-foreground">Set as default</Label>
                 <Switch id="isDefault" checked={values.isDefault} onCheckedChange={(v) => form.setValue("isDefault", v)} />
               </div>
-            </Section>
+            </div>
 
             <Separator />
 
@@ -197,9 +210,30 @@ export function EmbedBuilder({ template, isSaving, onSave, submitRef }: EmbedBui
               )}
             </Button>
           </div>
-          <div className="flex items-start gap-6">
-            <div className="hidden h-10 w-10 shrink-0 rounded-full bg-muted sm:block" />
+          <div className="flex items-start gap-3">
+            {/* Bot avatar */}
+            <div
+              className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white sm:flex"
+              style={{ backgroundColor: "#5865F2" }}
+            >
+              B
+            </div>
             <div className="min-w-0 flex-1">
+              {/* Bot header row */}
+              <div className="mb-1.5 flex items-baseline gap-2">
+                <span className="text-sm font-semibold" style={{ color: discordTheme === "dark" ? "#f2f3f5" : "#060607" }}>
+                  BRM5 Bot
+                </span>
+                <span
+                  className="inline-flex items-center rounded px-1 text-[10px] font-semibold uppercase tracking-wide"
+                  style={{ backgroundColor: "#5865F2", color: "#fff" }}
+                >
+                  BOT
+                </span>
+                <span className="text-xs" style={{ color: discordTheme === "dark" ? "#949ba4" : "#5c5e66" }}>
+                  Today at {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                </span>
+              </div>
               <EmbedPreview
                 title={values.title}
                 url={values.url || undefined}

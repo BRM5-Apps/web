@@ -231,6 +231,12 @@ export const API_ROUTES = {
     },
     welcomeConfig: (factionId: string) =>
       `/factions/${factionId}/welcome-config`,
+    messageSend: (factionId: string) => `/factions/${factionId}/messages/send`,
+    messageHistory: (factionId: string) => `/factions/${factionId}/messages/history`,
+    schedule: {
+      list: (factionId: string) => `/factions/${factionId}/scheduled-messages`,
+      detail: (factionId: string, id: string) => `/factions/${factionId}/scheduled-messages/${id}`,
+    },
   },
   billing: {
     subscription: "/billing/subscription",

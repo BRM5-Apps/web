@@ -22,13 +22,13 @@ function WsStatusDot() {
   const dotClass = {
     connected: "bg-emerald-500",
     connecting: "bg-amber-400 animate-pulse",
-    disconnected: "bg-muted-foreground",
+    disconnected: "bg-[#949BA4]",
   }[status];
   return (
-    // ring-sidebar = sidebar bg color used as gap ring between dot and avatar
+    // ring matches sidebar bg #1E1F22 to create gap between dot and avatar
     <span
       title={`WebSocket: ${status}`}
-      className={cn("absolute bottom-0 right-0 h-2 w-2 rounded-full ring-1 ring-sidebar", dotClass)}
+      className={cn("absolute bottom-0 right-0 h-2 w-2 rounded-full ring-1 ring-[#1E1F22]", dotClass)}
     />
   );
 }
@@ -58,7 +58,7 @@ function NavItems({ expanded }: NavItemsProps) {
             {/* Section label — only visible when expanded */}
             <span
               className={cn(
-                "block px-3 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground transition-all duration-150 overflow-hidden whitespace-nowrap",
+                "block px-3 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wider text-[#949BA4] transition-all duration-150 overflow-hidden whitespace-nowrap",
                 expanded ? "max-w-[200px] opacity-100" : "max-w-0 opacity-0"
               )}
             >
@@ -89,8 +89,8 @@ function NavItems({ expanded }: NavItemsProps) {
                         className={cn(
                           "flex items-center rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors duration-100",
                           isActive
-                            ? "bg-sidebar-accent text-foreground"
-                            : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground"
+                            ? "bg-[#404249] text-[#F1F1F2] border-l-2 border-[#5865F2]"
+                            : "text-[#949BA4] hover:bg-[#35373C] hover:text-[#F1F1F2]"
                         )}
                       >
                         <Icon className="h-4 w-4 flex-shrink-0" />
@@ -128,8 +128,8 @@ function NavItems({ expanded }: NavItemsProps) {
                             className={cn(
                               "flex items-center rounded-md pl-7 pr-3 py-1.5 text-[13px] font-medium transition-colors duration-100",
                               isChildActive
-                                ? "bg-sidebar-accent text-foreground"
-                                : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground"
+                                ? "bg-[#404249] text-[#F1F1F2] border-l-2 border-[#5865F2]"
+                                : "text-[#949BA4] hover:bg-[#35373C] hover:text-[#F1F1F2]"
                             )}
                           >
                             <ChildIcon className="h-4 w-4 flex-shrink-0" />
@@ -174,10 +174,10 @@ function SidebarContent({ expanded }: SidebarContentProps) {
         <TooltipTrigger asChild>
           <button
             onClick={() => router.push("/select-server")}
-            className="flex items-center gap-2 border-b border-border px-3 py-3 w-full text-left hover:bg-sidebar-accent/60 transition-colors duration-100"
+            className="flex items-center gap-2 border-b border-[#3F4147] px-3 py-3 w-full text-left hover:bg-[#35373C] transition-colors duration-100"
           >
             {/* icon */}
-            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-muted">
+            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-[#404249]">
               {activeFaction?.iconUrl ? (
                 <img
                   src={activeFaction.iconUrl}
@@ -185,7 +185,7 @@ function SidebarContent({ expanded }: SidebarContentProps) {
                   className="h-8 w-8 rounded-md object-cover"
                 />
               ) : (
-                <span className="text-xs font-bold text-foreground">
+                <span className="text-xs font-bold text-[#F1F1F2]">
                   {activeFaction?.name?.charAt(0) ?? "B"}
                 </span>
               )}
@@ -197,10 +197,10 @@ function SidebarContent({ expanded }: SidebarContentProps) {
                 expanded ? "max-w-[200px] opacity-100" : "max-w-0 opacity-0"
               )}
             >
-              <span className="truncate text-[13px] font-semibold text-foreground">
+              <span className="truncate text-[13px] font-semibold text-[#F1F1F2]">
                 {activeFaction?.name ?? "Select server"}
               </span>
-              <ChevronRight className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+              <ChevronRight className="h-3.5 w-3.5 flex-shrink-0 text-[#949BA4]" />
             </span>
           </button>
         </TooltipTrigger>
@@ -217,7 +217,7 @@ function SidebarContent({ expanded }: SidebarContentProps) {
       </ScrollArea>
 
       {/* User row */}
-      <div className="flex items-center gap-2 border-t border-border px-3 py-3">
+      <div className="flex items-center gap-2 border-t border-[#3F4147] px-3 py-3">
         <div className="relative flex-shrink-0">
           {user?.avatarUrl ? (
             <img
@@ -226,7 +226,7 @@ function SidebarContent({ expanded }: SidebarContentProps) {
               className="h-8 w-8 rounded-full object-cover"
             />
           ) : (
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-bold text-foreground">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#404249] text-xs font-bold text-[#F1F1F2]">
               {user?.username?.charAt(0)?.toUpperCase() ?? "?"}
             </div>
           )}
@@ -239,14 +239,14 @@ function SidebarContent({ expanded }: SidebarContentProps) {
             expanded ? "max-w-[200px] opacity-100" : "max-w-0 opacity-0"
           )}
         >
-          <span className="truncate text-[13px] font-medium text-foreground">
+          <span className="truncate text-[13px] font-medium text-[#F1F1F2]">
             {user?.username ?? ""}
           </span>
           <span className="flex items-center gap-1 flex-shrink-0">
             <Link
               href={activeFactionId ? `/faction/${activeFactionId}/settings` : "/select-server"}
               onClick={(e) => e.stopPropagation()}
-              className="text-muted-foreground hover:text-foreground transition-colors"
+              className="text-[#949BA4] hover:text-[#F1F1F2] transition-colors"
             >
               <Settings className="h-4 w-4" />
             </Link>
@@ -255,7 +255,7 @@ function SidebarContent({ expanded }: SidebarContentProps) {
                 await fetch("/api/auth/clear", { method: "POST" });
                 await signOut({ callbackUrl: "/login" });
               }}
-              className="text-muted-foreground hover:text-destructive transition-colors"
+              className="text-[#949BA4] hover:text-destructive transition-colors"
               aria-label="Log out"
             >
               <LogOut className="h-4 w-4" />
@@ -275,7 +275,7 @@ function DesktopSidebar() {
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-40 hidden h-screen flex-col bg-sidebar",
+        "fixed left-0 top-0 z-40 hidden h-screen flex-col bg-[#1E1F22]",
         "transition-[width] duration-150 ease-out md:flex",
         expanded ? "w-56" : "w-14"
       )}
@@ -296,14 +296,14 @@ function MobileSidebar() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="fixed left-3 top-3 z-50 flex h-9 w-9 items-center justify-center rounded-md bg-sidebar text-foreground md:hidden"
+        className="fixed left-3 top-3 z-50 flex h-9 w-9 items-center justify-center rounded-md bg-[#1E1F22] text-[#F1F1F2] md:hidden"
         aria-label="Open navigation"
       >
         <Menu className="h-5 w-5" />
       </button>
 
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="left" className="w-56 p-0 bg-sidebar border-r border-border">
+        <SheetContent side="left" className="w-56 p-0 bg-[#1E1F22] border-r border-[#3F4147]">
           <SheetTitle className="sr-only">Navigation</SheetTitle>
           <SidebarContent expanded={true} />
         </SheetContent>

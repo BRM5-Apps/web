@@ -78,7 +78,7 @@ export default function EmbedTemplatesPage() {
 
       <div className="grid gap-6 xl:grid-cols-[420px_1fr]">
         {/* Left: List */}
-        <Card className="p-4">
+        <Card className="p-3">
           {isLoading ? (
             <div className="space-y-2">
               {Array.from({ length: 6 }).map((_, i) => (

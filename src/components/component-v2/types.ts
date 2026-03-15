@@ -76,7 +76,7 @@ export interface C2Thumbnail {
   url: string;
 }
 
-export type C2Accessory = C2LinkButton | C2Thumbnail;
+export type C2Accessory = C2Button | C2LinkButton | C2Thumbnail;
 
 export interface C2Section {
   id: string;
@@ -163,6 +163,7 @@ export interface FaWait extends FlowActionBase {
 export interface FaCheck extends FlowActionBase {
   type: "check";
   functionId?: string;
+  condition?: Record<string, unknown>;  // Raw Discord condition for JSON round-trip
   passBranch: FlowAction[];
   failBranch: FlowAction[];
 }

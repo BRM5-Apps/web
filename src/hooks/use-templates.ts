@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api } from "@/lib/api-client";
 import type { EmbedTemplate, ContainerTemplate, TextTemplate, ModalTemplate } from "@/types/template";
+import type { ApiError } from "@/types/api";
 
 // Query Keys
 const qk = {
@@ -107,7 +108,7 @@ export function useCreateContainerTemplate(factionId: string) {
       qc.invalidateQueries({ queryKey: qk.containers(factionId) });
       qc.setQueryData(qk.container(factionId, created.id), created);
     },
-    onError: () => toast.error("Failed to create container"),
+    onError: (err: ApiError) => toast.error(err?.message ?? "Failed to create container"),
   });
 }
 

@@ -137,6 +137,12 @@ export const queryKeys = {
       ["factions", factionId, "permissions"] as const,
   },
 
+  // ── Messages (send to Discord) ──
+  messages: {
+    history: (factionId: string) =>
+      ["factions", factionId, "messages", "history"] as const,
+  },
+
   // ── Promotion Paths ──
   promotionPaths: {
     all: (factionId: string) =>

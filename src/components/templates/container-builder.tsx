@@ -39,10 +39,10 @@ export interface ContainerBuilderProps {
 export function ContainerBuilder({ template, onSave, isSaving, submitRef }: ContainerBuilderProps) {
   const form = useForm<{ name: string; accentColor?: string }>({
     resolver: zodResolver(containerSchema),
-    defaultValues: { name: template?.name ?? "", accentColor: template?.accentColor ?? "" },
+    defaultValues: { name: template?.name ?? "", accentColor: (template?.template_data as any)?.accentColor ?? "" },
   });
 
-  const [components, setComponents] = useState<ContainerItem[]>(() => (Array.isArray(template?.components) ? (template!.components as DiscordContainerComponent[]) : []));
+  const [components, setComponents] = useState<ContainerItem[]>(() => (Array.isArray(template?.template_data?.components) ? (template!.template_data!.components as DiscordContainerComponent[]) : []));
 
   // Expose imperative save handle for parent toolbars
   const onSaveRef = useRef(onSave);
@@ -115,7 +115,7 @@ export function ContainerBuilder({ template, onSave, isSaving, submitRef }: Cont
   function fromJson(json: string) {
     const data = JSON.parse(json);
     form.setValue("name", data.name ?? template?.name ?? "");
-    form.setValue("accentColor", data.accentColor ?? template?.accentColor ?? "");
+    form.setValue("accentColor", data.accentColor ?? (template?.template_data as any)?.accentColor ?? "");
     if (Array.isArray(data.components)) setComponents(data.components);
   }
 

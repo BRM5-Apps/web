@@ -27,8 +27,8 @@ export interface ContainerTemplate {
   factionId?: string;
   hubId?: string;
   name: string;
-  accentColor?: string;
-  components: unknown[];
+  template_data: { components?: unknown[] };
+  is_default?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -51,6 +51,32 @@ export interface ModalTemplate {
   is_default?: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ScheduledMessage {
+  id: string;
+  factionId: string;
+  embedTemplateId?: string;
+  textTemplateId?: string;
+  containerTemplateId?: string;
+  channelId: string;
+  scheduledAt: string;
+  repeatInterval?: string;
+  isActive: boolean;
+  lastSentAt?: string;
+  createdAt: string;
+}
+
+export interface MessageSend {
+  id: string;
+  faction_id: string;
+  channel_id: string;
+  template_type: "text" | "embed" | "container";
+  template_id: string;
+  status: "pending" | "sent" | "failed";
+  error_msg?: string;
+  created_at: string;
+  sent_at?: string;
 }
 
 /** Union for "any saved output (message or modal)" */

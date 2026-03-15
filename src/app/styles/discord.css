@@ -5,19 +5,19 @@
 
 @layer components {
   .discord-embed {
-    @apply rounded border-l-4 bg-[#2f3136] p-4;
+    @apply rounded border-l-4 bg-[#2b2d31] p-4;
   }
 
   .discord-embed-author {
-    @apply flex items-center gap-2 text-sm font-medium text-white;
+    @apply flex items-center gap-2 text-sm font-medium text-[#ffffff];
   }
 
   .discord-embed-title {
-    @apply mt-2 font-semibold text-white;
+    @apply mt-2 font-semibold text-[#ffffff];
   }
 
   .discord-embed-description {
-    @apply mt-1 text-sm text-[#dcddde];
+    @apply mt-1 text-sm text-[#dbdee1];
   }
 
   .discord-embed-field {
@@ -25,15 +25,15 @@
   }
 
   .discord-embed-field-name {
-    @apply text-xs font-semibold text-white;
+    @apply text-xs font-semibold text-[#ffffff];
   }
 
   .discord-embed-field-value {
-    @apply text-sm text-[#dcddde];
+    @apply text-sm text-[#dbdee1];
   }
 
   .discord-embed-footer {
-    @apply mt-3 flex items-center gap-2 text-xs text-[#72767d];
+    @apply mt-3 flex items-center gap-2 text-xs text-[#949ba4];
   }
 
   .discord-embed-image {
@@ -41,7 +41,7 @@
   }
 
   .discord-container {
-    @apply rounded-lg bg-[#2f3136] p-4;
+    @apply rounded-lg bg-[#2b2d31] p-4;
   }
 
   .discord-button {
@@ -49,22 +49,22 @@
   }
 
   .discord-button-primary {
-    @apply bg-discord-blurple text-white hover:bg-discord-blurple/80;
+    @apply bg-[#5865F2] text-white hover:bg-[#4752C4];
   }
 
   .discord-button-secondary {
-    @apply bg-[#4f545c] text-white hover:bg-[#4f545c]/80;
+    @apply bg-[#4e5058] text-white hover:bg-[#6d6f78];
   }
 
   .discord-button-success {
-    @apply bg-discord-green text-white hover:bg-discord-green/80;
+    @apply bg-[#23a55a] text-white hover:bg-[#1f8b4c];
   }
 
   .discord-button-danger {
-    @apply bg-discord-red text-white hover:bg-discord-red/80;
+    @apply bg-[#d83c3e] text-white hover:bg-[#b93234];
   }
 
   .discord-message-bg {
-    @apply bg-[#36393f];
+    @apply bg-[#313338];
   }
 }

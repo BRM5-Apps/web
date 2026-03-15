@@ -102,7 +102,7 @@ export default function RanksPage() {
             <TabsTrigger value="paths">Promotion Paths</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="hierarchy">
+          <TabsContent value="hierarchy" className="mt-4">
             {isLoading ? (
               <div className="space-y-3">
                 {Array.from({ length: 4 }).map((_, i) => (
@@ -110,7 +110,7 @@ export default function RanksPage() {
                 ))}
               </div>
             ) : sortedRanks.length === 0 ? (
-              <div className="rounded-md border py-12 text-center">
+              <div className="rounded-md border px-6 py-12 text-center">
                 <p className="text-muted-foreground">
                   No ranks configured yet.
                 </p>
@@ -146,7 +146,7 @@ export default function RanksPage() {
             )}
           </TabsContent>
 
-          <TabsContent value="paths">
+          <TabsContent value="paths" className="mt-4">
             <PromotionPathEditor
               factionId={factionId}
               ranks={sortedRanks}

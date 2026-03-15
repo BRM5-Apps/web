@@ -145,7 +145,7 @@ export default function WelcomeSettingsPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 max-w-2xl">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Welcome & Goodbye</h1>
           <p className="text-muted-foreground">Automated messages when members join or leave.</p>
@@ -165,7 +165,7 @@ export default function WelcomeSettingsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-2xl">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Welcome & Goodbye</h1>
         <p className="text-muted-foreground">

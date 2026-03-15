@@ -26,12 +26,13 @@ export default function ContainerTemplatesPage() {
   const updateMutation = useUpdateContainerTemplate(factionId, selectedId ?? "");
 
   function handleSave(payload: { name: string; accentColor?: string; components: any[] }) {
+    const template_data = { components: payload.components, accentColor: payload.accentColor };
     if (!selectedId) {
-      createMutation.mutate({ name: payload.name, accentColor: payload.accentColor, components: payload.components }, {
+      createMutation.mutate({ name: payload.name, template_data }, {
         onSuccess: (tpl) => setSelectedId(tpl.id),
       });
     } else {
-      updateMutation.mutate({ name: payload.name, accentColor: payload.accentColor, components: payload.components });
+      updateMutation.mutate({ name: payload.name, template_data });
     }
   }
 
@@ -74,7 +75,7 @@ export default function ContainerTemplatesPage() {
                   className="flex w-full items-center gap-3 rounded-md p-2 text-left hover:bg-accent"
                 >
                   <div className="h-12 w-12 overflow-hidden rounded-md border p-1">
-                    <ContainerPreview components={tpl.components as any} accentColor={tpl.accentColor} />
+                    <ContainerPreview components={tpl.template_data?.components as any} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="truncate font-medium">{tpl.name}</div>

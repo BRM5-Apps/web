@@ -8,7 +8,7 @@ export default function PromoLocksPage() {
   useParams<{ factionId: string }>();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-2xl">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Promo Locks</h1>
         <p className="text-muted-foreground">Manage promotion locks for faction members.</p>

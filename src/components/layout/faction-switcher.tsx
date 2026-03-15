@@ -48,7 +48,7 @@ export function FactionSwitcher() {
       <DropdownMenuTrigger asChild>
         <Button
           variant="outline"
-          className="w-full justify-between text-left font-normal"
+          className="w-full justify-between text-left font-normal bg-[#2B2D31] text-[#F1F1F2] border-[#3F4147] hover:bg-[#35373C] hover:text-[#F1F1F2]"
           disabled={isLoading}
         >
           <span className="truncate">
@@ -57,22 +57,22 @@ export function FactionSwitcher() {
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-[var(--sidebar-width)] p-0" align="start">
+      <DropdownMenuContent className="w-[var(--sidebar-width)] p-0 bg-[#2B2D31] border-[#3F4147]" align="start">
         <div className="p-2">
           <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-[#949BA4]" />
             <Input
               placeholder="Search servers..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-8 h-9"
+              className="pl-8 h-9 bg-[#1E1F22] border-[#3F4147] text-[#F1F1F2] placeholder:text-[#949BA4]"
             />
           </div>
         </div>
         <DropdownMenuSeparator />
         <ScrollArea className="max-h-[300px]">
           {filteredFactions.length === 0 ? (
-            <div className="py-6 text-center text-sm text-muted-foreground">
+            <div className="py-6 text-center text-sm text-[#949BA4]">
               No servers found
             </div>
           ) : (
@@ -80,9 +80,9 @@ export function FactionSwitcher() {
               <DropdownMenuItem
                 key={faction.id}
                 onClick={() => handleSelect(faction.id)}
-                className="flex items-center gap-3 px-3 py-2"
+                className="flex items-center gap-3 px-3 py-2 text-[#DBDEE1] hover:bg-[#35373C] focus:bg-[#35373C] cursor-pointer"
               >
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#404249]">
                   {faction.iconUrl ? (
                     <img
                       src={faction.iconUrl}
@@ -90,19 +90,19 @@ export function FactionSwitcher() {
                       className="h-6 w-6 rounded"
                     />
                   ) : (
-                    <span className="text-xs font-bold text-primary">
+                    <span className="text-xs font-bold text-[#5865F2]">
                       {faction.name.charAt(0)}
                     </span>
                   )}
                 </div>
                 <div className="flex-1 truncate">
-                  <p className="text-sm font-medium truncate">{faction.name}</p>
-                  <p className="text-xs text-muted-foreground capitalize">
+                  <p className="text-sm font-medium truncate text-[#F1F1F2]">{faction.name}</p>
+                  <p className="text-xs text-[#949BA4] capitalize">
                     {faction.subscriptionTier}
                   </p>
                 </div>
                 {faction.id === activeFactionId && (
-                  <Check className="h-4 w-4 text-primary" />
+                  <Check className="h-4 w-4 text-[#5865F2]" />
                 )}
               </DropdownMenuItem>
             ))
@@ -111,7 +111,7 @@ export function FactionSwitcher() {
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={() => router.push("/faction")}
-          className="gap-2 px-3 py-2"
+          className="gap-2 px-3 py-2 text-[#DBDEE1] hover:bg-[#35373C] focus:bg-[#35373C] cursor-pointer"
         >
           <Plus className="h-4 w-4" />
           Browse Servers

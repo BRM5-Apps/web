@@ -22,6 +22,8 @@ import type {
   ContainerTemplate,
   TextTemplate,
   ModalTemplate,
+  ScheduledMessage,
+  MessageSend,
 } from "@/types/template";
 import type { FactionStats, DailyStats, LeaderboardEntry } from "@/types/stats";
 import type {
@@ -632,6 +634,12 @@ export const api = {
 
   // ── Moderation ──
   moderation: {
+    list: (factionId: string, opts?: RequestOptions) =>
+      apiClient.get<Punishment[]>(
+        API_ROUTES.factions.moderation.punish(factionId),
+        undefined,
+        opts
+      ),
     punish: (
       factionId: string,
       data: Partial<Punishment>,
@@ -862,6 +870,47 @@ export const api = {
       apiClient.post<BlacklistEntry>(API_ROUTES.blacklist.create, data, opts),
     delete: (discordId: string, opts?: RequestOptions) =>
       apiClient.delete<void>(API_ROUTES.blacklist.delete(discordId), opts),
+  },
+
+  // ── Messages (send to Discord) ──
+  messages: {
+    send: (
+      factionId: string,
+      data: { channel_id: string; template_type: string; template_id: string },
+      opts?: RequestOptions
+    ) =>
+      apiClient.post<MessageSend>(
+        API_ROUTES.factions.messageSend(factionId),
+        data,
+        opts
+      ),
+    history: (factionId: string, opts?: RequestOptions) =>
+      apiClient.get<MessageSend[]>(
+        API_ROUTES.factions.messageHistory(factionId),
+        undefined,
+        opts
+      ),
+  },
+
+  // ── Schedule ──
+  schedule: {
+    list: (factionId: string, opts?: RequestOptions) =>
+      apiClient.get<ScheduledMessage[]>(
+        API_ROUTES.factions.schedule.list(factionId),
+        undefined,
+        opts
+      ),
+    create: (factionId: string, data: Partial<ScheduledMessage>, opts?: RequestOptions) =>
+      apiClient.post<ScheduledMessage>(
+        API_ROUTES.factions.schedule.list(factionId),
+        data,
+        opts
+      ),
+    delete: (factionId: string, id: string, opts?: RequestOptions) =>
+      apiClient.delete<void>(
+        API_ROUTES.factions.schedule.detail(factionId, id),
+        opts
+      ),
   },
 
   // ── Config ──
