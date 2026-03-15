@@ -174,8 +174,16 @@ function FeatureCard({
   const Icon = feature.icon;
   return (
     <Card
+      role="button"
+      tabIndex={0}
       className="cursor-pointer transition-colors hover:bg-accent/40 group"
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
     >
       <CardHeader className="flex flex-row items-center gap-4 space-y-0 pb-2">
         <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${feature.accent}`}>
@@ -202,15 +210,14 @@ export default function ServerOverviewPage() {
   const router = useRouter();
   const factionId = params.factionId;
 
-  const { setActiveFaction, setFactionData } = useFactionStore();
+  const { setActiveFaction } = useFactionStore();
   const { data: faction, isLoading } = useFaction(factionId);
 
   useEffect(() => {
     if (faction) {
       setActiveFaction(factionId, faction);
-      setFactionData(faction);
     }
-  }, [faction, factionId, setActiveFaction, setFactionData]);
+  }, [faction, factionId, setActiveFaction]);
 
   if (isLoading) {
     return (
@@ -244,7 +251,7 @@ export default function ServerOverviewPage() {
       {/* Stats row */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <FactionStatsRow factionId={factionId} />
-        <StatCard label="Subscription" value={faction?.subscriptionTier} isLoading={isLoading} />
+        <StatCard label="Subscription" value={faction.subscriptionTier} isLoading={isLoading} />
       </div>
 
       {/* Quick actions */}
