@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Plus, AlertCircle } from "lucide-react";
+import { Plus, AlertCircle, LogOut } from "lucide-react";
+import { signOut } from "next-auth/react";
 import { useAdminGuildsWithFactions, type GuildWithFactionStatus } from "@/hooks/use-admin-guilds";
 import { useFactionStore } from "@/stores/faction-store";
 import { useAuth } from "@/providers/auth-provider";
@@ -42,6 +43,16 @@ function TopBar() {
             </div>
           )}
           <span className="text-[13px] text-muted-foreground">{user.username}</span>
+          <button
+            onClick={async () => {
+              await fetch("/api/auth/clear", { method: "POST" });
+              await signOut({ callbackUrl: "/login" });
+            }}
+            className="ml-1 text-muted-foreground hover:text-destructive transition-colors"
+            aria-label="Log out"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
         </div>
       )}
     </div>
@@ -50,7 +61,12 @@ function TopBar() {
 
 // ─── Server card ──────────────────────────────────────────────────────────────
 
-const BOT_INSTALL_URL = process.env.NEXT_PUBLIC_BOT_INSTALL_URL ?? "#";
+const BOT_INSTALL_URL = process.env.NEXT_PUBLIC_BOT_INSTALL_URL ?? "";
+
+function buildBotInstallUrl(guildId: string): string {
+  if (!BOT_INSTALL_URL) return "#";
+  return `${BOT_INSTALL_URL}&guild_id=${guildId}`;
+}
 
 function ServerCard({ guild, onSelect }: ServerCardProps) {
   const iconUrl = guild.icon
@@ -60,15 +76,15 @@ function ServerCard({ guild, onSelect }: ServerCardProps) {
   if (!guild.hasBot) {
     return (
       <a
-        href={`${BOT_INSTALL_URL}${BOT_INSTALL_URL.includes("?") ? "&" : "?"}guild_id=${guild.id}`}
+        href={buildBotInstallUrl(guild.id)}
         target="_blank"
         rel="noopener noreferrer"
         className={cn(
-          "flex flex-col items-start gap-3 rounded-lg border border-border bg-card p-4 text-left",
+          "flex w-full flex-col items-start gap-3 overflow-hidden rounded-lg border border-border bg-card p-4 text-left",
           "opacity-50 transition-opacity duration-150 hover:opacity-70"
         )}
       >
-        <div className="flex items-center gap-3">
+        <div className="flex w-full items-center gap-3 overflow-hidden">
           {iconUrl ? (
             <img src={iconUrl} alt={guild.name} className="h-12 w-12 rounded-lg object-cover flex-shrink-0" />
           ) : (
@@ -76,7 +92,7 @@ function ServerCard({ guild, onSelect }: ServerCardProps) {
               {guild.name.charAt(0).toUpperCase()}
             </div>
           )}
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="truncate text-[13px] font-semibold text-foreground">{guild.name}</p>
             <p className="text-xs text-muted-foreground">Add Bot</p>
           </div>
@@ -89,12 +105,12 @@ function ServerCard({ guild, onSelect }: ServerCardProps) {
     <button
       onClick={() => onSelect(guild)}
       className={cn(
-        "flex flex-col items-start gap-3 rounded-lg border border-border bg-card p-4 text-left",
+        "flex w-full flex-col items-start gap-3 overflow-hidden rounded-lg border border-border bg-card p-4 text-left",
         "transition-all duration-150",
         "hover:border-white/20 hover:shadow-[0_0_0_1px_hsl(0_0%_100%/0.12)]"
       )}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex w-full items-center gap-3 overflow-hidden">
         {iconUrl ? (
           <img src={iconUrl} alt={guild.name} className="h-12 w-12 rounded-lg object-cover flex-shrink-0" />
         ) : (
@@ -102,7 +118,7 @@ function ServerCard({ guild, onSelect }: ServerCardProps) {
             {guild.name.charAt(0).toUpperCase()}
           </div>
         )}
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="truncate text-[13px] font-semibold text-foreground">{guild.name}</p>
           <p className="text-xs text-muted-foreground capitalize">
             {guild.faction?.subscriptionTier ?? "Free"}
@@ -118,7 +134,7 @@ function ServerCard({ guild, onSelect }: ServerCardProps) {
 function AddServerCard() {
   return (
     <a
-      href={BOT_INSTALL_URL}
+      href={BOT_INSTALL_URL || "#"}
       target="_blank"
       rel="noopener noreferrer"
       className={cn(
@@ -185,7 +201,7 @@ export default function SelectServerPage() {
                 )}
 
                 <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-                  {guilds?.map((guild) => (
+                  {[...(guilds ?? [])].sort((a, b) => Number(b.hasBot) - Number(a.hasBot)).map((guild) => (
                     <ServerCard key={guild.id} guild={guild} onSelect={handleSelect} />
                   ))}
                   <AddServerCard />
