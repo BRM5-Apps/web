@@ -244,7 +244,7 @@ export default function ServerOverviewPage() {
       {/* Stats row */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <FactionStatsRow factionId={factionId} />
-        <StatCard label="Subscription" value={faction.subscriptionTier} />
+        <StatCard label="Subscription" value={faction?.subscriptionTier} isLoading={isLoading} />
       </div>
 
       {/* Quick actions */}
