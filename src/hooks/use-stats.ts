@@ -9,6 +9,6 @@ export function useStats(factionId: string) {
     queryFn: ({ signal }) => api.stats.overview(factionId, { signal }),
     enabled: !!factionId,
     staleTime: 5 * 60 * 1000,
-    retry: false,
+    retry: false, // stats are non-critical; fail fast rather than a 7s retry loop
   });
 }
