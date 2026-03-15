@@ -8,5 +8,7 @@ export function useStats(factionId: string) {
     queryKey: queryKeys.stats.overview(factionId),
     queryFn: ({ signal }) => api.stats.overview(factionId, { signal }),
     enabled: !!factionId,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
   });
 }
