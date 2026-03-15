@@ -1,8 +1,13 @@
 export interface FactionStats {
+  id: string;
+  factionId: string;
   totalMembers: number;
   activeMembers: number;
   totalEvents: number;
-  totalPoints: number;
+  totalMessages: number;
+  totalVoiceMinutes: number;
+  rankCount: number;
+  updatedAt: string;
 }
 
 export interface UserStats {
