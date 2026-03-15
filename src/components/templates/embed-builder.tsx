@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useEffect, useState } from "react";
 import { z } from "zod";
 import { useForm, FormProvider, useFormContext } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -61,9 +61,11 @@ export interface EmbedBuilderProps {
   template?: Partial<EmbedTemplate> | null;
   isSaving?: boolean;
   onSave?: (data: EmbedFormData) => void;
+  /** Optional ref — parent can call submitRef.current?.() to trigger form submission */
+  submitRef?: React.MutableRefObject<(() => void) | null>;
 }
 
-export function EmbedBuilder({ template, isSaving, onSave }: EmbedBuilderProps) {
+export function EmbedBuilder({ template, isSaving, onSave, submitRef }: EmbedBuilderProps) {
   const defaultValues = useMemo<EmbedFormData>(() => ({
     name: template?.name ?? "",
     title: template?.title ?? "",
@@ -87,6 +89,15 @@ export function EmbedBuilder({ template, isSaving, onSave }: EmbedBuilderProps) 
   const [discordTheme, setDiscordTheme] = useState<DiscordTheme>("dark");
 
   const values = form.watch();
+
+  // Expose an imperative submit handle so parent toolbars can trigger save
+  const onSaveRef = useRef(onSave);
+  onSaveRef.current = onSave;
+  useEffect(() => {
+    if (!submitRef) return;
+    submitRef.current = () => form.handleSubmit((d) => onSaveRef.current?.(d))();
+    return () => { submitRef.current = null; };
+  }, [submitRef, form]);
 
   return (
     <FormProvider {...form}>

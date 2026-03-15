@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useEffect, useState } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -32,15 +32,34 @@ export interface ContainerBuilderProps {
   template?: Partial<ContainerTemplate> | null;
   onSave?: (data: { name: string; accentColor?: string; components: ContainerItem[] }) => void;
   isSaving?: boolean;
+  /** Optional ref — parent can call submitRef.current?.() to trigger save */
+  submitRef?: React.MutableRefObject<(() => void) | null>;
 }
 
-export function ContainerBuilder({ template, onSave, isSaving }: ContainerBuilderProps) {
+export function ContainerBuilder({ template, onSave, isSaving, submitRef }: ContainerBuilderProps) {
   const form = useForm<{ name: string; accentColor?: string }>({
     resolver: zodResolver(containerSchema),
     defaultValues: { name: template?.name ?? "", accentColor: template?.accentColor ?? "" },
   });
 
   const [components, setComponents] = useState<ContainerItem[]>(() => (Array.isArray(template?.components) ? (template!.components as DiscordContainerComponent[]) : []));
+
+  // Expose imperative save handle for parent toolbars
+  const onSaveRef = useRef(onSave);
+  onSaveRef.current = onSave;
+  const componentsRef = useRef(components);
+  componentsRef.current = components;
+  useEffect(() => {
+    if (!submitRef) return;
+    submitRef.current = () => {
+      onSaveRef.current?.({
+        name: form.getValues("name") ?? "",
+        accentColor: form.getValues("accentColor") || undefined,
+        components: componentsRef.current,
+      });
+    };
+    return () => { submitRef.current = null; };
+  }, [submitRef, form]);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [jsonOpen, setJsonOpen] = useState(false);
   const [discordTheme, setDiscordTheme] = useState<DiscordTheme>("dark");
