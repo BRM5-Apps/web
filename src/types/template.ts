@@ -42,3 +42,20 @@ export interface TextTemplate {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface ModalTemplate {
+  id: string;
+  factionId?: string;
+  name: string;
+  template_data: Record<string, unknown>; // modal pages/fields JSON
+  is_default?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Union for "any saved output (message or modal)" */
+export type SavedTemplate =
+  | { kind: "text"; template: TextTemplate }
+  | { kind: "embed"; template: EmbedTemplate }
+  | { kind: "container"; template: ContainerTemplate }
+  | { kind: "modal"; template: ModalTemplate };

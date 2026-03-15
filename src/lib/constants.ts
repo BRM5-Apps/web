@@ -175,6 +175,9 @@ export const API_ROUTES = {
       texts: (factionId: string) => `/factions/${factionId}/texts`,
       text: (factionId: string, templateId: string) =>
         `/factions/${factionId}/texts/${templateId}`,
+      modals: (factionId: string) => `/factions/${factionId}/modals`,
+      modal: (factionId: string, templateId: string) =>
+        `/factions/${factionId}/modals/${templateId}`,
     },
     stats: {
       overview: (factionId: string) => `/factions/${factionId}/stats`,

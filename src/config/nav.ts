@@ -81,7 +81,7 @@ export const factionNavConfig: NavSection[] = [
         children: [
           { href: "/templates/embeds", icon: Code, label: "Embeds", permission: "templates.view" },
           { href: "/templates/containers", icon: MessageSquare, label: "Containers", permission: "templates.view" },
-          { href: "/templates/texts", icon: FileText, label: "Text", permission: "templates.view" },
+          { href: "/templates/text", icon: FileText, label: "Text", permission: "templates.view" },
         ],
       },
     ],

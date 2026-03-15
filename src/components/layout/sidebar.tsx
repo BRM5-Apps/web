@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Settings, Menu, ChevronRight } from "lucide-react";
+import { signOut } from "next-auth/react";
+import { Settings, Menu, ChevronRight, LogOut } from "lucide-react";
 import { factionNavConfig } from "@/config/nav";
 import { useFactionStore } from "@/stores/faction-store";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -241,13 +242,25 @@ function SidebarContent({ expanded }: SidebarContentProps) {
           <span className="truncate text-[13px] font-medium text-foreground">
             {user?.username ?? ""}
           </span>
-          <Link
-            href={activeFactionId ? `/faction/${activeFactionId}/settings` : "/select-server"}
-            onClick={(e) => e.stopPropagation()}
-            className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <Settings className="h-4 w-4" />
-          </Link>
+          <span className="flex items-center gap-1 flex-shrink-0">
+            <Link
+              href={activeFactionId ? `/faction/${activeFactionId}/settings` : "/select-server"}
+              onClick={(e) => e.stopPropagation()}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Settings className="h-4 w-4" />
+            </Link>
+            <button
+              onClick={async () => {
+                await fetch("/api/auth/clear", { method: "POST" });
+                await signOut({ callbackUrl: "/login" });
+              }}
+              className="text-muted-foreground hover:text-destructive transition-colors"
+              aria-label="Log out"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          </span>
         </span>
       </div>
     </div>

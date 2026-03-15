@@ -3,7 +3,8 @@
 import { useParams } from "next/navigation";
 import { useRef, useState } from "react";
 import { EmbedBuilder, type EmbedFormData } from "@/components/templates/embed-builder";
-import { ContainerBuilder } from "@/components/templates/container-builder";
+import { ComponentV2BuilderV2 } from "@/components/component-v2";
+import type { C2TopLevelItem } from "@/components/component-v2";
 import {
   useCreateEmbedTemplate,
   useCreateContainerTemplate,
@@ -41,9 +42,9 @@ export default function MessageBuilderPage() {
   const [channelId, setChannelId] = useState("");
   const [textContent, setTextContent] = useState("");
 
-  // Refs that embed/container builders write their submit fns into
+  // Refs that builders write their submit fns into
   const embedSubmitRef = useRef<(() => void) | null>(null);
-  const containerSubmitRef = useRef<(() => void) | null>(null);
+  const componentSubmitRef = useRef<(() => void) | null>(null);
 
   const createEmbed = useCreateEmbedTemplate(factionId);
   const createContainer = useCreateContainerTemplate(factionId);
@@ -67,7 +68,7 @@ export default function MessageBuilderPage() {
       return;
     }
     if (mode === "component") {
-      containerSubmitRef.current?.();
+      componentSubmitRef.current?.();
     }
   }
 
@@ -101,14 +102,11 @@ export default function MessageBuilderPage() {
     );
   }
 
-  function handleContainerSave(payload: {
-    name: string;
-    accentColor?: string;
-    components: unknown[];
-  }) {
-    createContainer.mutate(
-      { name: payload.name, accentColor: payload.accentColor, components: payload.components },
-    );
+  function handleComponentSave(name: string, items: C2TopLevelItem[]) {
+    createContainer.mutate({
+      name: name.trim() || `Component V2 ${new Date().toLocaleTimeString()}`,
+      components: items,
+    });
   }
 
   // ─── Render ───────────────────────────────────────────────────────────────
@@ -206,10 +204,10 @@ export default function MessageBuilderPage() {
       )}
 
       {mode === "component" && (
-        <ContainerBuilder
-          onSave={handleContainerSave}
+        <ComponentV2BuilderV2
+          onSave={handleComponentSave}
           isSaving={createContainer.isPending}
-          submitRef={containerSubmitRef}
+          submitRef={componentSubmitRef}
         />
       )}
     </div>

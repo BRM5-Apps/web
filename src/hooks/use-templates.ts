@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api } from "@/lib/api-client";
-import type { EmbedTemplate, ContainerTemplate, TextTemplate } from "@/types/template";
+import type { EmbedTemplate, ContainerTemplate, TextTemplate, ModalTemplate } from "@/types/template";
 
 // Query Keys
 const qk = {
@@ -13,6 +13,8 @@ const qk = {
   container: (f: string, id: string) => ["templates", "container", f, id] as const,
   texts: (f: string) => ["templates", "texts", f] as const,
   text: (f: string, id: string) => ["templates", "text", f, id] as const,
+  modals: (f: string) => ["templates", "modals", f] as const,
+  modal: (f: string, id: string) => ["templates", "modal", f, id] as const,
 };
 
 // ── Embed Templates ──
@@ -191,4 +193,91 @@ export function useDeleteTextTemplate(factionId: string) {
     },
     onError: () => toast.error("Failed to delete text template"),
   });
+}
+
+// ── Modal Templates ──
+
+export function useModalTemplates(factionId: string) {
+  return useQuery({
+    queryKey: qk.modals(factionId),
+    queryFn: () => api.templates.listModals(factionId),
+    staleTime: 1000 * 60 * 2,
+    enabled: Boolean(factionId),
+  });
+}
+
+export function useCreateModalTemplate(factionId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Partial<ModalTemplate>) => api.templates.createModal(factionId, data),
+    onSuccess: (created) => {
+      toast.success("Modal template saved");
+      qc.invalidateQueries({ queryKey: qk.modals(factionId) });
+      qc.setQueryData(qk.modal(factionId, created.id), created);
+    },
+    onError: () => toast.error("Failed to save modal template"),
+  });
+}
+
+export function useUpdateModalTemplate(factionId: string, id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Partial<ModalTemplate>) => api.templates.updateModal(factionId, id, data),
+    onSuccess: (updated) => {
+      toast.success("Modal template saved");
+      qc.setQueryData(qk.modal(factionId, id), updated);
+      qc.invalidateQueries({ queryKey: qk.modals(factionId) });
+    },
+    onError: () => toast.error("Failed to save modal template"),
+  });
+}
+
+export function useDeleteModalTemplate(factionId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.templates.deleteModal(factionId, id),
+    onSuccess: (_res, id) => {
+      toast.success("Modal template deleted");
+      qc.invalidateQueries({ queryKey: qk.modals(factionId) });
+      qc.removeQueries({ queryKey: qk.modal(factionId, id) });
+    },
+    onError: () => toast.error("Failed to delete modal template"),
+  });
+}
+
+// ── All templates for a faction (for Send Output picker) ──
+
+export function useAllTemplates(factionId: string) {
+  const embeds = useQuery({
+    queryKey: qk.embeds(factionId),
+    queryFn: () => api.templates.listEmbeds(factionId),
+    staleTime: 1000 * 60 * 2,
+    enabled: Boolean(factionId),
+  });
+  const containers = useQuery({
+    queryKey: qk.containers(factionId),
+    queryFn: () => api.templates.listContainers(factionId),
+    staleTime: 1000 * 60 * 2,
+    enabled: Boolean(factionId),
+  });
+  const texts = useQuery({
+    queryKey: qk.texts(factionId),
+    queryFn: () => api.templates.listTexts(factionId),
+    staleTime: 1000 * 60 * 2,
+    enabled: Boolean(factionId),
+  });
+  const modals = useQuery({
+    queryKey: qk.modals(factionId),
+    queryFn: () => api.templates.listModals(factionId),
+    staleTime: 1000 * 60 * 2,
+    enabled: Boolean(factionId),
+  });
+
+  return {
+    embeds: embeds.data ?? [],
+    containers: containers.data ?? [],
+    texts: texts.data ?? [],
+    modals: modals.data ?? [],
+    isLoading: embeds.isLoading || containers.isLoading || texts.isLoading || modals.isLoading,
+  };
 }

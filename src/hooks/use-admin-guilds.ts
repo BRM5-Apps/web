@@ -39,6 +39,9 @@ function useFactionsByGuildIds(guildIds: string[]) {
     queryFn: ({ signal }) => api.factions.byGuildIds(guildIds, { signal }),
     enabled: guildIds.length > 0,
     staleTime: 5 * 60 * 1000,
+    // Don't retry — surface errors immediately so the UI shows them
+    // rather than stalling on skeletons for 7+ seconds
+    retry: false,
   });
 }
 

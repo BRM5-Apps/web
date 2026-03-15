@@ -14,20 +14,21 @@ export async function middleware(request: NextRequest) {
 
   const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
   const hasBackendCookie = Boolean(request.cookies.get("backendToken")?.value);
-  const hasNextAuth = !!token;
-  // Treat the presence of the backend cookie as the source of truth for gated routes
-  const isBackendAuthenticated = hasBackendCookie;
+  const hasNextAuth = !!token; // NextAuth session (Discord OAuth completed)
+  // Both cookies must be present to consider the user fully authenticated.
+  // hasNextAuth alone (just after OAuth, before exchange) is NOT enough — the
+  // login page needs to run the exchange to set the backendToken cookie.
+  const isFullyAuthenticated = hasBackendCookie && hasNextAuth;
   const isPublicPath = PUBLIC_PATHS.some((path) => pathname.startsWith(path));
 
-  // Redirect authenticated users away from login
-  if (isBackendAuthenticated && pathname === "/login") {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+  // Redirect fully-authenticated users away from login
+  if (isFullyAuthenticated && pathname === "/login") {
+    return NextResponse.redirect(new URL("/select-server", request.url));
   }
 
-  // Protect dashboard routes
-  if (!isBackendAuthenticated && pathname.startsWith("/dashboard")) {
+  // Protect dashboard routes (legacy /dashboard path)
+  if (!hasBackendCookie && pathname.startsWith("/dashboard")) {
     const loginUrl = new URL("/login", request.url);
-    // Preserve the intended destination for post-login redirect
     loginUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(loginUrl);
   }

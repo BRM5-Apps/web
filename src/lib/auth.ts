@@ -40,7 +40,7 @@ export const authOptions: NextAuthOptions = {
       if (url.startsWith("/")) return `${baseUrl}${url}`;
       // Allow callbacks to the same origin
       if (new URL(url).origin === baseUrl) return url;
-      return `${baseUrl}/dashboard`;
+      return `${baseUrl}/select-server`;
     },
   },
   pages: {

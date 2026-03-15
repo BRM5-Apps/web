@@ -21,6 +21,7 @@ import type {
   EmbedTemplate,
   ContainerTemplate,
   TextTemplate,
+  ModalTemplate,
 } from "@/types/template";
 import type { FactionStats, DailyStats, LeaderboardEntry } from "@/types/stats";
 import type {
@@ -553,6 +554,48 @@ export const api = {
     ) =>
       apiClient.delete<void>(
         API_ROUTES.factions.templates.text(factionId, templateId),
+        opts
+      ),
+    listModals: (factionId: string, opts?: RequestOptions) =>
+      apiClient.get<ModalTemplate[]>(
+        API_ROUTES.factions.templates.modals(factionId),
+        undefined,
+        opts
+      ),
+    getModal: (factionId: string, templateId: string, opts?: RequestOptions) =>
+      apiClient.get<ModalTemplate>(
+        API_ROUTES.factions.templates.modal(factionId, templateId),
+        undefined,
+        opts
+      ),
+    createModal: (
+      factionId: string,
+      data: Partial<ModalTemplate>,
+      opts?: RequestOptions
+    ) =>
+      apiClient.post<ModalTemplate>(
+        API_ROUTES.factions.templates.modals(factionId),
+        data,
+        opts
+      ),
+    updateModal: (
+      factionId: string,
+      templateId: string,
+      data: Partial<ModalTemplate>,
+      opts?: RequestOptions
+    ) =>
+      apiClient.patch<ModalTemplate>(
+        API_ROUTES.factions.templates.modal(factionId, templateId),
+        data,
+        opts
+      ),
+    deleteModal: (
+      factionId: string,
+      templateId: string,
+      opts?: RequestOptions
+    ) =>
+      apiClient.delete<void>(
+        API_ROUTES.factions.templates.modal(factionId, templateId),
         opts
       ),
   },
