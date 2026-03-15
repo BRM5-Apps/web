@@ -222,12 +222,14 @@ export const api = {
 
   // ── Ranks ──
   ranks: {
-    list: (factionId: string, opts?: RequestOptions) =>
-      apiClient.get<RankWithDetails[]>(
+    list: async (factionId: string, opts?: RequestOptions) => {
+      const result = await apiClient.get<{ ranks: RankWithDetails[] }>(
         API_ROUTES.factions.ranks(factionId),
         undefined,
         opts
-      ),
+      );
+      return result.ranks ?? [];
+    },
     get: (factionId: string, rankId: string, opts?: RequestOptions) =>
       apiClient.get<RankWithDetails>(
         API_ROUTES.factions.rank(factionId, rankId),
