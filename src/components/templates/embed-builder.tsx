@@ -63,9 +63,11 @@ export interface EmbedBuilderProps {
   onSave?: (data: EmbedFormData) => void;
   /** Optional ref — parent can call submitRef.current?.() to trigger form submission */
   submitRef?: React.MutableRefObject<(() => void) | null>;
+  webhookUsername?: string;
+  webhookAvatarUrl?: string;
 }
 
-export function EmbedBuilder({ template, isSaving, onSave, submitRef }: EmbedBuilderProps) {
+export function EmbedBuilder({ template, isSaving, onSave, submitRef, webhookUsername, webhookAvatarUrl }: EmbedBuilderProps) {
   const defaultValues = useMemo<EmbedFormData>(() => ({
     name: template?.name ?? "",
     title: template?.title ?? "",
@@ -212,17 +214,26 @@ export function EmbedBuilder({ template, isSaving, onSave, submitRef }: EmbedBui
           </div>
           <div className="flex items-start gap-3">
             {/* Bot avatar */}
-            <div
-              className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white sm:flex"
-              style={{ backgroundColor: "#5865F2" }}
-            >
-              B
-            </div>
+            {webhookAvatarUrl ? (
+              <img
+                src={webhookAvatarUrl}
+                alt=""
+                className="hidden h-10 w-10 shrink-0 rounded-full object-cover sm:block"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+              />
+            ) : (
+              <div
+                className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white sm:flex"
+                style={{ backgroundColor: "#5865F2" }}
+              >
+                {webhookUsername ? webhookUsername[0].toUpperCase() : "B"}
+              </div>
+            )}
             <div className="min-w-0 flex-1">
               {/* Bot header row */}
               <div className="mb-1.5 flex items-baseline gap-2">
                 <span className="text-sm font-semibold" style={{ color: discordTheme === "dark" ? "#f2f3f5" : "#060607" }}>
-                  BRM5 Bot
+                  {webhookUsername || "BRM5 Bot"}
                 </span>
                 <span
                   className="inline-flex items-center rounded px-1 text-[10px] font-semibold uppercase tracking-wide"

@@ -352,9 +352,11 @@ function PreviewItem({ item, theme }: PreviewItemProps) {
 
 export interface PreviewPanelProps {
   items: C2TopLevelItem[];
+  webhookUsername?: string;
+  webhookAvatarUrl?: string;
 }
 
-export function PreviewPanel({ items }: PreviewPanelProps) {
+export function PreviewPanel({ items, webhookUsername, webhookAvatarUrl }: PreviewPanelProps) {
   const [theme, setTheme] = useState<DiscordTheme>("dark");
   const tokens = discordThemes[theme];
 
@@ -399,12 +401,21 @@ export function PreviewPanel({ items }: PreviewPanelProps) {
           <div className="flex gap-3">
             {/* Avatar */}
             <div className="flex-shrink-0">
-              <div
-                className="flex h-10 w-10 items-center justify-center rounded-full text-white text-sm font-bold select-none"
-                style={{ backgroundColor: "#5865F2" }}
-              >
-                B
-              </div>
+              {webhookAvatarUrl ? (
+                <img
+                  src={webhookAvatarUrl}
+                  alt=""
+                  className="h-10 w-10 rounded-full object-cover select-none"
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                />
+              ) : (
+                <div
+                  className="flex h-10 w-10 items-center justify-center rounded-full text-white text-sm font-bold select-none"
+                  style={{ backgroundColor: "#5865F2" }}
+                >
+                  {webhookUsername ? webhookUsername[0].toUpperCase() : "B"}
+                </div>
+              )}
             </div>
 
             {/* Message body */}
@@ -412,7 +423,7 @@ export function PreviewPanel({ items }: PreviewPanelProps) {
               {/* Header row */}
               <div className="flex items-baseline gap-2 mb-1">
                 <span className="text-sm font-semibold" style={{ color: tokens.botName }}>
-                  BRM5 Bot
+                  {webhookUsername || "BRM5 Bot"}
                 </span>
                 <span
                   className="inline-flex items-center rounded px-1 py-0 text-[10px] font-semibold uppercase tracking-wide"

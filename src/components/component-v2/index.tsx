@@ -13,6 +13,8 @@ export interface ComponentV2BuilderV2Props {
   submitRef?: React.MutableRefObject<(() => void) | null>;
   factionId?: string;
   initialItems?: C2TopLevelItem[];
+  webhookUsername?: string;
+  webhookAvatarUrl?: string;
 }
 
 export function ComponentV2BuilderV2({
@@ -21,6 +23,8 @@ export function ComponentV2BuilderV2({
   submitRef,
   factionId,
   initialItems,
+  webhookUsername,
+  webhookAvatarUrl,
 }: ComponentV2BuilderV2Props) {
   const [items, setItems] = useState<C2TopLevelItem[]>(initialItems ?? []);
   const [jsonExpanded, setJsonExpanded] = useState(false);
@@ -108,7 +112,7 @@ export function ComponentV2BuilderV2({
             <h2 className="text-sm font-semibold text-foreground">Preview</h2>
           </div>
           <div className="rounded-lg border border-border overflow-hidden">
-            <PreviewPanel items={items} />
+            <PreviewPanel items={items} webhookUsername={webhookUsername} webhookAvatarUrl={webhookAvatarUrl} />
           </div>
         </div>
       </div>

@@ -876,7 +876,14 @@ export const api = {
   messages: {
     send: (
       factionId: string,
-      data: { channel_id: string; template_type: string; template_id: string },
+      data: {
+        channel_id?: string;
+        webhook_urls?: string[];
+        webhook_username?: string;
+        webhook_avatar_url?: string;
+        template_type: string;
+        template_id: string;
+      },
       opts?: RequestOptions
     ) =>
       apiClient.post<MessageSend>(

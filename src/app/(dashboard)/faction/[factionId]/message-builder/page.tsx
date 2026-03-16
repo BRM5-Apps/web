@@ -42,6 +42,8 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
+  Plus,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSendMessage, useMessageHistory } from "@/hooks/use-messages";
@@ -252,7 +254,11 @@ export default function MessageBuilderPage() {
   const factionId = params.factionId;
 
   const [mode, setMode] = useState<MessageMode>("text");
+  const [sendVia, setSendVia] = useState<"bot" | "webhook">("bot");
   const [channelId, setChannelId] = useState("");
+  const [webhookUrls, setWebhookUrls] = useState<string[]>([""]);
+  const [webhookUsername, setWebhookUsername] = useState("");
+  const [webhookAvatarUrl, setWebhookAvatarUrl] = useState("");
   const [sheetOpen, setSheetOpen] = useState(false);
 
   // Name lives in the sheet input
@@ -273,6 +279,7 @@ export default function MessageBuilderPage() {
   const componentSubmitRef = useRef<(() => void) | null>(null);
   // When true, the next successful save will immediately trigger a send
   const pendingSendRef = useRef(false);
+  const pendingDestRef = useRef<{ channel_id?: string; webhook_urls?: string[]; webhook_username?: string; webhook_avatar_url?: string }>({});
 
   // Send mutation + history
   const sendMessage = useSendMessage(factionId);
@@ -338,7 +345,7 @@ export default function MessageBuilderPage() {
             if (pendingSendRef.current) {
               pendingSendRef.current = false;
               setHasSentThisSession(true);
-              sendMessage.mutate({ channel_id: channelId, template_type: "text", template_id: created.id });
+              sendMessage.mutate({ ...pendingDestRef.current, template_type: "text", template_id: created.id });
             }
           },
         }
@@ -375,7 +382,7 @@ export default function MessageBuilderPage() {
           if (pendingSendRef.current) {
             pendingSendRef.current = false;
             setHasSentThisSession(true);
-            sendMessage.mutate({ channel_id: channelId, template_type: "embed", template_id: created.id });
+            sendMessage.mutate({ ...pendingDestRef.current, template_type: "embed", template_id: created.id });
           }
         },
       }
@@ -395,7 +402,7 @@ export default function MessageBuilderPage() {
           if (pendingSendRef.current) {
             pendingSendRef.current = false;
             setHasSentThisSession(true);
-            sendMessage.mutate({ channel_id: channelId, template_type: "container", template_id: created.id });
+            sendMessage.mutate({ ...pendingDestRef.current, template_type: "container", template_id: created.id });
           }
         },
       }
@@ -403,29 +410,42 @@ export default function MessageBuilderPage() {
   }
 
   function handleSend() {
-    if (!channelId.trim()) {
+    if (sendVia === "bot" && !channelId.trim()) {
       toast.error("Enter a channel ID");
       return;
     }
+    if (sendVia === "webhook") {
+      const validUrls = webhookUrls.map((u) => u.trim()).filter(Boolean);
+      if (validUrls.length === 0) {
+        toast.error("Enter at least one webhook URL");
+        return;
+      }
+    }
+    const validWebhookUrls = webhookUrls.map((u) => u.trim()).filter(Boolean);
+    const destination = sendVia === "webhook"
+      ? {
+          webhook_urls: validWebhookUrls,
+          ...(webhookUsername.trim() ? { webhook_username: webhookUsername.trim() } : {}),
+          ...(webhookAvatarUrl.trim() ? { webhook_avatar_url: webhookAvatarUrl.trim() } : {}),
+        }
+      : { channel_id: channelId.trim() };
+
     // Already have a saved template — send immediately
     if (savedTemplateId && savedTemplateType) {
       setHasSentThisSession(true);
-      sendMessage.mutate({
-        channel_id: channelId,
-        template_type: savedTemplateType,
-        template_id: savedTemplateId,
-      });
+      sendMessage.mutate({ ...destination, template_type: savedTemplateType, template_id: savedTemplateId });
       return;
     }
     // No saved template yet — auto-save then send
     pendingSendRef.current = true;
+    pendingDestRef.current = destination;
     handleSave();
   }
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6">
       {/* Page header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Message Builder</h1>
@@ -467,24 +487,32 @@ export default function MessageBuilderPage() {
             </div>
           </div>
 
-          {/* Channel input */}
-          <div className="min-w-[200px] flex-1 space-y-1.5">
-            <Label
-              htmlFor="channelId"
-              className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
-            >
-              Target Channel ID
-            </Label>
-            <Input
-              id="channelId"
-              placeholder="123456789012345678"
-              value={channelId}
-              onChange={(e) => setChannelId(e.target.value)}
-            />
+          {/* Send-via toggle */}
+          <div className="space-y-1.5">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Send Via
+            </p>
+            <div className="flex overflow-hidden rounded-lg border border-border">
+              {(["bot", "webhook"] as const).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setSendVia(v)}
+                  className={cn(
+                    "px-3 py-2 text-sm font-medium transition-colors border-r border-border last:border-r-0 capitalize",
+                    sendVia === v
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-background text-muted-foreground hover:bg-accent hover:text-foreground"
+                  )}
+                >
+                  {v}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Actions */}
-          <div className="space-y-1.5">
+          <div className="ml-auto space-y-1.5">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Actions
             </p>
@@ -496,7 +524,11 @@ export default function MessageBuilderPage() {
               <Button
                 variant="outline"
                 onClick={handleSend}
-                disabled={!channelId.trim() || sendMessage.isPending || isSaving}
+                disabled={
+                  (sendVia === "bot" ? !channelId.trim() : !webhookUrls.some((u) => u.trim())) ||
+                  sendMessage.isPending ||
+                  isSaving
+                }
               >
                 {sendMessage.isPending || (pendingSendRef.current && isSaving) ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -526,6 +558,91 @@ export default function MessageBuilderPage() {
         </div>
       </Card>
 
+      {/* ── Destination ── full-width below action bar */}
+      <Card className="p-4">
+        {sendVia === "bot" ? (
+          <div className="space-y-1.5">
+            <Label htmlFor="channelId" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Target Channel ID
+            </Label>
+            <Input
+              id="channelId"
+              placeholder="123456789012345678"
+              value={channelId}
+              onChange={(e) => setChannelId(e.target.value)}
+            />
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* Webhook URLs */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Webhook URLs
+              </Label>
+              <div className="space-y-2">
+                {webhookUrls.map((url, i) => (
+                  <div key={i} className="flex gap-1.5">
+                    <Input
+                      placeholder="https://discord.com/api/webhooks/..."
+                      value={url}
+                      onChange={(e) => {
+                        const next = [...webhookUrls];
+                        next[i] = e.target.value;
+                        setWebhookUrls(next);
+                      }}
+                    />
+                    {webhookUrls.length > 1 && (
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-10 w-10 shrink-0 text-destructive hover:text-destructive"
+                        onClick={() => setWebhookUrls(webhookUrls.filter((_, j) => j !== i))}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-7 gap-1 text-xs"
+                  onClick={() => setWebhookUrls([...webhookUrls, ""])}
+                >
+                  <Plus className="h-3 w-3" />
+                  Add URL
+                </Button>
+              </div>
+            </div>
+            {/* Identity overrides */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Username (optional)
+                </Label>
+                <Input
+                  placeholder="Override bot name"
+                  value={webhookUsername}
+                  onChange={(e) => setWebhookUsername(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Avatar URL (optional)
+                </Label>
+                <Input
+                  placeholder="https://..."
+                  value={webhookAvatarUrl}
+                  onChange={(e) => setWebhookAvatarUrl(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+      </Card>
+
       {/* ── Compose area ── */}
       {mode === "text" && (
         <Card className="space-y-3 p-4">
@@ -549,6 +666,8 @@ export default function MessageBuilderPage() {
           onSave={handleEmbedSave}
           isSaving={createEmbed.isPending}
           submitRef={embedSubmitRef}
+          webhookUsername={sendVia === "webhook" ? webhookUsername : undefined}
+          webhookAvatarUrl={sendVia === "webhook" ? webhookAvatarUrl : undefined}
         />
       )}
 
@@ -560,6 +679,8 @@ export default function MessageBuilderPage() {
           isSaving={createContainer.isPending}
           submitRef={componentSubmitRef}
           factionId={factionId}
+          webhookUsername={sendVia === "webhook" ? webhookUsername : undefined}
+          webhookAvatarUrl={sendVia === "webhook" ? webhookAvatarUrl : undefined}
         />
       )}
 

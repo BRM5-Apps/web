@@ -9,12 +9,15 @@ export function useSendMessage(factionId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: {
-      channel_id: string;
+      channel_id?: string;
+      webhook_urls?: string[];
+      webhook_username?: string;
+      webhook_avatar_url?: string;
       template_type: string;
       template_id: string;
     }) => api.messages.send(factionId, data),
     onSuccess: () => {
-      toast.success("Message queued — the bot will deliver it shortly");
+      toast.success("Message queued — delivering shortly");
       qc.invalidateQueries({
         queryKey: queryKeys.messages.history(factionId),
       });
