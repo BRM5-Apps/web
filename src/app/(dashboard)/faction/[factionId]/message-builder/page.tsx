@@ -280,6 +280,8 @@ export default function MessageBuilderPage() {
   // When true, the next successful save will immediately trigger a send
   const pendingSendRef = useRef(false);
   const pendingDestRef = useRef<{ channel_id?: string; webhook_urls?: string[]; webhook_username?: string; webhook_avatar_url?: string }>({});
+  // Resolved name to use for the current save (may be auto-generated)
+  const pendingNameRef = useRef<string>("");
 
   // Send mutation + history
   const sendMessage = useSendMessage(factionId);
@@ -328,18 +330,24 @@ export default function MessageBuilderPage() {
 
   // ── Save ───────────────────────────────────────────────────────────────────
 
-  function handleSave() {
-    const name = templateName.trim();
+  function handleSave(requireName = true) {
+    // When triggered from handleSend (auto-save-then-send), a name is optional —
+    // auto-generate one so the user can send without ever touching the template name.
+    const autoName = `${mode === "component" ? "Component" : mode === "embed" ? "Embed" : "Message"} ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+    const name = templateName.trim() || (!requireName ? autoName : "");
     if (!name) {
       toast.error("Enter a name before saving");
       return;
     }
+    // Store so embed/component handlers (which go through form submit) can read it
+    pendingNameRef.current = name;
     if (mode === "text") {
       if (!textContent.trim()) { toast.error("Message cannot be empty"); return; }
       createText.mutate(
         { name, content: textContent },
         {
           onSuccess: (created) => {
+            pendingNameRef.current = "";
             setSavedTemplateId(created.id);
             setSavedTemplateType("text");
             if (pendingSendRef.current) {
@@ -364,7 +372,7 @@ export default function MessageBuilderPage() {
   function handleEmbedSave(form: EmbedFormData) {
     createEmbed.mutate(
       {
-        name: templateName.trim() || form.name,
+        name: pendingNameRef.current || templateName.trim() || form.name,
         title: form.title || undefined,
         description: form.description || undefined,
         color: form.color || undefined,
@@ -377,6 +385,7 @@ export default function MessageBuilderPage() {
       },
       {
         onSuccess: (created) => {
+          pendingNameRef.current = "";
           setSavedTemplateId(created.id);
           setSavedTemplateType("embed");
           if (pendingSendRef.current) {
@@ -392,11 +401,12 @@ export default function MessageBuilderPage() {
   function handleComponentSave(items: C2TopLevelItem[]) {
     createContainer.mutate(
       {
-        name: templateName.trim() || `Component ${new Date().toLocaleTimeString()}`,
+        name: pendingNameRef.current || templateName.trim() || `Component ${new Date().toLocaleTimeString()}`,
         template_data: { components: items },
       },
       {
         onSuccess: (created) => {
+          pendingNameRef.current = "";
           setSavedTemplateId(created.id);
           setSavedTemplateType("container");
           if (pendingSendRef.current) {
@@ -436,10 +446,10 @@ export default function MessageBuilderPage() {
       sendMessage.mutate({ ...destination, template_type: savedTemplateType, template_id: savedTemplateId });
       return;
     }
-    // No saved template yet — auto-save then send
+    // No saved template yet — auto-save then send (name not required)
     pendingSendRef.current = true;
     pendingDestRef.current = destination;
-    handleSave();
+    handleSave(false);
   }
 
   // ─── Render ───────────────────────────────────────────────────────────────
