@@ -11,13 +11,13 @@ import { api } from "@/lib/api-client";
 const MEDALS = ["🥇", "🥈", "🥉"];
 
 export default function LeaderboardPage() {
-  const { factionId } = useParams<{ factionId: string }>();
+  const { serverId } = useParams<{ serverId: string }>();
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["factions", factionId, "stats", "leaderboard"],
-    queryFn: () => api.stats.leaderboard(factionId, { limit: 25 }),
+    queryKey: ["servers", serverId, "stats", "leaderboard"],
+    queryFn: () => api.stats.leaderboard(serverId, { limit: 25 }),
     staleTime: 1000 * 60 * 2,
-    enabled: Boolean(factionId),
+    enabled: Boolean(serverId),
   });
 
   return (

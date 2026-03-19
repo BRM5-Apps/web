@@ -6,25 +6,25 @@ import { api } from "@/lib/api-client";
 import type { ScheduledMessage } from "@/types/template";
 
 const qk = {
-  list: (factionId: string) => ["factions", factionId, "schedule"] as const,
+  list: (serverId: string) => ["servers", serverId, "schedule"] as const,
 };
 
-export function useScheduledMessages(factionId: string) {
+export function useScheduledMessages(serverId: string) {
   return useQuery({
-    queryKey: qk.list(factionId),
-    queryFn: () => api.schedule.list(factionId),
+    queryKey: qk.list(serverId),
+    queryFn: () => api.schedule.list(serverId),
     staleTime: 1000 * 60 * 2,
-    enabled: Boolean(factionId),
+    enabled: Boolean(serverId),
   });
 }
 
-export function useCreateSchedule(factionId: string) {
+export function useCreateSchedule(serverId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: Partial<ScheduledMessage>) => api.schedule.create(factionId, data),
+    mutationFn: (data: Partial<ScheduledMessage>) => api.schedule.create(serverId, data),
     onSuccess: () => {
       toast.success("Scheduled message created");
-      qc.invalidateQueries({ queryKey: qk.list(factionId) });
+      qc.invalidateQueries({ queryKey: qk.list(serverId) });
     },
     onError: (err: unknown) => {
       toast.error(
@@ -36,13 +36,13 @@ export function useCreateSchedule(factionId: string) {
   });
 }
 
-export function useDeleteSchedule(factionId: string) {
+export function useDeleteSchedule(serverId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => api.schedule.delete(factionId, id),
+    mutationFn: (id: string) => api.schedule.delete(serverId, id),
     onSuccess: () => {
       toast.success("Scheduled message deleted");
-      qc.invalidateQueries({ queryKey: qk.list(factionId) });
+      qc.invalidateQueries({ queryKey: qk.list(serverId) });
     },
     onError: () => toast.error("Failed to delete scheduled message"),
   });

@@ -2,20 +2,20 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { queryKeys } from "@/lib/query-keys";
 import { invalidateRelated } from "@/lib/query-utils";
-import type { Faction, PaginatedMembers } from "@/types/faction";
+import type { Server, PaginatedMembers } from "@/types/server";
 
-export function useFaction(factionId: string) {
-  return useQuery<Faction>({
-    queryKey: queryKeys.factions.detail(factionId),
-    queryFn: ({ signal }) => api.factions.get(factionId, { signal }),
-    enabled: !!factionId,
+export function useServer(serverId: string) {
+  return useQuery<Server>({
+    queryKey: queryKeys.servers.detail(serverId),
+    queryFn: ({ signal }) => api.servers.get(serverId, { signal }),
+    enabled: !!serverId,
   });
 }
 
-export function useFactions() {
-  return useQuery<Faction[]>({
-    queryKey: queryKeys.factions.lists(),
-    queryFn: ({ signal }) => api.factions.list({ signal }),
+export function useServers() {
+  return useQuery<Server[]>({
+    queryKey: queryKeys.servers.lists(),
+    queryFn: ({ signal }) => api.servers.list({ signal }),
   });
 }
 
@@ -28,12 +28,12 @@ export interface MemberQueryParams {
   sortOrder?: "asc" | "desc";
 }
 
-export function useFactionMembers(factionId: string, params: MemberQueryParams = {}) {
+export function useServerMembers(serverId: string, params: MemberQueryParams = {}) {
   return useQuery<PaginatedMembers>({
-    queryKey: queryKeys.members.list(factionId, params as Record<string, unknown>),
+    queryKey: queryKeys.members.list(serverId, params as Record<string, unknown>),
     queryFn: ({ signal }) =>
       api.members.list(
-        factionId,
+        serverId,
         {
           page: params.page ?? 1,
           limit: params.limit ?? 20,
@@ -44,29 +44,29 @@ export function useFactionMembers(factionId: string, params: MemberQueryParams =
         },
         { signal }
       ),
-    enabled: !!factionId,
+    enabled: !!serverId,
   });
 }
 
-export function useUpdateFaction(factionId: string) {
+export function useUpdateServer(serverId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: Partial<Pick<Faction, "name" | "description" | "iconUrl">>) =>
-      api.factions.update(factionId, data),
+    mutationFn: (data: Partial<Pick<Server, "name" | "description" | "iconUrl">>) =>
+      api.servers.update(serverId, data),
     onSuccess: () => {
-      invalidateRelated(queryClient, "faction", factionId);
+      invalidateRelated(queryClient, "server", serverId);
     },
   });
 }
 
-export function useDeleteFaction(factionId: string) {
+export function useDeleteServer(serverId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => api.factions.delete(factionId),
+    mutationFn: () => api.servers.delete(serverId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.factions.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.servers.all });
     },
   });
 }

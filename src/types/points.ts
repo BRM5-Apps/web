@@ -1,6 +1,6 @@
 export interface UserPoints {
   id: string;
-  factionUserId: string;
+  serverUserId: string;
   totalPoints: number;
   weeklyPoints: number;
   monthlyPoints: number;
@@ -10,7 +10,7 @@ export interface UserPoints {
 
 export interface PointTransaction {
   id: string;
-  factionUserId: string;
+  serverUserId: string;
   amount: number;
   reason: string;
   source: "event" | "manual" | "bonus" | "deduction";
@@ -29,7 +29,7 @@ export interface PromotionThreshold {
 
 export interface PromotionFlag {
   id: string;
-  factionUserId: string;
+  serverUserId: string;
   rankId: string;
   status: "pending" | "approved" | "denied";
   flaggedAt: string;

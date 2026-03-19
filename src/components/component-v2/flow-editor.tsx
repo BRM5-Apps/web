@@ -50,7 +50,7 @@ function uid(): string {
   return crypto.randomUUID();
 }
 
-function makeAction(type: FlowActionType): FlowAction {
+export function makeAction(type: FlowActionType): FlowAction {
   switch (type) {
     case "do_nothing":
       return { id: uid(), type: "do_nothing" };
@@ -110,7 +110,7 @@ function makeAction(type: FlowActionType): FlowAction {
   }
 }
 
-function actionLabel(action: FlowAction): string {
+export function actionLabel(action: FlowAction): string {
   switch (action.type) {
     case "do_nothing":
       return "Do Nothing";
@@ -137,7 +137,7 @@ function actionLabel(action: FlowAction): string {
   }
 }
 
-function computeErrors(actions: FlowAction[]): string[] {
+export function computeErrors(actions: FlowAction[]): string[] {
   const errors: string[] = [];
   actions.forEach((action, idx) => {
     if (
@@ -160,7 +160,7 @@ function computeErrors(actions: FlowAction[]): string[] {
 
 // ── ACTION_TYPES ─────────────────────────────────────────────────────────────
 
-const ACTION_TYPES: { type: FlowActionType; label: string }[] = [
+export const ACTION_TYPES: { type: FlowActionType; label: string }[] = [
   { type: "do_nothing", label: "Do nothing" },
   { type: "wait", label: "Wait for X seconds" },
   { type: "check", label: "Check" },
@@ -179,11 +179,11 @@ const ACTION_TYPES: { type: FlowActionType; label: string }[] = [
 interface SendOutputFieldsProps {
   action: FaSendOutput;
   onChange: (updated: FlowAction) => void;
-  factionId?: string;
+  serverId?: string;
 }
 
-function SendOutputFields({ action, onChange, factionId }: SendOutputFieldsProps) {
-  const templates = useAllTemplates(factionId ?? "");
+function SendOutputFields({ action, onChange, serverId }: SendOutputFieldsProps) {
+  const templates = useAllTemplates(serverId ?? "");
 
   // Groups: only show modal group when outputKind === "modal", else show text/embed/container
   const groups: { kind: SendOutputTemplateType; label: string; items: { id: string; name: string }[] }[] =
@@ -291,10 +291,10 @@ function SendOutputFields({ action, onChange, factionId }: SendOutputFieldsProps
 interface ActionFieldsProps {
   action: FlowAction;
   onChange: (updated: FlowAction) => void;
-  factionId?: string;
+  serverId?: string;
 }
 
-function ActionFields({ action, onChange, factionId }: ActionFieldsProps) {
+export function ActionFields({ action, onChange, serverId }: ActionFieldsProps) {
   if (action.type === "do_nothing") {
     return (
       <p className="text-xs text-gray-400">No configuration needed.</p>
@@ -394,7 +394,7 @@ function ActionFields({ action, onChange, factionId }: ActionFieldsProps) {
       <SendOutputFields
         action={action as FaSendOutput}
         onChange={onChange}
-        factionId={factionId}
+        serverId={serverId}
       />
     );
   }
@@ -581,7 +581,7 @@ interface AddActionDropdownProps {
   onAdd: (type: FlowActionType) => void;
 }
 
-function AddActionDropdown({ onAdd }: AddActionDropdownProps) {
+export function AddActionDropdown({ onAdd }: AddActionDropdownProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -615,10 +615,10 @@ interface ActionCardProps {
   onMoveDown: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
-  factionId?: string;
+  serverId?: string;
 }
 
-function ActionCard({
+export function ActionCard({
   action,
   index,
   total,
@@ -627,7 +627,7 @@ function ActionCard({
   onMoveDown,
   onDuplicate,
   onDelete,
-  factionId,
+  serverId,
 }: ActionCardProps) {
   return (
     <div className="rounded-lg border border-[#5865F2]/40 bg-[#5865F2]/10 p-3">
@@ -678,7 +678,7 @@ function ActionCard({
           </button>
         </div>
       </div>
-      <ActionFields action={action} onChange={onChange} factionId={factionId} />
+      <ActionFields action={action} onChange={onChange} serverId={serverId} />
     </div>
   );
 }
@@ -690,7 +690,7 @@ interface FlowEditorProps {
   onOpenChange: (open: boolean) => void;
   actions: FlowAction[];
   onChange: (actions: FlowAction[]) => void;
-  factionId?: string;
+  serverId?: string;
 }
 
 export function FlowEditor({
@@ -698,7 +698,7 @@ export function FlowEditor({
   onOpenChange,
   actions,
   onChange,
-  factionId,
+  serverId,
 }: FlowEditorProps) {
   const [localActions, setLocalActions] = useState<FlowAction[]>(actions);
 
@@ -787,7 +787,7 @@ export function FlowEditor({
               onMoveDown={() => moveDown(idx)}
               onDuplicate={() => duplicate(idx)}
               onDelete={() => remove(idx)}
-              factionId={factionId}
+              serverId={serverId}
             />
           ))}
         </div>

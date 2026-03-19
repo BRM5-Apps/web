@@ -1,51 +1,51 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { Faction } from "@/types/faction";
+import type { Server } from "@/types/server";
 
-interface FactionStoreState {
-  activeFactionId: string | null;
-  activeFaction: Faction | null;
+interface ServerStoreState {
+  activeServerId: string | null;
+  activeServer: Server | null;
   userPermissions: string[];
 }
 
-interface FactionStoreActions {
-  setActiveFaction: (factionId: string, faction?: Faction) => void;
-  setFactionData: (faction: Faction) => void;
+interface ServerStoreActions {
+  setActiveServer: (serverId: string, server?: Server) => void;
+  setServerData: (server: Server) => void;
   setUserPermissions: (permissions: string[]) => void;
-  clearActiveFaction: () => void;
+  clearActiveServer: () => void;
 }
 
-export const useFactionStore = create<FactionStoreState & FactionStoreActions>()(
+export const useServerStore = create<ServerStoreState & ServerStoreActions>()(
   persist(
     (set) => ({
-      activeFactionId: null,
-      activeFaction: null,
+      activeServerId: null,
+      activeServer: null,
       userPermissions: [],
 
-      setActiveFaction: (factionId, faction) =>
+      setActiveServer: (serverId, server) =>
         set({
-          activeFactionId: factionId,
-          activeFaction: faction ?? null,
+          activeServerId: serverId,
+          activeServer: server ?? null,
           userPermissions: [],
         }),
 
-      setFactionData: (faction) =>
-        set({ activeFaction: faction }),
+      setServerData: (server) =>
+        set({ activeServer: server }),
 
       setUserPermissions: (permissions) =>
         set({ userPermissions: permissions }),
 
-      clearActiveFaction: () =>
+      clearActiveServer: () =>
         set({
-          activeFactionId: null,
-          activeFaction: null,
+          activeServerId: null,
+          activeServer: null,
           userPermissions: [],
         }),
     }),
     {
-      name: "factionhub-faction",
+      name: "serverhub-server",
       partialize: (state) => ({
-        activeFactionId: state.activeFactionId,
+        activeServerId: state.activeServerId,
       }),
     }
   )

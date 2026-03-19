@@ -5,7 +5,7 @@ import { queryKeys } from "./query-keys";
  * Resource types that can trigger cascading invalidation.
  */
 type InvalidatableResource =
-  | "faction"
+  | "server"
   | "members"
   | "ranks"
   | "events"
@@ -29,51 +29,51 @@ type InvalidatableResource =
 export async function invalidateRelated(
   queryClient: QueryClient,
   resource: InvalidatableResource,
-  factionId: string
+  serverId: string
 ): Promise<void> {
   const relatedMap: Record<InvalidatableResource, readonly QueryKey[]> = {
-    faction: [
-      queryKeys.factions.all,
-      queryKeys.factions.detail(factionId),
+    server: [
+      queryKeys.servers.all,
+      queryKeys.servers.detail(serverId),
     ],
     members: [
-      queryKeys.members.all(factionId),
-      queryKeys.stats.overview(factionId),
+      queryKeys.members.all(serverId),
+      queryKeys.stats.overview(serverId),
     ],
     ranks: [
-      queryKeys.ranks.all(factionId),
-      queryKeys.members.all(factionId),
-      queryKeys.promotionPaths.all(factionId),
+      queryKeys.ranks.all(serverId),
+      queryKeys.members.all(serverId),
+      queryKeys.promotionPaths.all(serverId),
     ],
     events: [
-      queryKeys.events.all(factionId),
-      queryKeys.stats.overview(factionId),
+      queryKeys.events.all(serverId),
+      queryKeys.stats.overview(serverId),
     ],
-    stats: [queryKeys.stats.overview(factionId)],
+    stats: [queryKeys.stats.overview(serverId)],
     moderation: [
-      queryKeys.moderation.punishments(factionId),
-      queryKeys.moderation.blacklist(factionId),
-      queryKeys.moderation.promoLocks(factionId),
+      queryKeys.moderation.punishments(serverId),
+      queryKeys.moderation.blacklist(serverId),
+      queryKeys.moderation.promoLocks(serverId),
     ],
     points: [
-      queryKeys.points.flags(factionId),
-      queryKeys.stats.overview(factionId),
-      queryKeys.members.all(factionId),
+      queryKeys.points.flags(serverId),
+      queryKeys.stats.overview(serverId),
+      queryKeys.members.all(serverId),
     ],
-    units: [queryKeys.units.all(factionId)],
+    units: [queryKeys.units.all(serverId)],
     templates: [
-      queryKeys.templates.embeds(factionId),
-      queryKeys.templates.containers(factionId),
-      queryKeys.templates.text(factionId),
+      queryKeys.templates.embeds(serverId),
+      queryKeys.templates.containers(serverId),
+      queryKeys.templates.text(serverId),
     ],
     promotionPaths: [
-      queryKeys.promotionPaths.all(factionId),
-      queryKeys.ranks.all(factionId),
+      queryKeys.promotionPaths.all(serverId),
+      queryKeys.ranks.all(serverId),
     ],
     config: [
-      queryKeys.config.faction(factionId),
-      queryKeys.config.welcome(factionId),
-      queryKeys.config.eventTypes(factionId),
+      queryKeys.config.server(serverId),
+      queryKeys.config.welcome(serverId),
+      queryKeys.config.eventTypes(serverId),
     ],
   };
 
@@ -90,8 +90,8 @@ export async function invalidateRelated(
  * Returns props to spread onto the triggering element.
  *
  * @example
- * const hoverProps = prefetchOnHover(queryClient, queryKeys.factions.detail(id), () => api.factions.get(id));
- * <Link {...hoverProps} href={`/factions/${id}`}>View Faction</Link>
+ * const hoverProps = prefetchOnHover(queryClient, queryKeys.servers.detail(id), () => api.servers.get(id));
+ * <Link {...hoverProps} href={`/servers/${id}`}>View Server</Link>
  */
 export function prefetchOnHover<T>(
   queryClient: QueryClient,

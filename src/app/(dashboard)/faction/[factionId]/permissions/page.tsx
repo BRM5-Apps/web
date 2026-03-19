@@ -34,22 +34,22 @@ function groupPermissions(keys: string[]): Record<string, string[]> {
 
 // ─── Hooks ───────────────────────────────────────────────────────────────────
 
-function useMyPermissions(factionId: string) {
+function useMyPermissions(serverId: string) {
   return useQuery<{ permissions: string[] }>({
-    queryKey: queryKeys.permissions.user(factionId),
-    queryFn: ({ signal }) => api.permissions.get(factionId, { signal }),
-    enabled: !!factionId,
+    queryKey: queryKeys.permissions.user(serverId),
+    queryFn: ({ signal }) => api.permissions.get(serverId, { signal }),
+    enabled: !!serverId,
   });
 }
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function PermissionsPage() {
-  const params = useParams<{ factionId: string }>();
-  const factionId = params.factionId;
+  const params = useParams<{ serverId: string }>();
+  const serverId = params.serverId;
 
-  const { data: permissionsData, isLoading: permsLoading } = useMyPermissions(factionId);
-  const { data: ranks, isLoading: ranksLoading } = useRanks(factionId);
+  const { data: permissionsData, isLoading: permsLoading } = useMyPermissions(serverId);
+  const { data: ranks, isLoading: ranksLoading } = useRanks(serverId);
 
   const isLoading = permsLoading || ranksLoading;
   const permissions = permissionsData?.permissions ?? [];
@@ -61,11 +61,11 @@ export default function PermissionsPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Permissions</h1>
           <p className="text-muted-foreground">
-            Your current permissions for this faction, and per-rank permission settings.
+            Your current permissions for this server, and per-rank permission settings.
           </p>
         </div>
         <Button variant="outline" size="sm" asChild>
-          <Link href={`/faction/${factionId}/ranks`}>
+          <Link href={`/server/${serverId}/ranks`}>
             <Shield className="mr-2 h-4 w-4" />
             Manage Ranks
           </Link>
@@ -79,7 +79,7 @@ export default function PermissionsPage() {
             <ShieldCheck className="h-5 w-5 text-indigo-500" />
             Your Permissions
           </CardTitle>
-          <CardDescription>Permissions granted to your rank in this faction.</CardDescription>
+          <CardDescription>Permissions granted to your rank in this server.</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -136,7 +136,7 @@ export default function PermissionsPage() {
               {[...ranks].sort((a, b) => b.level - a.level).map((rank) => (
                 <Link
                   key={rank.id}
-                  href={`/faction/${factionId}/ranks`}
+                  href={`/server/${serverId}/ranks`}
                   className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3 transition-colors hover:bg-accent/40"
                 >
                   <div className="flex items-center gap-3">

@@ -81,8 +81,8 @@ function SkeletonRows() {
 }
 
 export default function EventsPage() {
-  const { factionId } = useParams<{ factionId: string }>();
-  const { data: events, isLoading, isError, error, refetch } = useEvents(factionId);
+  const { serverId } = useParams<{ serverId: string }>();
+  const { data: events, isLoading, isError, error, refetch } = useEvents(serverId);
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -90,7 +90,7 @@ export default function EventsPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Events</h1>
           <p className="text-muted-foreground">
-            View and manage faction events.
+            View and manage server events.
           </p>
         </div>
         <TooltipProvider>

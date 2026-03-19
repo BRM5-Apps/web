@@ -3,8 +3,8 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/providers/auth-provider";
-import { useFactions } from "@/hooks/use-faction";
-import { useFactionStore } from "@/stores/faction-store";
+import { useServers } from "@/hooks/use-server";
+import { useServerStore } from "@/stores/server-store";
 import { usePermissions } from "@/hooks/use-permissions";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Loading } from "@/components/shared/loading";
@@ -17,11 +17,11 @@ export default function DashboardLayout({
 }) {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
-  const { data: factions, isLoading: factionsLoading } = useFactions();
-  const { activeFactionId, setFactionData, setUserPermissions } = useFactionStore();
+  const { data: servers, isLoading: serversLoading } = useServers();
+  const { activeServerId, setServerData, setUserPermissions } = useServerStore();
 
-  // Load permissions when faction changes
-  const { permissions } = usePermissions(activeFactionId ?? "");
+  // Load permissions when server changes
+  const { permissions } = usePermissions(activeServerId ?? "");
 
   // Sync permissions to store
   useEffect(() => {
@@ -30,15 +30,15 @@ export default function DashboardLayout({
     }
   }, [permissions, setUserPermissions]);
 
-  // Hydrate faction data from API when we have an ID from localStorage
+  // Hydrate server data from API when we have an ID from localStorage
   useEffect(() => {
-    if (activeFactionId && factions) {
-      const faction = factions.find((f) => f.id === activeFactionId);
-      if (faction) {
-        setFactionData(faction);
+    if (activeServerId && servers) {
+      const server = servers.find((f) => f.id === activeServerId);
+      if (server) {
+        setServerData(server);
       }
     }
-  }, [activeFactionId, factions, setFactionData]);
+  }, [activeServerId, servers, setServerData]);
 
   // Redirect if not authenticated
   useEffect(() => {

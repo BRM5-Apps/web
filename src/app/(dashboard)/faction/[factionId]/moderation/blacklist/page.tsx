@@ -5,13 +5,13 @@ import { Ban } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function BlacklistPage() {
-  useParams<{ factionId: string }>();
+  useParams<{ serverId: string }>();
 
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Blacklist</h1>
-        <p className="text-muted-foreground">Manage blacklisted users from your faction.</p>
+        <p className="text-muted-foreground">Manage blacklisted users from your server.</p>
       </div>
 
       <Card>
@@ -20,7 +20,7 @@ export default function BlacklistPage() {
             <Ban className="h-5 w-5 text-red-500" />
             Blacklisted Users
           </CardTitle>
-          <CardDescription>Users banned from joining this faction.</CardDescription>
+          <CardDescription>Users banned from joining this server.</CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">Blacklist management coming soon.</p>

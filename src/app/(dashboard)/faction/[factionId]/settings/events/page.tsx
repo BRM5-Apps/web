@@ -5,7 +5,7 @@ import { CalendarCog } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function EventSettingsPage() {
-  useParams<{ factionId: string }>();
+  useParams<{ serverId: string }>();
 
   return (
     <div className="space-y-6 max-w-2xl">

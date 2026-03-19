@@ -43,20 +43,20 @@ type FormData = z.infer<typeof schema>;
 
 // ─── Hooks ───────────────────────────────────────────────────────────────────
 
-function useWelcomeConfig(factionId: string) {
+function useWelcomeConfig(serverId: string) {
   return useQuery<WelcomeConfig>({
-    queryKey: queryKeys.config.welcome(factionId),
-    queryFn: ({ signal }) => api.config.getWelcome(factionId, { signal }) as unknown as Promise<WelcomeConfig>,
-    enabled: !!factionId,
+    queryKey: queryKeys.config.welcome(serverId),
+    queryFn: ({ signal }) => api.config.getWelcome(serverId, { signal }) as unknown as Promise<WelcomeConfig>,
+    enabled: !!serverId,
   });
 }
 
-function useUpdateWelcomeConfig(factionId: string) {
+function useUpdateWelcomeConfig(serverId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: Partial<WelcomeConfig>) => api.config.updateWelcome(factionId, data),
+    mutationFn: (data: Partial<WelcomeConfig>) => api.config.updateWelcome(serverId, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.config.welcome(factionId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.config.welcome(serverId) });
     },
   });
 }
@@ -71,11 +71,11 @@ const KIND_LABELS: Record<TemplateKind, string> = {
 };
 
 export default function WelcomeSettingsPage() {
-  const params = useParams<{ factionId: string }>();
-  const factionId = params.factionId;
-  const { data: config, isLoading } = useWelcomeConfig(factionId);
-  const updateMutation = useUpdateWelcomeConfig(factionId);
-  const templates = useAllTemplates(factionId);
+  const params = useParams<{ serverId: string }>();
+  const serverId = params.serverId;
+  const { data: config, isLoading } = useWelcomeConfig(serverId);
+  const updateMutation = useUpdateWelcomeConfig(serverId);
+  const templates = useAllTemplates(serverId);
 
   const { register, handleSubmit, reset, watch, setValue } = useForm<FormData>({
     resolver: zodResolver(schema),

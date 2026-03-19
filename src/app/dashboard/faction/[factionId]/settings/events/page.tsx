@@ -1,7 +1,7 @@
 export default function EventSettingsPage({
   params,
 }: {
-  params: Promise<{ factionId: string }>;
+  params: Promise<{ serverId: string }>;
 }) {
   return (
     <div className="page-header">

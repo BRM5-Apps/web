@@ -5,13 +5,13 @@ import { ShieldCheck } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function PermissionSettingsPage() {
-  useParams<{ factionId: string }>();
+  useParams<{ serverId: string }>();
 
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Permission Settings</h1>
-        <p className="text-muted-foreground">Configure rank-based permission assignments for this faction.</p>
+        <p className="text-muted-foreground">Configure rank-based permission assignments for this server.</p>
       </div>
 
       <Card>

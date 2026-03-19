@@ -11,8 +11,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ChevronRight, ChevronUp, ChevronDown, Copy, Trash2 } from "lucide-react";
-import { FlowEditor } from "./flow-editor";
-import type { C2SelectMenu, SelectOption, FlowAction } from "./types";
+import { ActionEditorWorkbench } from "./action-editor-workbench";
+import type { ActionGraphDocument, C2SelectMenu, SelectOption, FlowAction } from "./types";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -29,6 +29,7 @@ function makeOption(): SelectOption {
     value: uid().replace(/-/g, "").slice(0, 10),
     default: false,
     flow: [],
+    actionGraph: undefined,
   };
 }
 
@@ -97,7 +98,7 @@ interface OptionCardProps {
   onMoveDown: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
-  factionId?: string;
+  serverId?: string;
 }
 
 function OptionCard({
@@ -109,7 +110,7 @@ function OptionCard({
   onMoveDown,
   onDuplicate,
   onDelete,
-  factionId,
+  serverId,
 }: OptionCardProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [flowOpen, setFlowOpen] = useState(false);
@@ -289,12 +290,16 @@ function OptionCard({
         )}
       </div>
 
-      <FlowEditor
+      <ActionEditorWorkbench
         open={flowOpen}
         onOpenChange={setFlowOpen}
         actions={option.flow}
-        onChange={(flow: FlowAction[]) => onChange({ ...option, flow })}
-        factionId={factionId}
+        graph={option.actionGraph}
+        onSave={({ graph, flow }: { graph: ActionGraphDocument; flow: FlowAction[] }) =>
+          onChange({ ...option, actionGraph: graph, flow })
+        }
+        serverId={serverId}
+        title="Option Action Editor"
       />
     </>
   );
@@ -305,10 +310,10 @@ function OptionCard({
 interface CustomSelectBodyProps {
   options: SelectOption[];
   onChange: (options: SelectOption[]) => void;
-  factionId?: string;
+  serverId?: string;
 }
 
-function CustomSelectBody({ options, onChange, factionId }: CustomSelectBodyProps) {
+function CustomSelectBody({ options, onChange, serverId }: CustomSelectBodyProps) {
   function updateOption(idx: number, updated: SelectOption) {
     onChange(options.map((o, i) => (i === idx ? updated : o)));
   }
@@ -350,7 +355,7 @@ function CustomSelectBody({ options, onChange, factionId }: CustomSelectBodyProp
           onMoveDown={() => moveOption(idx, 1)}
           onDuplicate={() => duplicateOption(idx)}
           onDelete={() => deleteOption(idx)}
-          factionId={factionId}
+          serverId={serverId}
         />
       ))}
       <button
@@ -369,11 +374,12 @@ function CustomSelectBody({ options, onChange, factionId }: CustomSelectBodyProp
 interface SnowflakeBodyProps {
   defaultValues: string[];
   flow: FlowAction[];
-  onChange: (patch: { defaultValues?: string[]; flow?: FlowAction[] }) => void;
-  factionId?: string;
+  actionGraph?: ActionGraphDocument;
+  onChange: (patch: { defaultValues?: string[]; flow?: FlowAction[]; actionGraph?: ActionGraphDocument }) => void;
+  serverId?: string;
 }
 
-function SnowflakeBody({ defaultValues, flow, onChange, factionId }: SnowflakeBodyProps) {
+function SnowflakeBody({ defaultValues, flow, actionGraph, onChange, serverId }: SnowflakeBodyProps) {
   const [flowOpen, setFlowOpen] = useState(false);
 
   function updateId(idx: number, value: string) {
@@ -432,12 +438,16 @@ function SnowflakeBody({ defaultValues, flow, onChange, factionId }: SnowflakeBo
         </button>
       </div>
 
-      <FlowEditor
+      <ActionEditorWorkbench
         open={flowOpen}
         onOpenChange={setFlowOpen}
         actions={flow}
-        onChange={(updated: FlowAction[]) => onChange({ flow: updated })}
-        factionId={factionId}
+        graph={actionGraph}
+        onSave={({ graph, flow: updated }: { graph: ActionGraphDocument; flow: FlowAction[] }) =>
+          onChange({ flow: updated, actionGraph: graph })
+        }
+        serverId={serverId}
+        title="Menu Action Editor"
       />
     </div>
   );
@@ -450,7 +460,7 @@ export interface SelectMenuEditDialogProps {
   onOpenChange: (open: boolean) => void;
   menu: C2SelectMenu;
   onChange: (updated: C2SelectMenu) => void;
-  factionId?: string;
+  serverId?: string;
 }
 
 const MENU_TYPE_LABELS: Record<C2SelectMenu["menuType"], string> = {
@@ -461,12 +471,15 @@ const MENU_TYPE_LABELS: Record<C2SelectMenu["menuType"], string> = {
   channel_select: "Channel Select Menu",
 };
 
+import { DiscordModal, DiscordField, DiscordInput, DiscordButton } from "@/components/shared/discord-modal";
+import { Check } from "lucide-react";
+
 export function SelectMenuEditDialog({
   open,
   onOpenChange,
   menu,
   onChange,
-  factionId,
+  serverId,
 }: SelectMenuEditDialogProps) {
   // Local draft — only committed on Save
   const [draft, setDraft] = useState<C2SelectMenu>(menu);
@@ -474,7 +487,7 @@ export function SelectMenuEditDialog({
   // Re-sync when dialog opens with fresh data
   useEffect(() => {
     if (open) setDraft(menu);
-  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, menu]);
 
   function save() {
     onChange(draft);
@@ -484,84 +497,78 @@ export function SelectMenuEditDialog({
   const isCustomSelect = draft.menuType === "select";
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#2b2d31] border-[#3f4147] text-white max-w-lg max-h-[90vh] flex flex-col p-0 gap-0">
-        <DialogHeader className="px-4 pt-4 pb-3 border-b border-[#3f4147] flex-shrink-0">
-          <DialogTitle className="text-base font-semibold text-white">
-            {MENU_TYPE_LABELS[draft.menuType]}
-          </DialogTitle>
-        </DialogHeader>
+    <DiscordModal
+      open={open}
+      onOpenChange={onOpenChange}
+      title={`Edit ${MENU_TYPE_LABELS[draft.menuType]}`}
+      size="lg"
+      footer={
+        <div className="flex w-full items-center justify-between">
+          <DiscordButton variant="ghost" onClick={() => onOpenChange(false)}>
+            Cancel
+          </DiscordButton>
+          <DiscordButton onClick={save}>
+            Save changes
+          </DiscordButton>
+        </div>
+      }
+    >
+      <div className="space-y-6 py-2">
+        <DiscordField label="Placeholder">
+          <div className="relative">
+            <DiscordInput
+              value={draft.placeholder}
+              onChange={(e) =>
+                setDraft((d) => ({
+                  ...d,
+                  placeholder: e.target.value.slice(0, 150),
+                }))
+              }
+              placeholder="Make a selection"
+              className="pr-14"
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[#80848E] pointer-events-none">
+              {draft.placeholder.length}/150
+            </span>
+          </div>
+        </DiscordField>
 
-        {/* Scrollable body */}
-        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4 min-h-0">
-          {/* ── Common header ── */}
-          <div className="space-y-3">
-            {/* Placeholder */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-medium text-gray-300">
-                  Placeholder
-                </label>
-                <span className="text-xs text-gray-600">
-                  {draft.placeholder.length}/150
-                </span>
-              </div>
-              <input
-                value={draft.placeholder}
-                onChange={(e) =>
-                  setDraft((d) => ({
-                    ...d,
-                    placeholder: e.target.value.slice(0, 150),
-                  }))
-                }
-                placeholder="Make a selection"
-                className="w-full rounded border border-[#3f4147] focus:border-[#5865F2] bg-[#1e1f22] px-3 py-1.5 text-sm text-white outline-none placeholder:text-gray-600"
-              />
-            </div>
-
-            {/* Disabled */}
-            <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+        <DiscordField label="State">
+          <label className="flex items-center gap-3 cursor-pointer group">
+            <div className="relative flex items-center justify-center">
               <input
                 type="checkbox"
                 checked={draft.disabled}
-                onChange={(e) =>
-                  setDraft((d) => ({ ...d, disabled: e.target.checked }))
-                }
-                className="accent-[#5865F2]"
+                onChange={(e) => setDraft((d) => ({ ...d, disabled: e.target.checked }))}
+                className="peer appearance-none w-6 h-6 border-2 border-[#80848E] rounded-[4px] bg-transparent checked:bg-[#5865F2] checked:border-[#5865F2] transition-all"
               />
-              Disabled
-            </label>
-          </div>
+              <Check className="absolute h-4 w-4 text-white opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" strokeWidth={3} />
+            </div>
+            <span className="text-[15px] font-medium text-[#DBDEE1] group-hover:text-white transition-colors">
+              Disable menu
+            </span>
+          </label>
+        </DiscordField>
 
-          {/* ── Divider ── */}
-          <div className="border-t border-[#3f4147]" />
+        <div className="h-px bg-[#3F4147] w-full" />
 
-          {/* ── Type-specific body ── */}
-          {isCustomSelect ? (
-            <CustomSelectBody
-              options={draft.options}
-              onChange={(options) => setDraft((d) => ({ ...d, options }))}
-              factionId={factionId}
-            />
-          ) : (
-            <SnowflakeBody
-              defaultValues={draft.defaultValues}
-              flow={draft.flow}
-              onChange={(patch) => setDraft((d) => ({ ...d, ...patch }))}
-              factionId={factionId}
-            />
-          )}
-        </div>
-
-        <DialogFooter className="px-4 py-3 border-t border-[#3f4147] flex-shrink-0 flex justify-center">
-          <Button
-            onClick={save}
-            className="bg-[#5865F2] hover:bg-[#4752c4] text-white px-8"
-          >
-            Save
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        {/* ── Type-specific body ── */}
+        {isCustomSelect ? (
+          <CustomSelectBody
+            options={draft.options}
+            onChange={(options) => setDraft((d) => ({ ...d, options }))}
+            serverId={serverId}
+          />
+        ) : (
+          <SnowflakeBody
+            defaultValues={draft.defaultValues}
+            flow={draft.flow}
+            actionGraph={draft.actionGraph}
+            onChange={(patch) => setDraft((d) => ({ ...d, ...patch }))}
+            serverId={serverId}
+          />
+        )}
+      </div>
+    </DiscordModal>
   );
 }

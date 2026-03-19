@@ -1,6 +1,6 @@
 export interface Rank {
   id: string;
-  factionId?: string;
+  serverId?: string;
   hubId?: string;
   name: string;
   level: number;
@@ -47,7 +47,7 @@ export interface ReorderRanksPayload {
 /** Promotion path between two ranks */
 export interface PromotionPath {
   id: string;
-  factionId: string;
+  serverId: string;
   fromRankId: string;
   toRankId: string;
   requiredPoints?: number;
@@ -70,7 +70,7 @@ export interface PromotionPathPayload {
 
 export interface RankHistory {
   id: string;
-  factionUserId: string;
+  serverUserId: string;
   oldRankId?: string;
   newRankId?: string;
   changedById: string;

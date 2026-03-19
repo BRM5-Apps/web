@@ -17,18 +17,18 @@ import { PermissionGate } from "@/components/shared/permission-gate";
 import { Plus, Pencil } from "lucide-react";
 
 export default function EmbedTemplatesPage() {
-  const params = useParams<{ factionId: string }>();
-  const factionId = params.factionId;
+  const params = useParams<{ serverId: string }>();
+  const serverId = params.serverId;
   const qp = useSearchParams();
   const initialId = qp.get("id") ?? undefined;
 
-  const { data, isLoading } = useEmbedTemplates(factionId);
+  const { data, isLoading } = useEmbedTemplates(serverId);
   const [selectedId, setSelectedId] = useState<string | undefined>(initialId);
 
   const selectedTemplate = useMemo(() => data?.find((t) => t.id === selectedId) ?? null, [data, selectedId]);
 
-  const createMutation = useCreateEmbedTemplate(factionId);
-  const updateMutation = useUpdateEmbedTemplate(factionId, selectedId ?? "");
+  const createMutation = useCreateEmbedTemplate(serverId);
+  const updateMutation = useUpdateEmbedTemplate(serverId, selectedId ?? "");
 
   function handleSave(form: EmbedFormData) {
     if (!selectedId) {

@@ -21,22 +21,22 @@ const VARIABLES = [
   { key: "{{unit}}", description: "The user's unit" },
   { key: "{{event_name}}", description: "Current event name" },
   { key: "{{timestamp}}", description: "Current timestamp" },
-  { key: "{{faction_name}}", description: "Name of the faction" },
+  { key: "{{server_name}}", description: "Name of the server" },
 ];
 
 export default function TextTemplatesPage() {
-  const params = useParams<{ factionId: string }>();
-  const factionId = params.factionId;
+  const params = useParams<{ serverId: string }>();
+  const serverId = params.serverId;
 
-  const { data, isLoading } = useTextTemplates(factionId);
+  const { data, isLoading } = useTextTemplates(serverId);
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
 
   const selected = useMemo(() => data?.find((t) => t.id === selectedId) ?? null, [data, selectedId]);
   const [name, setName] = useState<string>(selected?.name ?? "");
   const [content, setContent] = useState<string>(selected?.content ?? "");
 
-  const createMutation = useCreateTextTemplate(factionId);
-  const updateMutation = useUpdateTextTemplate(factionId, selectedId ?? "");
+  const createMutation = useCreateTextTemplate(serverId);
+  const updateMutation = useUpdateTextTemplate(serverId, selectedId ?? "");
 
   function selectTemplate(id?: string) {
     setSelectedId(id);
@@ -56,7 +56,7 @@ export default function TextTemplatesPage() {
     unit: "Infantry",
     event_name: "Operation Dawn",
     timestamp: new Date().toISOString(),
-    faction_name: "Phantoms",
+    server_name: "Phantoms",
   };
 
   function renderTemplate(str: string): string {

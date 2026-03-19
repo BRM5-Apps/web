@@ -1,12 +1,12 @@
 export default function RanksPage({
   params,
 }: {
-  params: Promise<{ factionId: string }>;
+  params: Promise<{ serverId: string }>;
 }) {
   return (
     <div className="page-header">
       <h1 className="page-title">Rank Management</h1>
-      <p className="page-description">Configure ranks and permissions for this faction.</p>
+      <p className="page-description">Configure ranks and permissions for this server.</p>
     </div>
   );
 }

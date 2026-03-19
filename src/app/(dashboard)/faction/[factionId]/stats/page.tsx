@@ -126,7 +126,7 @@ function getInitials(username: string): string {
 }
 
 export default function StatsPage() {
-  const { factionId } = useParams<{ factionId: string }>();
+  const { serverId } = useParams<{ serverId: string }>();
 
   const {
     data: stats,
@@ -134,7 +134,7 @@ export default function StatsPage() {
     isError: statsError,
     error: statsErrorObj,
     refetch: refetchStats,
-  } = useStats(factionId);
+  } = useStats(serverId);
 
   const {
     data: leaderboard,
@@ -143,10 +143,10 @@ export default function StatsPage() {
     error: leaderboardErrorObj,
     refetch: refetchLeaderboard,
   } = useQuery<LeaderboardEntry[]>({
-    queryKey: queryKeys.stats.leaderboard(factionId),
+    queryKey: queryKeys.stats.leaderboard(serverId),
     queryFn: ({ signal }) =>
-      api.stats.leaderboard(factionId, undefined, { signal }),
-    enabled: !!factionId,
+      api.stats.leaderboard(serverId, undefined, { signal }),
+    enabled: !!serverId,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -159,7 +159,7 @@ export default function StatsPage() {
           Analytics & Stats
         </h1>
         <p className="text-muted-foreground">
-          View faction analytics, trends, and performance metrics.
+          View server analytics, trends, and performance metrics.
         </p>
       </div>
 
@@ -169,7 +169,7 @@ export default function StatsPage() {
           message={
             statsErrorObj instanceof Error
               ? statsErrorObj.message
-              : "Could not load faction statistics."
+              : "Could not load server statistics."
           }
           onRetry={() => refetchStats()}
         />

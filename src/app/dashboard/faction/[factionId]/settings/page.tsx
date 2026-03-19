@@ -1,12 +1,12 @@
-export default function FactionSettingsPage({
+export default function ServerSettingsPage({
   params,
 }: {
-  params: Promise<{ factionId: string }>;
+  params: Promise<{ serverId: string }>;
 }) {
   return (
     <div className="page-header">
-      <h1 className="page-title">Faction Settings</h1>
-      <p className="page-description">Configure general faction settings.</p>
+      <h1 className="page-title">Server Settings</h1>
+      <p className="page-description">Configure general server settings.</p>
     </div>
   );
 }

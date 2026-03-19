@@ -9,11 +9,11 @@ export interface User {
   updatedAt: string;
 }
 
-/** Extended user with faction membership context */
+/** Extended user with server membership context */
 export interface UserProfile extends User {
-  factions: Array<{
-    factionId: string;
-    factionName: string;
+  servers: Array<{
+    serverId: string;
+    serverName: string;
     rankName: string;
     joinedAt: string;
   }>;

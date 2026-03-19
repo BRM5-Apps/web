@@ -1,7 +1,7 @@
 export default function PermissionSettingsPage({
   params,
 }: {
-  params: Promise<{ factionId: string }>;
+  params: Promise<{ serverId: string }>;
 }) {
   return (
     <div className="page-header">

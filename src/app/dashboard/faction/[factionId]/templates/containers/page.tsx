@@ -1,7 +1,7 @@
 export default function ContainerTemplatesPage({
   params,
 }: {
-  params: Promise<{ factionId: string }>;
+  params: Promise<{ serverId: string }>;
 }) {
   return (
     <div className="page-header">

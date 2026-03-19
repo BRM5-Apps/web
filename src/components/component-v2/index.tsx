@@ -9,22 +9,26 @@ import type { C2TopLevelItem } from "./types";
 
 export interface ComponentV2BuilderV2Props {
   onSave?: (items: C2TopLevelItem[]) => void;
+  onItemsChange?: (items: C2TopLevelItem[]) => void;
   isSaving?: boolean;
   submitRef?: React.MutableRefObject<(() => void) | null>;
-  factionId?: string;
+  serverId?: string;
   initialItems?: C2TopLevelItem[];
   webhookUsername?: string;
   webhookAvatarUrl?: string;
+  sidebar?: React.ReactNode;
 }
 
 export function ComponentV2BuilderV2({
   onSave,
+  onItemsChange,
   isSaving: _isSaving,
   submitRef,
-  factionId,
+  serverId,
   initialItems,
   webhookUsername,
   webhookAvatarUrl,
+  sidebar,
 }: ComponentV2BuilderV2Props) {
   const [items, setItems] = useState<C2TopLevelItem[]>(initialItems ?? []);
   const [jsonExpanded, setJsonExpanded] = useState(false);
@@ -32,6 +36,7 @@ export function ComponentV2BuilderV2({
   const [isDirty, setIsDirty] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [sideView, setSideView] = useState<"preview" | "elements">("preview");
 
   const itemsRef = useRef(items);
   itemsRef.current = items;
@@ -43,6 +48,10 @@ export function ComponentV2BuilderV2({
     submitRef.current = () => onSaveRef.current?.(itemsRef.current);
     return () => { submitRef.current = null; };
   }, [submitRef]);
+
+  useEffect(() => {
+    onItemsChange?.(items);
+  }, [items, onItemsChange]);
 
   // Sync items -> jsonText when not manually edited
   useEffect(() => {
@@ -95,26 +104,50 @@ export function ComponentV2BuilderV2({
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Left: Editor */}
-        <div>
-          <div className="mb-2">
-            <h2 className="text-sm font-semibold text-foreground">Components</h2>
+      <div className="grid max-w-[1000px] gap-6 lg:grid-cols-2">
+          {/* Left: Editor */}
+          <div>
+            <div className="mb-2">
+              <h2 className="text-sm font-semibold text-foreground">Components</h2>
+            </div>
+            <div className="overflow-hidden rounded-lg border border-border bg-card">
+              <EditorPanel items={items} onChange={setItems} serverId={serverId} />
+            </div>
           </div>
-          <div className="rounded-lg border border-border bg-card overflow-hidden">
-            <EditorPanel items={items} onChange={setItems} factionId={factionId} />
-          </div>
-        </div>
 
-        {/* Right: Preview */}
-        <div>
-          <div className="mb-2">
-            <h2 className="text-sm font-semibold text-foreground">Preview</h2>
+          {/* Right: Preview */}
+          <div>
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold text-foreground">
+                {sideView === "preview" ? "Preview" : "Elements"}
+              </h2>
+              {sidebar ? (
+                <div className="rounded-md border border-border p-1">
+                  {(["preview", "elements"] as const).map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setSideView(value)}
+                      className={`rounded px-3 py-1.5 text-sm capitalize transition-colors ${
+                        sideView === value
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {value}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+            <div className="overflow-hidden rounded-lg border border-border">
+              {sideView === "elements" && sidebar ? (
+                <div className="p-4">{sidebar}</div>
+              ) : (
+                <PreviewPanel items={items} webhookUsername={webhookUsername} webhookAvatarUrl={webhookAvatarUrl} />
+              )}
+            </div>
           </div>
-          <div className="rounded-lg border border-border overflow-hidden">
-            <PreviewPanel items={items} webhookUsername={webhookUsername} webhookAvatarUrl={webhookAvatarUrl} />
-          </div>
-        </div>
       </div>
 
       {/* JSON Editor */}
@@ -216,4 +249,7 @@ export type {
   C2SectionContent,
   C2Thumbnail,
   C2Accessory,
+  ActionGraphDocument,
+  ActionGraphNode,
+  ActionGraphEdge,
 } from "./types";

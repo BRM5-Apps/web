@@ -1,6 +1,6 @@
 export interface Punishment {
   id: string;
-  factionId: string;
+  serverId: string;
   userId: string;
   type: "warn" | "mute" | "kick" | "ban";
   reason: string;
@@ -19,7 +19,7 @@ export interface PunishmentAppeal {
   reviewedById?: string;
   reviewedAt?: string;
   reviewNote?: string;
-  escalatedTo?: "faction_hub" | "pl5";
+  escalatedTo?: "server_hub" | "pl5";
   createdAt: string;
   updatedAt: string;
 }
@@ -34,7 +34,7 @@ export interface BlacklistEntry {
 
 export interface BlacklistConfig {
   id: string;
-  factionId: string;
+  serverId: string;
   enabled: boolean;
   action: "notify" | "block" | "auto_ban";
   notifyChannelId?: string;
@@ -44,7 +44,7 @@ export interface BlacklistConfig {
 
 export interface PromoLock {
   id: string;
-  factionUserId: string;
+  serverUserId: string;
   lockedById: string;
   reason: string;
   expiresAt?: string;

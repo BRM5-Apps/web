@@ -1,6 +1,6 @@
 export * from "./api";
 export * from "./user";
-export * from "./faction";
+export * from "./server";
 export * from "./rank";
 export * from "./event";
 export * from "./template";

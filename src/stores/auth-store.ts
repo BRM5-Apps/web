@@ -2,37 +2,37 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 interface AuthStoreState {
-  /** Currently selected faction ID */
-  selectedFactionId: string | null;
-  /** Cached permission keys for the active faction */
-  factionPermissions: string[];
+  /** Currently selected server ID */
+  selectedServerId: string | null;
+  /** Cached permission keys for the active server */
+  serverPermissions: string[];
 }
 
 interface AuthStoreActions {
-  setSelectedFactionId: (factionId: string | null) => void;
-  setFactionPermissions: (permissions: string[]) => void;
-  clearFactionState: () => void;
+  setSelectedServerId: (serverId: string | null) => void;
+  setServerPermissions: (permissions: string[]) => void;
+  clearServerState: () => void;
 }
 
 export const useAuthStore = create<AuthStoreState & AuthStoreActions>()(
   persist(
     (set) => ({
-      selectedFactionId: null,
-      factionPermissions: [],
+      selectedServerId: null,
+      serverPermissions: [],
 
-      setSelectedFactionId: (factionId) =>
-        set({ selectedFactionId: factionId, factionPermissions: [] }),
+      setSelectedServerId: (serverId) =>
+        set({ selectedServerId: serverId, serverPermissions: [] }),
 
-      setFactionPermissions: (permissions) =>
-        set({ factionPermissions: permissions }),
+      setServerPermissions: (permissions) =>
+        set({ serverPermissions: permissions }),
 
-      clearFactionState: () =>
-        set({ selectedFactionId: null, factionPermissions: [] }),
+      clearServerState: () =>
+        set({ selectedServerId: null, serverPermissions: [] }),
     }),
     {
-      name: "factionhub-auth",
+      name: "serverhub-auth",
       partialize: (state) => ({
-        selectedFactionId: state.selectedFactionId,
+        selectedServerId: state.selectedServerId,
       }),
     }
   )

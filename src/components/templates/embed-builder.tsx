@@ -16,6 +16,7 @@ import { EmbedPreview } from "@/components/discord-preview/embed-preview";
 import { type DiscordTheme } from "@/components/discord-preview/discord-theme";
 import { JsonImportDialog } from "@/components/templates/json-import";
 import { FieldEditor } from "@/components/templates/field-editor";
+import { cn } from "@/lib/utils";
 import { Plus, Variable, Upload, Download, Save, Sun, Moon } from "lucide-react";
 import type { EmbedTemplate } from "@/types/template";
 
@@ -27,7 +28,7 @@ const AVAILABLE_VARIABLES = [
   { key: "{{unit}}", description: "The user's unit" },
   { key: "{{event_name}}", description: "Current event name" },
   { key: "{{timestamp}}", description: "Current timestamp" },
-  { key: "{{faction_name}}", description: "Name of the faction" },
+  { key: "{{server_name}}", description: "Name of the server" },
 ] as const;
 
 // ── Zod Schema ──
@@ -61,13 +62,15 @@ export interface EmbedBuilderProps {
   template?: Partial<EmbedTemplate> | null;
   isSaving?: boolean;
   onSave?: (data: EmbedFormData) => void;
+  onDataChange?: (data: EmbedFormData) => void;
   /** Optional ref — parent can call submitRef.current?.() to trigger form submission */
   submitRef?: React.MutableRefObject<(() => void) | null>;
   webhookUsername?: string;
   webhookAvatarUrl?: string;
+  sidebar?: React.ReactNode;
 }
 
-export function EmbedBuilder({ template, isSaving, onSave, submitRef, webhookUsername, webhookAvatarUrl }: EmbedBuilderProps) {
+export function EmbedBuilder({ template, isSaving, onSave, onDataChange, submitRef, webhookUsername, webhookAvatarUrl, sidebar }: EmbedBuilderProps) {
   const defaultValues = useMemo<EmbedFormData>(() => ({
     name: template?.name ?? "",
     title: template?.title ?? "",
@@ -89,6 +92,7 @@ export function EmbedBuilder({ template, isSaving, onSave, submitRef, webhookUse
   const form = useForm<EmbedFormData>({ resolver: zodResolver(embedSchema), defaultValues, mode: "onBlur" });
   const [jsonOpen, setJsonOpen] = useState(false);
   const [discordTheme, setDiscordTheme] = useState<DiscordTheme>("dark");
+  const [sideView, setSideView] = useState<"preview" | "elements">("preview");
 
   const values = form.watch();
 
@@ -101,12 +105,16 @@ export function EmbedBuilder({ template, isSaving, onSave, submitRef, webhookUse
     return () => { submitRef.current = null; };
   }, [submitRef, form]);
 
+  useEffect(() => {
+    onDataChange?.(values);
+  }, [values, onDataChange]);
+
   return (
     <FormProvider {...form}>
-      <div className="grid gap-6 lg:grid-cols-[400px_1fr] xl:grid-cols-[420px_1fr]">
-        {/* Left: Form */}
-        <Card className="p-4">
-          <div className="space-y-5">
+      <div className={sidebar ? "grid max-w-[1000px] gap-6 lg:grid-cols-[400px_minmax(0,1fr)] xl:grid-cols-[420px_minmax(0,1fr)]" : "grid gap-6 lg:grid-cols-[400px_1fr] xl:grid-cols-[420px_1fr]"}>
+          {/* Left: Form */}
+          <Card className="p-4">
+            <div className="space-y-5">
             {/* ── Template name — prominent ── */}
             <div className="rounded-md border border-primary/40 bg-primary/5 px-3 py-3">
               <Label htmlFor="name" className="text-xs font-semibold uppercase tracking-wider text-primary">
@@ -131,7 +139,7 @@ export function EmbedBuilder({ template, isSaving, onSave, submitRef, webhookUse
             <Separator />
 
             <Section title="Author">
-              <TextField name="authorName" label="Name" placeholder="Faction Bot" withVariables />
+              <TextField name="authorName" label="Name" placeholder="Server Bot" withVariables />
               <TextField name="authorIconUrl" label="Icon URL" placeholder="https://..." />
               <TextField name="authorUrl" label="URL" placeholder="https://..." />
             </Section>
@@ -171,7 +179,7 @@ export function EmbedBuilder({ template, isSaving, onSave, submitRef, webhookUse
             <Separator />
 
             <Section title="Footer">
-              <TextField name="footerText" label="Text" placeholder="© Faction" withVariables />
+              <TextField name="footerText" label="Text" placeholder="© Server" withVariables />
               <TextField name="footerIconUrl" label="Icon URL" placeholder="https://..." />
               <div className="flex items-center justify-between pt-1">
                 <Label htmlFor="timestamp" className="text-sm text-muted-foreground">Include timestamp</Label>
@@ -179,40 +187,68 @@ export function EmbedBuilder({ template, isSaving, onSave, submitRef, webhookUse
               </div>
             </Section>
 
-            <div className="flex gap-2 pt-2">
-              <Button type="button" variant="outline" size="sm" onClick={() => setJsonOpen(true)}>
-                <Upload className="mr-2 h-4 w-4" /> Import JSON
-              </Button>
-              <Button type="button" variant="outline" size="sm" onClick={() => copyToClipboard(JSON.stringify(toApiPayload(values), null, 2))}>
-                <Download className="mr-2 h-4 w-4" /> Export JSON
-              </Button>
-              <div className="ml-auto" />
-              <Button type="button" size="sm" onClick={form.handleSubmit((d) => onSave?.(d))} disabled={isSaving}>
-                <Save className="mr-2 h-4 w-4" /> Save Template
-              </Button>
+              <div className="flex gap-2 pt-2">
+                <Button type="button" variant="outline" size="sm" onClick={() => setJsonOpen(true)}>
+                  <Upload className="mr-2 h-4 w-4" /> Import JSON
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => copyToClipboard(JSON.stringify(toApiPayload(values), null, 2))}>
+                  <Download className="mr-2 h-4 w-4" /> Export JSON
+                </Button>
+                <div className="ml-auto" />
+                <Button type="button" size="sm" onClick={form.handleSubmit((d) => onSave?.(d))} disabled={isSaving}>
+                  <Save className="mr-2 h-4 w-4" /> Save Template
+                </Button>
+              </div>
             </div>
-          </div>
-        </Card>
+          </Card>
 
-        {/* Right: Live Preview */}
-        <div className="rounded-md border p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <div className="text-sm font-medium text-muted-foreground">Live Preview</div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setDiscordTheme((prev) => (prev === "dark" ? "light" : "dark"))}
-              aria-label="Toggle Discord theme"
-            >
-              {discordTheme === "dark" ? (
-                <><Sun className="mr-1.5 h-4 w-4" /> Light</>
-              ) : (
-                <><Moon className="mr-1.5 h-4 w-4" /> Dark</>
-              )}
-            </Button>
-          </div>
-          <div className="flex items-start gap-3">
+          {/* Right: Live Preview */}
+          <div className="rounded-md border p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <div className="text-sm font-medium text-muted-foreground">
+                {sideView === "preview" ? "Live Preview" : "Elements"}
+              </div>
+              <div className="flex items-center gap-2">
+                {sidebar ? (
+                  <div className="rounded-md border border-border p-1">
+                    {(["preview", "elements"] as const).map((value) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => setSideView(value)}
+                        className={cn(
+                          "rounded px-3 py-1.5 text-sm capitalize transition-colors",
+                          sideView === value
+                            ? "bg-primary text-primary-foreground"
+                            : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        {value}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+                {sideView === "preview" ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setDiscordTheme((prev) => (prev === "dark" ? "light" : "dark"))}
+                    aria-label="Toggle Discord theme"
+                  >
+                    {discordTheme === "dark" ? (
+                      <><Sun className="mr-1.5 h-4 w-4" /> Light</>
+                    ) : (
+                      <><Moon className="mr-1.5 h-4 w-4" /> Dark</>
+                    )}
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+            {sideView === "elements" && sidebar ? (
+              <div>{sidebar}</div>
+            ) : (
+            <div className="flex items-start gap-3">
             {/* Bot avatar */}
             {webhookAvatarUrl ? (
               <img
@@ -229,7 +265,7 @@ export function EmbedBuilder({ template, isSaving, onSave, submitRef, webhookUse
                 {webhookUsername ? webhookUsername[0].toUpperCase() : "B"}
               </div>
             )}
-            <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1">
               {/* Bot header row */}
               <div className="mb-1.5 flex items-baseline gap-2">
                 <span className="text-sm font-semibold" style={{ color: discordTheme === "dark" ? "#f2f3f5" : "#060607" }}>
@@ -245,22 +281,23 @@ export function EmbedBuilder({ template, isSaving, onSave, submitRef, webhookUse
                   Today at {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 </span>
               </div>
-              <EmbedPreview
-                title={values.title}
-                url={values.url || undefined}
-                description={values.description}
-                color={values.color}
-                fields={values.fields}
-                footer={{ text: values.footerText, iconUrl: values.footerIconUrl || undefined }}
-                image={values.imageUrl ? { url: values.imageUrl } : undefined}
-                thumbnail={values.thumbnailUrl ? { url: values.thumbnailUrl } : undefined}
-                author={values.authorName ? { name: values.authorName, iconUrl: values.authorIconUrl || undefined, url: values.authorUrl || undefined } : undefined}
-                timestamp={values.timestamp ? new Date() : undefined}
-                discordTheme={discordTheme}
-              />
+                <EmbedPreview
+                  title={values.title}
+                  url={values.url || undefined}
+                  description={values.description}
+                  color={values.color}
+                  fields={values.fields}
+                  footer={{ text: values.footerText, iconUrl: values.footerIconUrl || undefined }}
+                  image={values.imageUrl ? { url: values.imageUrl } : undefined}
+                  thumbnail={values.thumbnailUrl ? { url: values.thumbnailUrl } : undefined}
+                  author={values.authorName ? { name: values.authorName, iconUrl: values.authorIconUrl || undefined, url: values.authorUrl || undefined } : undefined}
+                  timestamp={values.timestamp ? new Date() : undefined}
+                  discordTheme={discordTheme}
+                />
+              </div>
             </div>
+            )}
           </div>
-        </div>
       </div>
 
       <JsonImportDialog

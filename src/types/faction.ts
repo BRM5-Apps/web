@@ -1,4 +1,4 @@
-export interface Faction {
+export interface Server {
   id: string;
   name: string;
   discordGuildId: string;
@@ -10,19 +10,19 @@ export interface Faction {
   updatedAt: string;
 }
 
-export interface FactionUser {
+export interface ServerUser {
   id: string;
-  factionId: string;
+  serverId: string;
   userId: string;
   rankId?: string;
   joinedAt: string;
   isActive: boolean;
 }
 
-/** Member with joined user + rank data (returned by GET /factions/:id/members) */
-export interface FactionMember {
+/** Member with joined user + rank data (returned by GET /servers/:id/members) */
+export interface ServerMember {
   id: string;
-  factionId: string;
+  serverId: string;
   userId: string;
   username: string;
   discordId: string;
@@ -39,16 +39,16 @@ export interface FactionMember {
 
 /** Paginated member list response (unwrapped from ApiResponse envelope) */
 export interface PaginatedMembers {
-  members: FactionMember[];
+  members: ServerMember[];
   total: number;
   page: number;
   limit: number;
   totalPages: number;
 }
 
-export interface FactionConfig {
+export interface ServerConfig {
   id: string;
-  factionId: string;
+  serverId: string;
   logChannelId?: string;
   modChannelId?: string;
   eventChannelId?: string;

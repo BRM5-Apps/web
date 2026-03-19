@@ -1,4 +1,4 @@
-export interface FactionHub {
+export interface ServerHub {
   id: string;
   name: string;
   ownerId: string;
@@ -9,7 +9,7 @@ export interface FactionHub {
   updatedAt: string;
 }
 
-export interface FactionHubUser {
+export interface ServerHubUser {
   id: string;
   hubId: string;
   userId: string;
@@ -18,7 +18,7 @@ export interface FactionHubUser {
   isActive: boolean;
 }
 
-export interface FactionHubConfig {
+export interface ServerHubConfig {
   id: string;
   hubId: string;
   settings: Record<string, unknown>;
@@ -26,10 +26,10 @@ export interface FactionHubConfig {
   updatedAt: string;
 }
 
-export interface FactionHubStats {
+export interface ServerHubStats {
   id: string;
   hubId: string;
-  totalFactions: number;
+  totalServers: number;
   totalMembers: number;
   updatedAt: string;
 }

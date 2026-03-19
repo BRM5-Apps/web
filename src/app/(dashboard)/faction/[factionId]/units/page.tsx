@@ -38,11 +38,11 @@ import { useUnits, useCreateUnit, useDeleteUnit } from "@/hooks/use-units";
 import type { Unit } from "@/types/unit";
 
 export default function UnitsPage() {
-  const { factionId } = useParams<{ factionId: string }>();
+  const { serverId } = useParams<{ serverId: string }>();
 
-  const { data: units, isLoading, isError, error, refetch } = useUnits(factionId);
-  const createUnit = useCreateUnit(factionId);
-  const deleteUnit = useDeleteUnit(factionId);
+  const { data: units, isLoading, isError, error, refetch } = useUnits(serverId);
+  const createUnit = useCreateUnit(serverId);
+  const deleteUnit = useDeleteUnit(serverId);
 
   const [open, setOpen] = useState(false);
   const [unitName, setUnitName] = useState("");
@@ -78,7 +78,7 @@ export default function UnitsPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Units</h1>
           <p className="text-muted-foreground">
-            Manage your faction&apos;s unit structure.
+            Manage your server&apos;s unit structure.
           </p>
         </div>
         <Button onClick={() => setOpen(true)}>

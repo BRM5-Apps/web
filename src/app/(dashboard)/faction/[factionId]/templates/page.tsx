@@ -16,16 +16,16 @@ import { PermissionGate } from "@/components/shared/permission-gate";
 import { Trash2, Pencil, Plus } from "lucide-react";
 
 export default function TemplatesOverviewPage() {
-  const params = useParams<{ factionId: string }>();
-  const factionId = params.factionId;
+  const params = useParams<{ serverId: string }>();
+  const serverId = params.serverId;
 
-  const embeds = useEmbedTemplates(factionId);
-  const containers = useContainerTemplates(factionId);
-  const texts = useTextTemplates(factionId);
+  const embeds = useEmbedTemplates(serverId);
+  const containers = useContainerTemplates(serverId);
+  const texts = useTextTemplates(serverId);
 
-  const deleteEmbed = useDeleteEmbedTemplate(factionId);
-  const deleteContainer = useDeleteContainerTemplate(factionId);
-  const deleteText = useDeleteTextTemplate(factionId);
+  const deleteEmbed = useDeleteEmbedTemplate(serverId);
+  const deleteContainer = useDeleteContainerTemplate(serverId);
+  const deleteText = useDeleteTextTemplate(serverId);
 
   return (
     <div className="space-y-6">

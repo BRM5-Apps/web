@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { useAuth } from "@/providers/auth-provider";
-import { useFactionStore } from "@/stores/faction-store";
+import { useServerStore } from "@/stores/server-store";
 import type { WsEventType, WsEnvelope } from "@/types/websocket";
 
 export type WsConnectionStatus = "connecting" | "connected" | "disconnected";
@@ -32,7 +32,7 @@ const MAX_BACKOFF_MS = 30_000;
 
 export function WebSocketProvider({ children }: { children: ReactNode }) {
   const { backendToken } = useAuth();
-  const { activeFactionId } = useFactionStore();
+  const { activeServerId } = useServerStore();
   const [status, setStatus] = useState<WsConnectionStatus>("disconnected");
 
   const wsRef = useRef<WebSocket | null>(null);
@@ -51,7 +51,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!backendToken || !activeFactionId) {
+    if (!backendToken || !activeServerId) {
       setStatus("disconnected");
       return;
     }
@@ -61,7 +61,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     function connect() {
       if (cancelled) return;
 
-      const url = `${WS_BASE_URL}/ws/${activeFactionId}?token=${encodeURIComponent(backendToken!)}`;
+      const url = `${WS_BASE_URL}/ws/${activeServerId}?token=${encodeURIComponent(backendToken!)}`;
       setStatus("connecting");
 
       const ws = new WebSocket(url);
@@ -105,7 +105,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       wsRef.current = null;
       setStatus("disconnected");
     };
-  }, [backendToken, activeFactionId]);
+  }, [backendToken, activeServerId]);
 
   return (
     <WebSocketContext.Provider value={{ status, subscribe }}>

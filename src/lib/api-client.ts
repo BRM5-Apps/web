@@ -2,11 +2,11 @@ import axios, { AxiosError } from "axios";
 import { getSession } from "next-auth/react";
 import type { ApiError, ApiResponse } from "@/types/api";
 import type {
-  Faction,
-  FactionMember,
+  Server,
+  ServerMember,
   PaginatedMembers,
-  FactionConfig,
-} from "@/types/faction";
+  ServerConfig,
+} from "@/types/server";
 import type {
   Rank,
   RankWithDetails,
@@ -25,7 +25,8 @@ import type {
   ScheduledMessage,
   MessageSend,
 } from "@/types/template";
-import type { FactionStats, DailyStats, LeaderboardEntry } from "@/types/stats";
+import type { ElementCatalogItem, ResolveElementsResponse } from "@/types/element";
+import type { ServerStats, DailyStats, LeaderboardEntry } from "@/types/stats";
 import type {
   Punishment,
   PunishmentAppeal,
@@ -160,64 +161,64 @@ export const api = {
       apiClient.patch<User>(API_ROUTES.users.update(userId), data, opts),
   },
 
-  // ── Factions ──
-  factions: {
-    byGuildIds: async (guildIds: string[], opts?: RequestOptions): Promise<Faction[]> => {
+  // ── Servers ──
+  servers: {
+    byGuildIds: async (guildIds: string[], opts?: RequestOptions): Promise<Server[]> => {
       if (guildIds.length === 0) return [];
-      const result = await apiClient.get<{ factions: Faction[] }>(
-        "/factions/by-guild-ids",
+      const result = await apiClient.get<{ servers: Server[] }>(
+        "/servers/by-guild-ids",
         { guildIds: guildIds.join(",") },
         opts
       );
-      return result.factions ?? [];
+      return result.servers ?? [];
     },
     list: async (opts?: RequestOptions) => {
-      // Backend returns { items: [{ faction, rankId }] } for the
-      // authenticated user's factions. Normalize to a plain Faction[]
+      // Backend returns { items: [{ server, rankId }] } for the
+      // authenticated user's servers. Normalize to a plain Server[]
       // for frontend consumers.
       const view = await apiClient.get<{
-        items: { faction: Faction }[];
-      }>(API_ROUTES.factions.list, undefined, opts);
-      return view.items.map((item) => item.faction);
+        items: { server: Server }[];
+      }>(API_ROUTES.servers.list, undefined, opts);
+      return view.items.map((item) => item.server);
     },
-    get: (factionId: string, opts?: RequestOptions) =>
-      apiClient.get<Faction>(API_ROUTES.factions.get(factionId), undefined, opts),
-    create: (data: Partial<Faction>, opts?: RequestOptions) =>
-      apiClient.post<Faction>(API_ROUTES.factions.create, data, opts),
+    get: (serverId: string, opts?: RequestOptions) =>
+      apiClient.get<Server>(API_ROUTES.servers.get(serverId), undefined, opts),
+    create: (data: Partial<Server>, opts?: RequestOptions) =>
+      apiClient.post<Server>(API_ROUTES.servers.create, data, opts),
     update: (
-      factionId: string,
-      data: Partial<Pick<Faction, "name" | "description" | "iconUrl">>,
+      serverId: string,
+      data: Partial<Pick<Server, "name" | "description" | "iconUrl">>,
       opts?: RequestOptions
-    ) => apiClient.patch<Faction>(API_ROUTES.factions.update(factionId), data, opts),
-    delete: (factionId: string, opts?: RequestOptions) =>
-      apiClient.delete<void>(API_ROUTES.factions.delete(factionId), opts),
+    ) => apiClient.patch<Server>(API_ROUTES.servers.update(serverId), data, opts),
+    delete: (serverId: string, opts?: RequestOptions) =>
+      apiClient.delete<void>(API_ROUTES.servers.delete(serverId), opts),
   },
 
   // ── Members ──
   members: {
     list: (
-      factionId: string,
+      serverId: string,
       params?: Record<string, unknown>,
       opts?: RequestOptions
     ) =>
       apiClient.get<PaginatedMembers>(
-        API_ROUTES.factions.members.list(factionId),
+        API_ROUTES.servers.members.list(serverId),
         params,
         opts
       ),
     kick: (
-      factionId: string,
-      data: { factionUserId: string; reason?: string },
+      serverId: string,
+      data: { serverUserId: string; reason?: string },
       opts?: RequestOptions
     ) =>
-      apiClient.post<void>(API_ROUTES.factions.members.kick(factionId), data, opts),
+      apiClient.post<void>(API_ROUTES.servers.members.kick(serverId), data, opts),
   },
 
   // ── Permissions ──
   permissions: {
-    get: (factionId: string, opts?: RequestOptions) =>
+    get: (serverId: string, opts?: RequestOptions) =>
       apiClient.get<{ permissions: string[] }>(
-        API_ROUTES.factions.permissions(factionId),
+        API_ROUTES.servers.permissions(serverId),
         undefined,
         opts
       ),
@@ -225,75 +226,75 @@ export const api = {
 
   // ── Ranks ──
   ranks: {
-    list: async (factionId: string, opts?: RequestOptions) => {
+    list: async (serverId: string, opts?: RequestOptions) => {
       const result = await apiClient.get<{ ranks: RankWithDetails[] }>(
-        API_ROUTES.factions.ranks(factionId),
+        API_ROUTES.servers.ranks(serverId),
         undefined,
         opts
       );
       return result.ranks ?? [];
     },
-    get: (factionId: string, rankId: string, opts?: RequestOptions) =>
+    get: (serverId: string, rankId: string, opts?: RequestOptions) =>
       apiClient.get<RankWithDetails>(
-        API_ROUTES.factions.rank(factionId, rankId),
+        API_ROUTES.servers.rank(serverId, rankId),
         undefined,
         opts
       ),
-    create: (factionId: string, data: RankPayload, opts?: RequestOptions) =>
-      apiClient.post<Rank>(API_ROUTES.factions.ranks(factionId), data, opts),
+    create: (serverId: string, data: RankPayload, opts?: RequestOptions) =>
+      apiClient.post<Rank>(API_ROUTES.servers.ranks(serverId), data, opts),
     update: (
-      factionId: string,
+      serverId: string,
       rankId: string,
       data: RankPayload,
       opts?: RequestOptions
     ) =>
       apiClient.patch<Rank>(
-        API_ROUTES.factions.rank(factionId, rankId),
+        API_ROUTES.servers.rank(serverId, rankId),
         data,
         opts
       ),
-    delete: (factionId: string, rankId: string, opts?: RequestOptions) =>
-      apiClient.delete<void>(API_ROUTES.factions.rank(factionId, rankId), opts),
+    delete: (serverId: string, rankId: string, opts?: RequestOptions) =>
+      apiClient.delete<void>(API_ROUTES.servers.rank(serverId, rankId), opts),
     reorder: (
-      factionId: string,
+      serverId: string,
       data: ReorderRanksPayload,
       opts?: RequestOptions
     ) =>
       apiClient.post<void>(
-        API_ROUTES.factions.reorderRanks(factionId),
+        API_ROUTES.servers.reorderRanks(serverId),
         data,
         opts
       ),
     promote: (
-      factionId: string,
-      data: { factionUserId: string; reason?: string },
+      serverId: string,
+      data: { serverUserId: string; reason?: string },
       opts?: RequestOptions
     ) =>
-      apiClient.post<void>(API_ROUTES.factions.promote(factionId), data, opts),
+      apiClient.post<void>(API_ROUTES.servers.promote(serverId), data, opts),
     demote: (
-      factionId: string,
-      data: { factionUserId: string; reason?: string },
+      serverId: string,
+      data: { serverUserId: string; reason?: string },
       opts?: RequestOptions
     ) =>
-      apiClient.post<void>(API_ROUTES.factions.demote(factionId), data, opts),
+      apiClient.post<void>(API_ROUTES.servers.demote(serverId), data, opts),
     getPermissions: (
-      factionId: string,
+      serverId: string,
       rankId: string,
       opts?: RequestOptions
     ) =>
       apiClient.get<Permission[]>(
-        API_ROUTES.factions.rankPermissions(factionId, rankId),
+        API_ROUTES.servers.rankPermissions(serverId, rankId),
         undefined,
         opts
       ),
     setPermissions: (
-      factionId: string,
+      serverId: string,
       rankId: string,
       permissionIds: string[],
       opts?: RequestOptions
     ) =>
       apiClient.post<void>(
-        API_ROUTES.factions.rankPermissions(factionId, rankId),
+        API_ROUTES.servers.rankPermissions(serverId, rankId),
         { permissionIds },
         opts
       ),
@@ -301,86 +302,86 @@ export const api = {
 
   // ── Promotion Paths ──
   promotionPaths: {
-    list: (factionId: string, opts?: RequestOptions) =>
+    list: (serverId: string, opts?: RequestOptions) =>
       apiClient.get<PromotionPath[]>(
-        API_ROUTES.factions.promotionPaths(factionId),
+        API_ROUTES.servers.promotionPaths(serverId),
         undefined,
         opts
       ),
     create: (
-      factionId: string,
+      serverId: string,
       data: PromotionPathPayload,
       opts?: RequestOptions
     ) =>
       apiClient.post<PromotionPath>(
-        API_ROUTES.factions.promotionPaths(factionId),
+        API_ROUTES.servers.promotionPaths(serverId),
         data,
         opts
       ),
     update: (
-      factionId: string,
+      serverId: string,
       pathId: string,
       data: PromotionPathPayload,
       opts?: RequestOptions
     ) =>
       apiClient.patch<PromotionPath>(
-        API_ROUTES.factions.promotionPath(factionId, pathId),
+        API_ROUTES.servers.promotionPath(serverId, pathId),
         data,
         opts
       ),
-    delete: (factionId: string, pathId: string, opts?: RequestOptions) =>
+    delete: (serverId: string, pathId: string, opts?: RequestOptions) =>
       apiClient.delete<void>(
-        API_ROUTES.factions.promotionPath(factionId, pathId),
+        API_ROUTES.servers.promotionPath(serverId, pathId),
         opts
       ),
   },
 
   // ── Events ──
   events: {
-    list: (factionId: string, params?: Record<string, unknown>, opts?: RequestOptions) =>
+    list: (serverId: string, params?: Record<string, unknown>, opts?: RequestOptions) =>
       apiClient.get<Event[]>(
-        API_ROUTES.factions.events.list(factionId),
+        API_ROUTES.servers.events.list(serverId),
         params,
         opts
       ),
-    create: (factionId: string, data: Partial<Event>, opts?: RequestOptions) =>
+    create: (serverId: string, data: Partial<Event>, opts?: RequestOptions) =>
       apiClient.post<Event>(
-        API_ROUTES.factions.events.create(factionId),
+        API_ROUTES.servers.events.create(serverId),
         data,
         opts
       ),
     update: (
-      factionId: string,
+      serverId: string,
       eventId: string,
       data: Partial<Event>,
       opts?: RequestOptions
     ) =>
       apiClient.patch<Event>(
-        API_ROUTES.factions.events.update(factionId, eventId),
+        API_ROUTES.servers.events.update(serverId, eventId),
         data,
         opts
       ),
-    start: (factionId: string, eventId: string, opts?: RequestOptions) =>
+    start: (serverId: string, eventId: string, opts?: RequestOptions) =>
       apiClient.post<Event>(
-        API_ROUTES.factions.events.start(factionId, eventId),
+        API_ROUTES.servers.events.start(serverId, eventId),
         undefined,
         opts
       ),
-    cancel: (factionId: string, eventId: string, opts?: RequestOptions) =>
+    cancel: (serverId: string, eventId: string, opts?: RequestOptions) =>
       apiClient.post<Event>(
-        API_ROUTES.factions.events.cancel(factionId, eventId),
+        API_ROUTES.servers.events.cancel(serverId, eventId),
         undefined,
         opts
       ),
-    upcoming: (factionId: string, opts?: RequestOptions) =>
+    upcoming: (serverId: string, opts?: RequestOptions) =>
       apiClient.get<Event[]>(
-        API_ROUTES.factions.events.upcoming(factionId),
+        API_ROUTES.servers.events.upcoming(serverId),
         undefined,
         opts
       ),
-    active: (factionId: string, opts?: RequestOptions) =>
+    active: (serverId: string, opts?: RequestOptions) =>
       apiClient.get<Event[]>(
-        API_ROUTES.factions.events.active(factionId),
+        API_ROUTES.servers.events.active(serverId),
         undefined,
         opts
       ),
@@ -388,35 +389,35 @@ export const api = {
 
   // ── Event Requests ──
   eventRequests: {
-    list: (factionId: string, opts?: RequestOptions) =>
+    list: (serverId: string, opts?: RequestOptions) =>
       apiClient.get<EventRequest[]>(
-        API_ROUTES.factions.eventRequests.list(factionId),
+        API_ROUTES.servers.eventRequests.list(serverId),
         undefined,
         opts
       ),
     create: (
-      factionId: string,
+      serverId: string,
       data: Partial<EventRequest>,
       opts?: RequestOptions
     ) =>
       apiClient.post<EventRequest>(
-        API_ROUTES.factions.eventRequests.create(factionId),
+        API_ROUTES.servers.eventRequests.create(serverId),
         data,
         opts
       ),
     approve: (
-      factionId: string,
+      serverId: string,
       requestId: string,
       opts?: RequestOptions
     ) =>
       apiClient.post<void>(
-        API_ROUTES.factions.eventRequests.approve(factionId, requestId),
+        API_ROUTES.servers.eventRequests.approve(serverId, requestId),
         undefined,
         opts
       ),
-    deny: (factionId: string, requestId: string, opts?: RequestOptions) =>
+    deny: (serverId: string, requestId: string, opts?: RequestOptions) =>
       apiClient.post<void>(
-        API_ROUTES.factions.eventRequests.deny(factionId, requestId),
+        API_ROUTES.servers.eventRequests.deny(serverId, requestId),
         undefined,
         opts
       ),
@@ -424,209 +425,239 @@ export const api = {
 
   // ── Templates ──
   templates: {
-    listEmbeds: (factionId: string, opts?: RequestOptions) =>
+    listEmbeds: (serverId: string, opts?: RequestOptions) =>
       apiClient.get<EmbedTemplate[]>(
-        API_ROUTES.factions.templates.embeds(factionId),
+        API_ROUTES.servers.templates.embeds(serverId),
         undefined,
         opts
       ),
-    getEmbed: (factionId: string, templateId: string, opts?: RequestOptions) =>
+    getEmbed: (serverId: string, templateId: string, opts?: RequestOptions) =>
       apiClient.get<EmbedTemplate>(
-        API_ROUTES.factions.templates.embed(factionId, templateId),
+        API_ROUTES.servers.templates.embed(serverId, templateId),
         undefined,
         opts
       ),
     createEmbed: (
-      factionId: string,
+      serverId: string,
       data: Partial<EmbedTemplate>,
       opts?: RequestOptions
     ) =>
       apiClient.post<EmbedTemplate>(
-        API_ROUTES.factions.templates.embeds(factionId),
+        API_ROUTES.servers.templates.embeds(serverId),
         data,
         opts
       ),
     updateEmbed: (
-      factionId: string,
+      serverId: string,
       templateId: string,
       data: Partial<EmbedTemplate>,
       opts?: RequestOptions
     ) =>
       apiClient.patch<EmbedTemplate>(
-        API_ROUTES.factions.templates.embed(factionId, templateId),
+        API_ROUTES.servers.templates.embed(serverId, templateId),
         data,
         opts
       ),
     deleteEmbed: (
-      factionId: string,
+      serverId: string,
       templateId: string,
       opts?: RequestOptions
     ) =>
       apiClient.delete<void>(
-        API_ROUTES.factions.templates.embed(factionId, templateId),
+        API_ROUTES.servers.templates.embed(serverId, templateId),
         opts
       ),
-    listContainers: (factionId: string, opts?: RequestOptions) =>
+    listContainers: (serverId: string, opts?: RequestOptions) =>
       apiClient.get<ContainerTemplate[]>(
-        API_ROUTES.factions.templates.containers(factionId),
+        API_ROUTES.servers.templates.containers(serverId),
         undefined,
         opts
       ),
     getContainer: (
-      factionId: string,
+      serverId: string,
       templateId: string,
       opts?: RequestOptions
     ) =>
       apiClient.get<ContainerTemplate>(
-        API_ROUTES.factions.templates.container(factionId, templateId),
+        API_ROUTES.servers.templates.container(serverId, templateId),
         undefined,
         opts
       ),
     createContainer: (
-      factionId: string,
+      serverId: string,
       data: Partial<ContainerTemplate>,
       opts?: RequestOptions
     ) =>
       apiClient.post<ContainerTemplate>(
-        API_ROUTES.factions.templates.containers(factionId),
+        API_ROUTES.servers.templates.containers(serverId),
         data,
         opts
       ),
     updateContainer: (
-      factionId: string,
+      serverId: string,
       templateId: string,
       data: Partial<ContainerTemplate>,
       opts?: RequestOptions
     ) =>
       apiClient.patch<ContainerTemplate>(
-        API_ROUTES.factions.templates.container(factionId, templateId),
+        API_ROUTES.servers.templates.container(serverId, templateId),
         data,
         opts
       ),
     deleteContainer: (
-      factionId: string,
+      serverId: string,
       templateId: string,
       opts?: RequestOptions
     ) =>
       apiClient.delete<void>(
-        API_ROUTES.factions.templates.container(factionId, templateId),
+        API_ROUTES.servers.templates.container(serverId, templateId),
         opts
       ),
-    listTexts: (factionId: string, opts?: RequestOptions) =>
+    listTexts: (serverId: string, opts?: RequestOptions) =>
       apiClient.get<TextTemplate[]>(
-        API_ROUTES.factions.templates.texts(factionId),
+        API_ROUTES.servers.templates.texts(serverId),
         undefined,
         opts
       ),
     getText: (
-      factionId: string,
+      serverId: string,
       templateId: string,
       opts?: RequestOptions
     ) =>
       apiClient.get<TextTemplate>(
-        API_ROUTES.factions.templates.text(factionId, templateId),
+        API_ROUTES.servers.templates.text(serverId, templateId),
         undefined,
         opts
       ),
     createText: (
-      factionId: string,
+      serverId: string,
       data: Partial<TextTemplate>,
       opts?: RequestOptions
     ) =>
       apiClient.post<TextTemplate>(
-        API_ROUTES.factions.templates.texts(factionId),
+        API_ROUTES.servers.templates.texts(serverId),
         data,
         opts
       ),
     updateText: (
-      factionId: string,
+      serverId: string,
       templateId: string,
       data: Partial<TextTemplate>,
       opts?: RequestOptions
     ) =>
       apiClient.patch<TextTemplate>(
-        API_ROUTES.factions.templates.text(factionId, templateId),
+        API_ROUTES.servers.templates.text(serverId, templateId),
         data,
         opts
       ),
     deleteText: (
-      factionId: string,
+      serverId: string,
       templateId: string,
       opts?: RequestOptions
     ) =>
       apiClient.delete<void>(
-        API_ROUTES.factions.templates.text(factionId, templateId),
+        API_ROUTES.servers.templates.text(serverId, templateId),
         opts
       ),
-    listModals: (factionId: string, opts?: RequestOptions) =>
+    listModals: (serverId: string, opts?: RequestOptions) =>
       apiClient.get<ModalTemplate[]>(
-        API_ROUTES.factions.templates.modals(factionId),
+        API_ROUTES.servers.templates.modals(serverId),
         undefined,
         opts
       ),
-    getModal: (factionId: string, templateId: string, opts?: RequestOptions) =>
+    getModal: (serverId: string, templateId: string, opts?: RequestOptions) =>
       apiClient.get<ModalTemplate>(
-        API_ROUTES.factions.templates.modal(factionId, templateId),
+        API_ROUTES.servers.templates.modal(serverId, templateId),
         undefined,
         opts
       ),
     createModal: (
-      factionId: string,
+      serverId: string,
       data: Partial<ModalTemplate>,
       opts?: RequestOptions
     ) =>
       apiClient.post<ModalTemplate>(
-        API_ROUTES.factions.templates.modals(factionId),
+        API_ROUTES.servers.templates.modals(serverId),
         data,
         opts
       ),
     updateModal: (
-      factionId: string,
+      serverId: string,
       templateId: string,
       data: Partial<ModalTemplate>,
       opts?: RequestOptions
     ) =>
       apiClient.patch<ModalTemplate>(
-        API_ROUTES.factions.templates.modal(factionId, templateId),
+        API_ROUTES.servers.templates.modal(serverId, templateId),
         data,
         opts
       ),
     deleteModal: (
-      factionId: string,
+      serverId: string,
       templateId: string,
       opts?: RequestOptions
     ) =>
       apiClient.delete<void>(
-        API_ROUTES.factions.templates.modal(factionId, templateId),
+        API_ROUTES.servers.templates.modal(serverId, templateId),
+        opts
+      ),
+  },
+
+  // ── Elements ──
+  elements: {
+    list: (serverId: string, opts?: RequestOptions) =>
+      apiClient.get<ElementCatalogItem[]>(
+        API_ROUTES.servers.elements.list(serverId),
+        undefined,
+        opts
+      ),
+    create: (
+      serverId: string,
+      data: Record<string, unknown>,
+      opts?: RequestOptions
+    ) =>
+      apiClient.post<ElementCatalogItem>(
+        API_ROUTES.servers.elements.create(serverId),
+        data,
+        opts
+      ),
+    resolve: (
+      serverId: string,
+      input: string,
+      opts?: RequestOptions
+    ) =>
+      apiClient.post<ResolveElementsResponse>(
+        API_ROUTES.servers.elements.resolve(serverId),
+        { input },
         opts
       ),
   },
 
   // ── Stats ──
   stats: {
-    overview: (factionId: string, opts?: RequestOptions) =>
-      apiClient.get<FactionStats>(
-        API_ROUTES.factions.stats.overview(factionId),
+    overview: (serverId: string, opts?: RequestOptions) =>
+      apiClient.get<ServerStats>(
+        API_ROUTES.servers.stats.overview(serverId),
         undefined,
         opts
       ),
     daily: (
-      factionId: string,
+      serverId: string,
       params?: Record<string, unknown>,
       opts?: RequestOptions
     ) =>
       apiClient.get<DailyStats[]>(
-        API_ROUTES.factions.stats.daily(factionId),
+        API_ROUTES.servers.stats.daily(serverId),
         params,
         opts
       ),
     leaderboard: (
-      factionId: string,
+      serverId: string,
       params?: Record<string, unknown>,
       opts?: RequestOptions
     ) =>
       apiClient.get<LeaderboardEntry[]>(
-        API_ROUTES.factions.stats.leaderboard(factionId),
+        API_ROUTES.servers.stats.leaderboard(serverId),
         params,
         opts
       ),
@@ -634,91 +665,91 @@ export const api = {
 
   // ── Moderation ──
   moderation: {
-    list: (factionId: string, opts?: RequestOptions) =>
+    list: (serverId: string, opts?: RequestOptions) =>
       apiClient.get<Punishment[]>(
-        API_ROUTES.factions.moderation.punish(factionId),
+        API_ROUTES.servers.moderation.punish(serverId),
         undefined,
         opts
       ),
     punish: (
-      factionId: string,
+      serverId: string,
       data: Partial<Punishment>,
       opts?: RequestOptions
     ) =>
       apiClient.post<Punishment>(
-        API_ROUTES.factions.moderation.punish(factionId),
+        API_ROUTES.servers.moderation.punish(serverId),
         data,
         opts
       ),
     revoke: (
-      factionId: string,
+      serverId: string,
       punishmentId: string,
       opts?: RequestOptions
     ) =>
       apiClient.post<void>(
-        API_ROUTES.factions.moderation.revoke(factionId, punishmentId),
+        API_ROUTES.servers.moderation.revoke(serverId, punishmentId),
         undefined,
         opts
       ),
     appeal: (
-      factionId: string,
+      serverId: string,
       punishmentId: string,
       data: { appealText: string },
       opts?: RequestOptions
     ) =>
       apiClient.post<PunishmentAppeal>(
-        API_ROUTES.factions.moderation.appeal(factionId, punishmentId),
+        API_ROUTES.servers.moderation.appeal(serverId, punishmentId),
         data,
         opts
       ),
-    listAppeals: (factionId: string, opts?: RequestOptions) =>
+    listAppeals: (serverId: string, opts?: RequestOptions) =>
       apiClient.get<PunishmentAppeal[]>(
-        API_ROUTES.factions.moderation.appeals(factionId),
+        API_ROUTES.servers.moderation.appeals(serverId),
         undefined,
         opts
       ),
     reviewAppeal: (
-      factionId: string,
+      serverId: string,
       appealId: string,
       data: { status: string; reviewNote?: string },
       opts?: RequestOptions
     ) =>
       apiClient.post<void>(
-        API_ROUTES.factions.moderation.reviewAppeal(factionId, appealId),
+        API_ROUTES.servers.moderation.reviewAppeal(serverId, appealId),
         data,
         opts
       ),
-    getBlacklistConfig: (factionId: string, opts?: RequestOptions) =>
+    getBlacklistConfig: (serverId: string, opts?: RequestOptions) =>
       apiClient.get<BlacklistConfig>(
-        API_ROUTES.factions.moderation.blacklistConfig(factionId),
+        API_ROUTES.servers.moderation.blacklistConfig(serverId),
         undefined,
         opts
       ),
     updateBlacklistConfig: (
-      factionId: string,
+      serverId: string,
       data: Partial<BlacklistConfig>,
       opts?: RequestOptions
     ) =>
       apiClient.patch<BlacklistConfig>(
-        API_ROUTES.factions.moderation.blacklistConfig(factionId),
+        API_ROUTES.servers.moderation.blacklistConfig(serverId),
         data,
         opts
       ),
-    listNotifications: (factionId: string, opts?: RequestOptions) =>
+    listNotifications: (serverId: string, opts?: RequestOptions) =>
       apiClient.get<unknown[]>(
-        API_ROUTES.factions.moderation.notifications(factionId),
+        API_ROUTES.servers.moderation.notifications(serverId),
         undefined,
         opts
       ),
     reviewNotification: (
-      factionId: string,
+      serverId: string,
       notificationId: string,
       data: Record<string, unknown>,
       opts?: RequestOptions
     ) =>
       apiClient.post<void>(
-        API_ROUTES.factions.moderation.reviewNotification(
-          factionId,
+        API_ROUTES.servers.moderation.reviewNotification(
+          serverId,
           notificationId
         ),
         data,
@@ -729,44 +760,44 @@ export const api = {
   // ── Points ──
   points: {
     get: (
-      factionId: string,
-      factionUserId: string,
+      serverId: string,
+      serverUserId: string,
       opts?: RequestOptions
     ) =>
       apiClient.get<UserPoints>(
-        API_ROUTES.factions.points.get(factionId, factionUserId),
+        API_ROUTES.servers.points.get(serverId, serverUserId),
         undefined,
         opts
       ),
     award: (
-      factionId: string,
-      data: { factionUserId: string; amount: number; reason: string },
+      serverId: string,
+      data: { serverUserId: string; amount: number; reason: string },
       opts?: RequestOptions
     ) =>
       apiClient.post<void>(
-        API_ROUTES.factions.points.award(factionId),
+        API_ROUTES.servers.points.award(serverId),
         data,
         opts
       ),
     deduct: (
-      factionId: string,
-      data: { factionUserId: string; amount: number; reason: string },
+      serverId: string,
+      data: { serverUserId: string; amount: number; reason: string },
       opts?: RequestOptions
     ) =>
       apiClient.post<void>(
-        API_ROUTES.factions.points.deduct(factionId),
+        API_ROUTES.servers.points.deduct(serverId),
         data,
         opts
       ),
-    promotionFlags: (factionId: string, opts?: RequestOptions) =>
+    promotionFlags: (serverId: string, opts?: RequestOptions) =>
       apiClient.get<PromotionFlag[]>(
-        API_ROUTES.factions.points.promotionFlags(factionId),
+        API_ROUTES.servers.points.promotionFlags(serverId),
         undefined,
         opts
       ),
-    processFlags: (factionId: string, opts?: RequestOptions) =>
+    processFlags: (serverId: string, opts?: RequestOptions) =>
       apiClient.post<void>(
-        API_ROUTES.factions.points.processFlags(factionId),
+        API_ROUTES.servers.points.processFlags(serverId),
         undefined,
         opts
       ),
@@ -774,67 +805,67 @@ export const api = {
 
   // ── Units ──
   units: {
-    list: (factionId: string, opts?: RequestOptions) =>
+    list: (serverId: string, opts?: RequestOptions) =>
       apiClient.get<Unit[]>(
-        API_ROUTES.factions.units.list(factionId),
+        API_ROUTES.servers.units.list(serverId),
         undefined,
         opts
       ),
     create: (
-      factionId: string,
+      serverId: string,
       data: Partial<Unit>,
       opts?: RequestOptions
     ) =>
       apiClient.post<Unit>(
-        API_ROUTES.factions.units.create(factionId),
+        API_ROUTES.servers.units.create(serverId),
         data,
         opts
       ),
     update: (
-      factionId: string,
+      serverId: string,
       unitId: string,
       data: Partial<Unit>,
       opts?: RequestOptions
     ) =>
       apiClient.patch<Unit>(
-        API_ROUTES.factions.units.update(factionId, unitId),
+        API_ROUTES.servers.units.update(serverId, unitId),
         data,
         opts
       ),
-    delete: (factionId: string, unitId: string, opts?: RequestOptions) =>
+    delete: (serverId: string, unitId: string, opts?: RequestOptions) =>
       apiClient.delete<void>(
-        API_ROUTES.factions.units.delete(factionId, unitId),
+        API_ROUTES.servers.units.delete(serverId, unitId),
         opts
       ),
     listMembers: (
-      factionId: string,
+      serverId: string,
       unitId: string,
       opts?: RequestOptions
     ) =>
       apiClient.get<UnitMember[]>(
-        API_ROUTES.factions.units.members(factionId, unitId),
+        API_ROUTES.servers.units.members(serverId, unitId),
         undefined,
         opts
       ),
     addMember: (
-      factionId: string,
+      serverId: string,
       unitId: string,
-      data: { factionUserId: string },
+      data: { serverUserId: string },
       opts?: RequestOptions
     ) =>
       apiClient.post<UnitMember>(
-        API_ROUTES.factions.units.addMember(factionId, unitId),
+        API_ROUTES.servers.units.addMember(serverId, unitId),
         data,
         opts
       ),
     removeMember: (
-      factionId: string,
+      serverId: string,
       unitId: string,
-      factionUserId: string,
+      serverUserId: string,
       opts?: RequestOptions
     ) =>
       apiClient.delete<void>(
-        API_ROUTES.factions.units.removeMember(factionId, unitId, factionUserId),
+        API_ROUTES.servers.units.removeMember(serverId, unitId, serverUserId),
         opts
       ),
   },
@@ -848,7 +879,7 @@ export const api = {
         opts
       ),
     createCheckout: (
-      data: { priceId: string; factionId?: string },
+      data: { priceId: string; serverId?: string },
       opts?: RequestOptions
     ) =>
       apiClient.post<CheckoutSession>(
@@ -875,7 +906,7 @@ export const api = {
   // ── Messages (send to Discord) ──
   messages: {
     send: (
-      factionId: string,
+      serverId: string,
       data: {
         channel_id?: string;
         webhook_urls?: string[];
@@ -887,13 +918,13 @@ export const api = {
       opts?: RequestOptions
     ) =>
       apiClient.post<MessageSend>(
-        API_ROUTES.factions.messageSend(factionId),
+        API_ROUTES.servers.messageSend(serverId),
         data,
         opts
       ),
-    history: (factionId: string, opts?: RequestOptions) =>
+    history: (serverId: string, opts?: RequestOptions) =>
       apiClient.get<MessageSend[]>(
-        API_ROUTES.factions.messageHistory(factionId),
+        API_ROUTES.servers.messageHistory(serverId),
         undefined,
         opts
       ),
@@ -901,62 +932,62 @@ export const api = {
 
   // ── Schedule ──
   schedule: {
-    list: (factionId: string, opts?: RequestOptions) =>
+    list: (serverId: string, opts?: RequestOptions) =>
       apiClient.get<ScheduledMessage[]>(
-        API_ROUTES.factions.schedule.list(factionId),
+        API_ROUTES.servers.schedule.list(serverId),
         undefined,
         opts
       ),
-    create: (factionId: string, data: Partial<ScheduledMessage>, opts?: RequestOptions) =>
+    create: (serverId: string, data: Partial<ScheduledMessage>, opts?: RequestOptions) =>
       apiClient.post<ScheduledMessage>(
-        API_ROUTES.factions.schedule.list(factionId),
+        API_ROUTES.servers.schedule.list(serverId),
         data,
         opts
       ),
-    delete: (factionId: string, id: string, opts?: RequestOptions) =>
+    delete: (serverId: string, id: string, opts?: RequestOptions) =>
       apiClient.delete<void>(
-        API_ROUTES.factions.schedule.detail(factionId, id),
+        API_ROUTES.servers.schedule.detail(serverId, id),
         opts
       ),
   },
 
   // ── Config ──
   config: {
-    get: (factionId: string, opts?: RequestOptions) =>
-      apiClient.get<FactionConfig>(
-        API_ROUTES.factions.config(factionId),
+    get: (serverId: string, opts?: RequestOptions) =>
+      apiClient.get<ServerConfig>(
+        API_ROUTES.servers.config(serverId),
         undefined,
         opts
       ),
     update: (
-      factionId: string,
-      data: Partial<FactionConfig>,
+      serverId: string,
+      data: Partial<ServerConfig>,
       opts?: RequestOptions
     ) =>
-      apiClient.patch<FactionConfig>(
-        API_ROUTES.factions.config(factionId),
+      apiClient.patch<ServerConfig>(
+        API_ROUTES.servers.config(serverId),
         data,
         opts
       ),
-    getWelcome: (factionId: string, opts?: RequestOptions) =>
+    getWelcome: (serverId: string, opts?: RequestOptions) =>
       apiClient.get<Record<string, unknown>>(
-        API_ROUTES.factions.welcomeConfig(factionId),
+        API_ROUTES.servers.welcomeConfig(serverId),
         undefined,
         opts
       ),
     updateWelcome: (
-      factionId: string,
+      serverId: string,
       data: Record<string, unknown>,
       opts?: RequestOptions
     ) =>
       apiClient.patch<Record<string, unknown>>(
-        API_ROUTES.factions.welcomeConfig(factionId),
+        API_ROUTES.servers.welcomeConfig(serverId),
         data,
         opts
       ),
-    getEventTypes: (factionId: string, opts?: RequestOptions) =>
+    getEventTypes: (serverId: string, opts?: RequestOptions) =>
       apiClient.get<EventType[]>(
-        API_ROUTES.factions.eventTypes(factionId),
+        API_ROUTES.servers.eventTypes(serverId),
         undefined,
         opts
       ),

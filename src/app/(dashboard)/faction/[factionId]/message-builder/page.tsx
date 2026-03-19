@@ -1,10 +1,12 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState, type ComponentType } from "react";
 import { EmbedBuilder, type EmbedFormData } from "@/components/templates/embed-builder";
 import { ComponentV2BuilderV2 } from "@/components/component-v2";
 import type { C2TopLevelItem } from "@/components/component-v2";
+import { ElementInsertionProvider } from "@/components/elements/element-insertion-provider";
+import { ElementSidebar } from "@/components/elements/element-sidebar";
 import {
   useCreateEmbedTemplate,
   useCreateContainerTemplate,
@@ -15,18 +17,16 @@ import {
   useDeleteEmbedTemplate,
   useDeleteContainerTemplate,
   useDeleteTextTemplate,
+  useUpdateEmbedTemplate,
+  useUpdateContainerTemplate,
+  useUpdateTextTemplate,
 } from "@/hooks/use-templates";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import {
   Send,
@@ -49,21 +49,104 @@ import { cn } from "@/lib/utils";
 import { useSendMessage, useMessageHistory } from "@/hooks/use-messages";
 import type { EmbedTemplate, ContainerTemplate, TextTemplate } from "@/types/template";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 type MessageMode = "text" | "embed" | "component";
+type TemplateKind = "text" | "embed" | "container";
 
 const MODES: {
   value: MessageMode;
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: ComponentType<{ className?: string }>;
 }[] = [
   { value: "text", label: "Text", icon: MessageSquare },
   { value: "embed", label: "Embed", icon: FileImage },
   { value: "component", label: "Component V2", icon: LayoutTemplate },
 ];
 
-// ─── Template row ─────────────────────────────────────────────────────────────
+const EMPTY_EMBED_DRAFT: EmbedFormData = {
+  name: "",
+  title: "",
+  url: "",
+  description: "",
+  color: "#4f545c",
+  fields: [],
+  imageUrl: "",
+  thumbnailUrl: "",
+  footerText: "",
+  footerIconUrl: "",
+  authorName: "",
+  authorIconUrl: "",
+  authorUrl: "",
+  timestamp: false,
+  isDefault: false,
+};
+
+function toTemplateKind(mode: MessageMode): TemplateKind {
+  return mode === "component" ? "container" : mode;
+}
+
+function toEmbedDraft(template?: Partial<EmbedTemplate> | null): EmbedFormData {
+  return {
+    name: template?.name ?? "",
+    title: template?.title ?? "",
+    url: "",
+    description: template?.description ?? "",
+    color: template?.color ?? "#4f545c",
+    fields: (template?.fields ?? []).map((field) => ({ ...field, inline: field.inline ?? false })),
+    imageUrl: template?.imageUrl ?? "",
+    thumbnailUrl: template?.thumbnailUrl ?? "",
+    footerText: template?.footer ?? "",
+    footerIconUrl: "",
+    authorName: template?.authorName ?? "",
+    authorIconUrl: template?.authorIconUrl ?? "",
+    authorUrl: "",
+    timestamp: false,
+    isDefault: false,
+  };
+}
+
+function snapshotText(content: string): string {
+  return JSON.stringify({ content });
+}
+
+function snapshotEmbed(draft?: EmbedFormData | null): string {
+  const normalized = draft ?? EMPTY_EMBED_DRAFT;
+  return JSON.stringify({
+    title: normalized.title,
+    url: normalized.url,
+    description: normalized.description,
+    color: normalized.color,
+    fields: normalized.fields,
+    imageUrl: normalized.imageUrl,
+    thumbnailUrl: normalized.thumbnailUrl,
+    footerText: normalized.footerText,
+    footerIconUrl: normalized.footerIconUrl,
+    authorName: normalized.authorName,
+    authorIconUrl: normalized.authorIconUrl,
+    authorUrl: normalized.authorUrl,
+    timestamp: normalized.timestamp,
+    isDefault: normalized.isDefault,
+  });
+}
+
+function snapshotComponent(items: C2TopLevelItem[]): string {
+  return JSON.stringify(items);
+}
+
+function currentSnapshotForMode(
+  mode: MessageMode,
+  textContent: string,
+  embedDraft: EmbedFormData | null,
+  componentDraft: C2TopLevelItem[]
+): string {
+  if (mode === "text") return snapshotText(textContent);
+  if (mode === "embed") return snapshotEmbed(embedDraft);
+  return snapshotComponent(componentDraft);
+}
+
+function autoNameForMode(mode: MessageMode): string {
+  const label = mode === "component" ? "Component" : mode === "embed" ? "Embed" : "Message";
+  return `${label} ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+}
 
 function TemplateRow({
   name,
@@ -79,21 +162,21 @@ function TemplateRow({
   isDeleting: boolean;
 }) {
   return (
-    <div className="flex items-center gap-2 rounded-md border border-border px-3 py-2 bg-card">
+    <div className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2">
       <span className="flex-1 truncate text-sm font-medium">{name}</span>
-      <div className="flex items-center gap-1 shrink-0">
-        <Button size="sm" variant="ghost" className="h-7 px-2 text-xs gap-1" onClick={onLoad} title="Load into builder">
+      <div className="flex shrink-0 items-center gap-1">
+        <Button size="sm" variant="ghost" className="h-7 gap-1 px-2 text-xs" onClick={onLoad} title="Load into builder">
           <Upload className="h-3 w-3" />
           Load
         </Button>
-        <Button size="sm" variant="ghost" className="h-7 px-2 text-xs gap-1" onClick={onCopy} title="Duplicate">
+        <Button size="sm" variant="ghost" className="h-7 gap-1 px-2 text-xs" onClick={onCopy} title="Duplicate">
           <Copy className="h-3 w-3" />
           Copy
         </Button>
         <Button
           size="sm"
           variant="ghost"
-          className="h-7 px-2 text-xs gap-1 text-destructive hover:text-destructive"
+          className="h-7 gap-1 px-2 text-xs text-destructive hover:text-destructive"
           onClick={onDelete}
           disabled={isDeleting}
           title="Delete"
@@ -105,16 +188,15 @@ function TemplateRow({
   );
 }
 
-// ─── Messages Sheet ───────────────────────────────────────────────────────────
-
 function MessagesSheet({
   open,
   onOpenChange,
   mode,
-  factionId,
+  serverId,
   templateName,
   onTemplateNameChange,
   onSave,
+  onSaveAsNew,
   isSaving,
   onLoadText,
   onLoadEmbed,
@@ -123,26 +205,27 @@ function MessagesSheet({
   open: boolean;
   onOpenChange: (v: boolean) => void;
   mode: MessageMode;
-  factionId: string;
+  serverId: string;
   templateName: string;
   onTemplateNameChange: (v: string) => void;
   onSave: () => void;
+  onSaveAsNew: () => void;
   isSaving: boolean;
   onLoadText: (t: TextTemplate) => void;
   onLoadEmbed: (t: EmbedTemplate) => void;
   onLoadComponent: (t: ContainerTemplate) => void;
 }) {
-  const texts = useTextTemplates(factionId);
-  const embeds = useEmbedTemplates(factionId);
-  const containers = useContainerTemplates(factionId);
+  const texts = useTextTemplates(serverId);
+  const embeds = useEmbedTemplates(serverId);
+  const containers = useContainerTemplates(serverId);
 
-  const deleteText = useDeleteTextTemplate(factionId);
-  const deleteEmbed = useDeleteEmbedTemplate(factionId);
-  const deleteContainer = useDeleteContainerTemplate(factionId);
+  const deleteText = useDeleteTextTemplate(serverId);
+  const deleteEmbed = useDeleteEmbedTemplate(serverId);
+  const deleteContainer = useDeleteContainerTemplate(serverId);
 
-  const createText = useCreateTextTemplate(factionId);
-  const createEmbed = useCreateEmbedTemplate(factionId);
-  const createContainer = useCreateContainerTemplate(factionId);
+  const createText = useCreateTextTemplate(serverId);
+  const createEmbed = useCreateEmbedTemplate(serverId);
+  const createContainer = useCreateContainerTemplate(serverId);
 
   const isLoading =
     mode === "text" ? texts.isLoading :
@@ -151,33 +234,33 @@ function MessagesSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[380px] sm:w-[420px] flex flex-col gap-0 p-0">
-        <SheetHeader className="px-5 py-4 border-b border-border">
+      <SheetContent side="right" className="flex w-[380px] flex-col gap-0 p-0 sm:w-[420px]">
+        <SheetHeader className="border-b border-border px-5 py-4">
           <SheetTitle>Messages</SheetTitle>
         </SheetHeader>
 
-        {/* Save row */}
-        <div className="px-5 py-4 border-b border-border space-y-3">
-          <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+        <div className="space-y-3 border-b border-border px-5 py-4">
+          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Save current {mode === "component" ? "component" : mode} message
           </Label>
+          <Input
+            placeholder="Template name..."
+            value={templateName}
+            onChange={(e) => onTemplateNameChange(e.target.value)}
+          />
           <div className="flex gap-2">
-            <Input
-              placeholder="Template name…"
-              value={templateName}
-              onChange={(e) => onTemplateNameChange(e.target.value)}
-              className="flex-1"
-            />
-            <Button onClick={onSave} disabled={isSaving || !templateName.trim()} size="sm">
+            <Button onClick={onSave} disabled={isSaving || !templateName.trim()} size="sm" className="flex-1">
               <Save className="mr-1.5 h-3.5 w-3.5" />
-              {isSaving ? "Saving…" : "Save"}
+              {isSaving ? "Saving..." : "Save"}
+            </Button>
+            <Button onClick={onSaveAsNew} disabled={isSaving || !templateName.trim()} size="sm" variant="outline">
+              Save as new
             </Button>
           </div>
         </div>
 
-        {/* Saved list */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-2">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-3">
+        <div className="flex-1 space-y-2 overflow-y-auto px-5 py-4">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Saved {mode} messages
           </p>
 
@@ -188,57 +271,57 @@ function MessagesSheet({
               ))}
             </div>
           ) : mode === "text" && texts.data?.length === 0 ? (
-            <p className="text-sm text-muted-foreground italic">No saved text messages yet.</p>
+            <p className="text-sm italic text-muted-foreground">No saved text messages yet.</p>
           ) : mode === "embed" && embeds.data?.length === 0 ? (
-            <p className="text-sm text-muted-foreground italic">No saved embed messages yet.</p>
+            <p className="text-sm italic text-muted-foreground">No saved embed messages yet.</p>
           ) : mode === "component" && containers.data?.length === 0 ? (
-            <p className="text-sm text-muted-foreground italic">No saved component messages yet.</p>
+            <p className="text-sm italic text-muted-foreground">No saved component messages yet.</p>
           ) : null}
 
-          {mode === "text" && texts.data?.map((t) => (
+          {mode === "text" && texts.data?.map((template) => (
             <TemplateRow
-              key={t.id}
-              name={t.name}
+              key={template.id}
+              name={template.name}
               isDeleting={deleteText.isPending}
-              onLoad={() => { onLoadText(t); onOpenChange(false); }}
-              onCopy={() => createText.mutate({ name: `${t.name} (copy)`, content: t.content })}
-              onDelete={() => deleteText.mutate(t.id)}
+              onLoad={() => { onLoadText(template); onOpenChange(false); }}
+              onCopy={() => createText.mutate({ name: `${template.name} (copy)`, content: template.content })}
+              onDelete={() => deleteText.mutate(template.id)}
             />
           ))}
 
-          {mode === "embed" && embeds.data?.map((t) => (
+          {mode === "embed" && embeds.data?.map((template) => (
             <TemplateRow
-              key={t.id}
-              name={t.name}
+              key={template.id}
+              name={template.name}
               isDeleting={deleteEmbed.isPending}
-              onLoad={() => { onLoadEmbed(t); onOpenChange(false); }}
+              onLoad={() => { onLoadEmbed(template); onOpenChange(false); }}
               onCopy={() => createEmbed.mutate({
-                name: `${t.name} (copy)`,
-                title: t.title,
-                description: t.description,
-                color: t.color,
-                fields: t.fields,
-                footer: t.footer,
-                imageUrl: t.imageUrl,
-                thumbnailUrl: t.thumbnailUrl,
-                authorName: t.authorName,
-                authorIconUrl: t.authorIconUrl,
+                name: `${template.name} (copy)`,
+                title: template.title,
+                description: template.description,
+                color: template.color,
+                fields: template.fields,
+                footer: template.footer,
+                imageUrl: template.imageUrl,
+                thumbnailUrl: template.thumbnailUrl,
+                authorName: template.authorName,
+                authorIconUrl: template.authorIconUrl,
               })}
-              onDelete={() => deleteEmbed.mutate(t.id)}
+              onDelete={() => deleteEmbed.mutate(template.id)}
             />
           ))}
 
-          {mode === "component" && containers.data?.map((t) => (
+          {mode === "component" && containers.data?.map((template) => (
             <TemplateRow
-              key={t.id}
-              name={t.name}
+              key={template.id}
+              name={template.name}
               isDeleting={deleteContainer.isPending}
-              onLoad={() => { onLoadComponent(t); onOpenChange(false); }}
+              onLoad={() => { onLoadComponent(template); onOpenChange(false); }}
               onCopy={() => createContainer.mutate({
-                name: `${t.name} (copy)`,
-                template_data: t.template_data,
+                name: `${template.name} (copy)`,
+                template_data: template.template_data,
               })}
-              onDelete={() => deleteContainer.mutate(t.id)}
+              onDelete={() => deleteContainer.mutate(template.id)}
             />
           ))}
         </div>
@@ -247,11 +330,9 @@ function MessagesSheet({
   );
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
-
 export default function MessageBuilderPage() {
-  const params = useParams<{ factionId: string }>();
-  const factionId = params.factionId;
+  const params = useParams<{ serverId: string }>();
+  const serverId = params.serverId;
 
   const [mode, setMode] = useState<MessageMode>("text");
   const [sendVia, setSendVia] = useState<"bot" | "webhook">("bot");
@@ -260,163 +341,200 @@ export default function MessageBuilderPage() {
   const [webhookUsername, setWebhookUsername] = useState("");
   const [webhookAvatarUrl, setWebhookAvatarUrl] = useState("");
   const [sheetOpen, setSheetOpen] = useState(false);
-
-  // Name lives in the sheet input
   const [templateName, setTemplateName] = useState("");
 
-  // Builder content state — bump key to remount builders when loading
   const [builderKey, setBuilderKey] = useState(0);
   const [textContent, setTextContent] = useState("");
   const [loadedEmbed, setLoadedEmbed] = useState<Partial<EmbedTemplate> | null>(null);
   const [loadedItems, setLoadedItems] = useState<C2TopLevelItem[]>([]);
+  const [embedDraft, setEmbedDraft] = useState<EmbedFormData | null>(null);
+  const [componentDraft, setComponentDraft] = useState<C2TopLevelItem[]>([]);
+  const [textSideView, setTextSideView] = useState<"preview" | "elements">("preview");
 
-  // Saved template tracking for send-after-save flow
-  const [savedTemplateId, setSavedTemplateId] = useState<string | null>(null);
-  const [savedTemplateType, setSavedTemplateType] = useState<string | null>(null);
+  const [currentTemplateId, setCurrentTemplateId] = useState<string | null>(null);
+  const [currentTemplateType, setCurrentTemplateType] = useState<TemplateKind | null>(null);
+  const [lastSavedSnapshot, setLastSavedSnapshot] = useState<string | null>(null);
 
-  // Submit refs for embed / component builders
-  const embedSubmitRef = useRef<(() => void) | null>(null);
-  const componentSubmitRef = useRef<(() => void) | null>(null);
-  // When true, the next successful save will immediately trigger a send
   const pendingSendRef = useRef(false);
   const pendingDestRef = useRef<{ channel_id?: string; webhook_urls?: string[]; webhook_username?: string; webhook_avatar_url?: string }>({});
-  // Resolved name to use for the current save (may be auto-generated)
-  const pendingNameRef = useRef<string>("");
 
-  // Send mutation + history
-  const sendMessage = useSendMessage(factionId);
-  const messageHistory = useMessageHistory(factionId);
-  // Only show status for sends triggered in this session, not historical data.
+  const sendMessage = useSendMessage(serverId);
+  const messageHistory = useMessageHistory(serverId);
   const [hasSentThisSession, setHasSentThisSession] = useState(false);
   const lastSend = hasSentThisSession ? messageHistory.data?.[0] : null;
 
-  const createEmbed = useCreateEmbedTemplate(factionId);
-  const createContainer = useCreateContainerTemplate(factionId);
-  const createText = useCreateTextTemplate(factionId);
+  const createEmbed = useCreateEmbedTemplate(serverId);
+  const createContainer = useCreateContainerTemplate(serverId);
+  const createText = useCreateTextTemplate(serverId);
+  const updateEmbed = useUpdateEmbedTemplate(serverId, currentTemplateType === "embed" ? currentTemplateId ?? "" : "");
+  const updateContainer = useUpdateContainerTemplate(serverId, currentTemplateType === "container" ? currentTemplateId ?? "" : "");
+  const updateText = useUpdateTextTemplate(serverId, currentTemplateType === "text" ? currentTemplateId ?? "" : "");
 
-  const isSaving = createEmbed.isPending || createContainer.isPending || createText.isPending;
+  const isSaving =
+    createEmbed.isPending ||
+    createContainer.isPending ||
+    createText.isPending ||
+    updateEmbed.isPending ||
+    updateContainer.isPending ||
+    updateText.isPending;
 
-  // ── Load handlers ──────────────────────────────────────────────────────────
+  const currentModeTemplateType = toTemplateKind(mode);
+  const currentSnapshot = useMemo(
+    () => currentSnapshotForMode(mode, textContent, embedDraft, componentDraft),
+    [mode, textContent, embedDraft, componentDraft]
+  );
+  const hasMatchingSavedTemplate =
+    currentTemplateId !== null &&
+    currentTemplateType === currentModeTemplateType &&
+    lastSavedSnapshot !== null;
+  const isDirty = !hasMatchingSavedTemplate || currentSnapshot !== lastSavedSnapshot;
 
-  function loadText(t: TextTemplate) {
-    setMode("text");
-    setTemplateName(t.name);
-    setTextContent(t.content);
-    setSavedTemplateId(t.id);
-    setSavedTemplateType("text");
-    setBuilderKey((k) => k + 1);
-    toast.success(`Loaded "${t.name}"`);
+  function finalizeSave(id: string, type: TemplateKind, name: string, snapshot: string) {
+    setCurrentTemplateId(id);
+    setCurrentTemplateType(type);
+    setLastSavedSnapshot(snapshot);
+    setTemplateName(name);
+    if (pendingSendRef.current) {
+      pendingSendRef.current = false;
+      setHasSentThisSession(true);
+      sendMessage.mutate({ ...pendingDestRef.current, template_type: type, template_id: id });
+    }
   }
 
-  function loadEmbed(t: EmbedTemplate) {
-    setMode("embed");
-    setTemplateName(t.name);
-    setLoadedEmbed(t);
-    setSavedTemplateId(t.id);
-    setSavedTemplateType("embed");
-    setBuilderKey((k) => k + 1);
-    toast.success(`Loaded "${t.name}"`);
+  function clearPendingSend() {
+    pendingSendRef.current = false;
+    pendingDestRef.current = {};
   }
 
-  function loadComponent(t: ContainerTemplate) {
-    setMode("component");
-    setTemplateName(t.name);
-    setLoadedItems((t.template_data?.components as C2TopLevelItem[]) ?? []);
-    setSavedTemplateId(t.id);
-    setSavedTemplateType("container");
-    setBuilderKey((k) => k + 1);
-    toast.success(`Loaded "${t.name}"`);
-  }
-
-  // ── Save ───────────────────────────────────────────────────────────────────
-
-  function handleSave(requireName = true) {
-    // When triggered from handleSend (auto-save-then-send), a name is optional —
-    // auto-generate one so the user can send without ever touching the template name.
-    const autoName = `${mode === "component" ? "Component" : mode === "embed" ? "Embed" : "Message"} ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
-    const name = templateName.trim() || (!requireName ? autoName : "");
+  function persistText(options?: { requireName?: boolean; forceCreate?: boolean }) {
+    const requireName = options?.requireName ?? true;
+    const forceCreate = options?.forceCreate ?? false;
+    const name = templateName.trim() || (!requireName ? autoNameForMode(mode) : "");
     if (!name) {
       toast.error("Enter a name before saving");
+      clearPendingSend();
       return;
     }
-    // Store so embed/component handlers (which go through form submit) can read it
-    pendingNameRef.current = name;
+    if (!textContent.trim()) {
+      toast.error("Message cannot be empty");
+      clearPendingSend();
+      return;
+    }
+
+    const payload = { name, content: textContent };
+    const snapshot = snapshotText(textContent);
+    const shouldUpdate = !forceCreate && currentTemplateId && currentTemplateType === "text";
+    const mutation = shouldUpdate ? updateText : createText;
+
+    mutation.mutate(payload, {
+      onSuccess: (saved) => finalizeSave(saved.id, "text", name, snapshot),
+      onError: () => clearPendingSend(),
+    });
+  }
+
+  function persistEmbed(data: EmbedFormData, options?: { requireName?: boolean; forceCreate?: boolean }) {
+    const requireName = options?.requireName ?? true;
+    const forceCreate = options?.forceCreate ?? false;
+    const name = templateName.trim() || data.name.trim() || (!requireName ? autoNameForMode(mode) : "");
+    if (!name) {
+      toast.error("Enter a name before saving");
+      clearPendingSend();
+      return;
+    }
+
+    const payload = {
+      name,
+      title: data.title || undefined,
+      description: data.description || undefined,
+      color: data.color || undefined,
+      fields: data.fields?.length ? data.fields : undefined,
+      footer: data.footerText || undefined,
+      imageUrl: data.imageUrl || undefined,
+      thumbnailUrl: data.thumbnailUrl || undefined,
+      authorName: data.authorName || undefined,
+      authorIconUrl: data.authorIconUrl || undefined,
+    };
+    const snapshot = snapshotEmbed(data);
+    const shouldUpdate = !forceCreate && currentTemplateId && currentTemplateType === "embed";
+    const mutation = shouldUpdate ? updateEmbed : createEmbed;
+
+    mutation.mutate(payload, {
+      onSuccess: (saved) => finalizeSave(saved.id, "embed", name, snapshot),
+      onError: () => clearPendingSend(),
+    });
+  }
+
+  function persistComponent(items: C2TopLevelItem[], options?: { requireName?: boolean; forceCreate?: boolean }) {
+    const requireName = options?.requireName ?? true;
+    const forceCreate = options?.forceCreate ?? false;
+    const name = templateName.trim() || (!requireName ? autoNameForMode(mode) : "");
+    if (!name) {
+      toast.error("Enter a name before saving");
+      clearPendingSend();
+      return;
+    }
+
+    const payload = {
+      name,
+      template_data: { components: items },
+    };
+    const snapshot = snapshotComponent(items);
+    const shouldUpdate = !forceCreate && currentTemplateId && currentTemplateType === "container";
+    const mutation = shouldUpdate ? updateContainer : createContainer;
+
+    mutation.mutate(payload, {
+      onSuccess: (saved) => finalizeSave(saved.id, "container", name, snapshot),
+      onError: () => clearPendingSend(),
+    });
+  }
+
+  function handleSave(options?: { requireName?: boolean; forceCreate?: boolean }) {
     if (mode === "text") {
-      if (!textContent.trim()) { toast.error("Message cannot be empty"); return; }
-      createText.mutate(
-        { name, content: textContent },
-        {
-          onSuccess: (created) => {
-            pendingNameRef.current = "";
-            setSavedTemplateId(created.id);
-            setSavedTemplateType("text");
-            if (pendingSendRef.current) {
-              pendingSendRef.current = false;
-              setHasSentThisSession(true);
-              sendMessage.mutate({ ...pendingDestRef.current, template_type: "text", template_id: created.id });
-            }
-          },
-        }
-      );
+      persistText(options);
       return;
     }
     if (mode === "embed") {
-      embedSubmitRef.current?.();
+      persistEmbed(embedDraft ?? toEmbedDraft(loadedEmbed), options);
       return;
     }
-    if (mode === "component") {
-      componentSubmitRef.current?.();
-    }
+    persistComponent(componentDraft, options);
   }
 
-  function handleEmbedSave(form: EmbedFormData) {
-    createEmbed.mutate(
-      {
-        name: pendingNameRef.current || templateName.trim() || form.name,
-        title: form.title || undefined,
-        description: form.description || undefined,
-        color: form.color || undefined,
-        fields: form.fields?.length ? form.fields : undefined,
-        footer: form.footerText || undefined,
-        imageUrl: form.imageUrl || undefined,
-        thumbnailUrl: form.thumbnailUrl || undefined,
-        authorName: form.authorName || undefined,
-        authorIconUrl: form.authorIconUrl || undefined,
-      },
-      {
-        onSuccess: (created) => {
-          pendingNameRef.current = "";
-          setSavedTemplateId(created.id);
-          setSavedTemplateType("embed");
-          if (pendingSendRef.current) {
-            pendingSendRef.current = false;
-            setHasSentThisSession(true);
-            sendMessage.mutate({ ...pendingDestRef.current, template_type: "embed", template_id: created.id });
-          }
-        },
-      }
-    );
+  function loadText(template: TextTemplate) {
+    setMode("text");
+    setTemplateName(template.name);
+    setTextContent(template.content);
+    setCurrentTemplateId(template.id);
+    setCurrentTemplateType("text");
+    setLastSavedSnapshot(snapshotText(template.content));
+    setBuilderKey((value) => value + 1);
+    toast.success(`Loaded "${template.name}"`);
   }
 
-  function handleComponentSave(items: C2TopLevelItem[]) {
-    createContainer.mutate(
-      {
-        name: pendingNameRef.current || templateName.trim() || `Component ${new Date().toLocaleTimeString()}`,
-        template_data: { components: items },
-      },
-      {
-        onSuccess: (created) => {
-          pendingNameRef.current = "";
-          setSavedTemplateId(created.id);
-          setSavedTemplateType("container");
-          if (pendingSendRef.current) {
-            pendingSendRef.current = false;
-            setHasSentThisSession(true);
-            sendMessage.mutate({ ...pendingDestRef.current, template_type: "container", template_id: created.id });
-          }
-        },
-      }
-    );
+  function loadEmbed(template: EmbedTemplate) {
+    const draft = toEmbedDraft(template);
+    setMode("embed");
+    setTemplateName(template.name);
+    setLoadedEmbed(template);
+    setEmbedDraft(draft);
+    setCurrentTemplateId(template.id);
+    setCurrentTemplateType("embed");
+    setLastSavedSnapshot(snapshotEmbed(draft));
+    setBuilderKey((value) => value + 1);
+    toast.success(`Loaded "${template.name}"`);
+  }
+
+  function loadComponent(template: ContainerTemplate) {
+    const items = (template.template_data?.components as C2TopLevelItem[]) ?? [];
+    setMode("component");
+    setTemplateName(template.name);
+    setLoadedItems(items);
+    setComponentDraft(items);
+    setCurrentTemplateId(template.id);
+    setCurrentTemplateType("container");
+    setLastSavedSnapshot(snapshotComponent(items));
+    setBuilderKey((value) => value + 1);
+    toast.success(`Loaded "${template.name}"`);
   }
 
   function handleSend() {
@@ -424,14 +542,13 @@ export default function MessageBuilderPage() {
       toast.error("Enter a channel ID");
       return;
     }
-    if (sendVia === "webhook") {
-      const validUrls = webhookUrls.map((u) => u.trim()).filter(Boolean);
-      if (validUrls.length === 0) {
-        toast.error("Enter at least one webhook URL");
-        return;
-      }
+
+    const validWebhookUrls = webhookUrls.map((url) => url.trim()).filter(Boolean);
+    if (sendVia === "webhook" && validWebhookUrls.length === 0) {
+      toast.error("Enter at least one webhook URL");
+      return;
     }
-    const validWebhookUrls = webhookUrls.map((u) => u.trim()).filter(Boolean);
+
     const destination = sendVia === "webhook"
       ? {
           webhook_urls: validWebhookUrls,
@@ -440,274 +557,337 @@ export default function MessageBuilderPage() {
         }
       : { channel_id: channelId.trim() };
 
-    // Already have a saved template — send immediately
-    if (savedTemplateId && savedTemplateType) {
+    if (!isDirty && currentTemplateId && currentTemplateType === currentModeTemplateType) {
       setHasSentThisSession(true);
-      sendMessage.mutate({ ...destination, template_type: savedTemplateType, template_id: savedTemplateId });
+      sendMessage.mutate({ ...destination, template_type: currentModeTemplateType, template_id: currentTemplateId });
       return;
     }
-    // No saved template yet — auto-save then send (name not required)
+
     pendingSendRef.current = true;
     pendingDestRef.current = destination;
-    handleSave(false);
+    handleSave({ requireName: false });
   }
 
-  // ─── Render ───────────────────────────────────────────────────────────────
+  function handleModeChange(nextMode: MessageMode) {
+    setMode(nextMode);
+    setCurrentTemplateId(null);
+    setCurrentTemplateType(null);
+    setLastSavedSnapshot(null);
+    setTemplateName("");
+  }
 
   return (
-    <div className="space-y-6">
-      {/* Page header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Message Builder</h1>
-        <p className="text-muted-foreground">
-          Compose and send messages to your Discord server.
-        </p>
-      </div>
-
-      {/* ── Action bar ── */}
-      <Card className="p-4">
-        <div className="flex flex-wrap items-end gap-4">
-          {/* Mode toggle */}
-          <div className="space-y-1.5">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Message Type
-            </p>
-            <div className="flex overflow-hidden rounded-lg border border-border">
-              {MODES.map(({ value, label, icon: Icon }) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => {
-                    setMode(value);
-                    setSavedTemplateId(null);
-                    setSavedTemplateType(null);
-                  }}
-                  className={cn(
-                    "flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors",
-                    "border-r border-border last:border-r-0",
-                    mode === value
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-background text-muted-foreground hover:bg-accent hover:text-foreground"
-                  )}
-                >
-                  <Icon className="h-3.5 w-3.5" />
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Send-via toggle */}
-          <div className="space-y-1.5">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Send Via
-            </p>
-            <div className="flex overflow-hidden rounded-lg border border-border">
-              {(["bot", "webhook"] as const).map((v) => (
-                <button
-                  key={v}
-                  type="button"
-                  onClick={() => setSendVia(v)}
-                  className={cn(
-                    "px-3 py-2 text-sm font-medium transition-colors border-r border-border last:border-r-0 capitalize",
-                    sendVia === v
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-background text-muted-foreground hover:bg-accent hover:text-foreground"
-                  )}
-                >
-                  {v}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="ml-auto space-y-1.5">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Actions
-            </p>
-            <div className="flex gap-2">
-              <Button onClick={() => setSheetOpen(true)} variant="outline">
-                <BookOpen className="mr-2 h-4 w-4" />
-                Messages
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleSend}
-                disabled={
-                  (sendVia === "bot" ? !channelId.trim() : !webhookUrls.some((u) => u.trim())) ||
-                  sendMessage.isPending ||
-                  isSaving
-                }
-              >
-                {sendMessage.isPending || (pendingSendRef.current && isSaving) ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="mr-2 h-4 w-4" />
-                )}
-                {sendMessage.isPending ? "Sending..." : isSaving ? "Saving..." : "Send"}
-              </Button>
-
-              {/* Last send status indicator */}
-              {lastSend && (
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  {lastSend.status === "sent" && (
-                    <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
-                  )}
-                  {lastSend.status === "pending" && (
-                    <Clock className="h-3.5 w-3.5 text-yellow-500" />
-                  )}
-                  {lastSend.status === "failed" && (
-                    <XCircle className="h-3.5 w-3.5 text-destructive" />
-                  )}
-                  <span className="capitalize">{lastSend.status}</span>
-                </div>
-              )}
-            </div>
-          </div>
+    <ElementInsertionProvider>
+      <div className="mx-auto max-w-[1000px] space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Message Builder</h1>
+          <p className="text-muted-foreground">
+            Compose and send messages to your Discord server.
+          </p>
         </div>
-      </Card>
 
-      {/* ── Destination ── full-width below action bar */}
-      <Card className="p-4">
-        {sendVia === "bot" ? (
-          <div className="space-y-1.5">
-            <Label htmlFor="channelId" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Target Channel ID
-            </Label>
-            <Input
-              id="channelId"
-              placeholder="123456789012345678"
-              value={channelId}
-              onChange={(e) => setChannelId(e.target.value)}
-            />
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {/* Webhook URLs */}
+        <Card className="p-4">
+          <div className="flex flex-wrap items-end gap-4">
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Webhook URLs
-              </Label>
-              <div className="space-y-2">
-                {webhookUrls.map((url, i) => (
-                  <div key={i} className="flex gap-1.5">
-                    <Input
-                      placeholder="https://discord.com/api/webhooks/..."
-                      value={url}
-                      onChange={(e) => {
-                        const next = [...webhookUrls];
-                        next[i] = e.target.value;
-                        setWebhookUrls(next);
-                      }}
-                    />
-                    {webhookUrls.length > 1 && (
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        className="h-10 w-10 shrink-0 text-destructive hover:text-destructive"
-                        onClick={() => setWebhookUrls(webhookUrls.filter((_, j) => j !== i))}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Message Type
+              </p>
+              <div className="flex overflow-hidden rounded-lg border border-border">
+                {MODES.map(({ value, label, icon: Icon }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => handleModeChange(value)}
+                    className={cn(
+                      "flex items-center gap-1.5 border-r border-border px-3 py-2 text-sm font-medium transition-colors last:border-r-0",
+                      mode === value
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-background text-muted-foreground hover:bg-accent hover:text-foreground"
                     )}
-                  </div>
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {label}
+                  </button>
                 ))}
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="h-7 gap-1 text-xs"
-                  onClick={() => setWebhookUrls([...webhookUrls, ""])}
-                >
-                  <Plus className="h-3 w-3" />
-                  Add URL
-                </Button>
               </div>
             </div>
-            {/* Identity overrides */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Username (optional)
-                </Label>
-                <Input
-                  placeholder="Override bot name"
-                  value={webhookUsername}
-                  onChange={(e) => setWebhookUsername(e.target.value)}
-                />
+
+            <div className="space-y-1.5">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Send Via
+              </p>
+              <div className="flex overflow-hidden rounded-lg border border-border">
+                {(["bot", "webhook"] as const).map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setSendVia(value)}
+                    className={cn(
+                      "border-r border-border px-3 py-2 text-sm font-medium capitalize transition-colors last:border-r-0",
+                      sendVia === value
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-background text-muted-foreground hover:bg-accent hover:text-foreground"
+                    )}
+                  >
+                    {value}
+                  </button>
+                ))}
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Avatar URL (optional)
-                </Label>
-                <Input
-                  placeholder="https://..."
-                  value={webhookAvatarUrl}
-                  onChange={(e) => setWebhookAvatarUrl(e.target.value)}
-                />
+            </div>
+
+            <div className="ml-auto space-y-1.5">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Actions
+              </p>
+              <div className="flex gap-2">
+                <Button onClick={() => setSheetOpen(true)} variant="outline">
+                  <BookOpen className="mr-2 h-4 w-4" />
+                  Messages
+                </Button>
+                <Button variant="outline" onClick={() => handleSave()} disabled={isSaving}>
+                  <Save className="mr-2 h-4 w-4" />
+                  {isSaving ? "Saving..." : currentTemplateId && currentTemplateType === currentModeTemplateType ? "Save" : "Save as new"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleSend}
+                  disabled={
+                    (sendVia === "bot" ? !channelId.trim() : !webhookUrls.some((url) => url.trim())) ||
+                    sendMessage.isPending ||
+                    isSaving
+                  }
+                >
+                  {sendMessage.isPending || (pendingSendRef.current && isSaving) ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="mr-2 h-4 w-4" />
+                  )}
+                  {sendMessage.isPending ? "Sending..." : isSaving ? "Saving..." : "Send"}
+                </Button>
+                {lastSend ? (
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    {lastSend.status === "sent" ? (
+                      <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                    ) : null}
+                    {lastSend.status === "pending" ? (
+                      <Clock className="h-3.5 w-3.5 text-yellow-500" />
+                    ) : null}
+                    {lastSend.status === "failed" ? (
+                      <XCircle className="h-3.5 w-3.5 text-destructive" />
+                    ) : null}
+                    <span className="capitalize">{lastSend.status}</span>
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
-        )}
-      </Card>
-
-      {/* ── Compose area ── */}
-      {mode === "text" && (
-        <Card className="space-y-3 p-4">
-          <Label htmlFor="textContent">Message Content</Label>
-          <textarea
-            id="textContent"
-            key={builderKey}
-            rows={8}
-            className="w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            placeholder={"Type your message…\n\nVariables: {{username}}, {{faction_name}}, {{rank}}"}
-            value={textContent}
-            onChange={(e) => setTextContent(e.target.value)}
-          />
         </Card>
-      )}
 
-      {mode === "embed" && (
-        <EmbedBuilder
-          key={builderKey}
-          template={loadedEmbed}
-          onSave={handleEmbedSave}
-          isSaving={createEmbed.isPending}
-          submitRef={embedSubmitRef}
-          webhookUsername={sendVia === "webhook" ? webhookUsername : undefined}
-          webhookAvatarUrl={sendVia === "webhook" ? webhookAvatarUrl : undefined}
+        <Card className="p-4">
+          {sendVia === "bot" ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="channelId" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Target Channel ID
+              </Label>
+              <Input
+                id="channelId"
+                placeholder="123456789012345678"
+                value={channelId}
+                onChange={(e) => setChannelId(e.target.value)}
+              />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Webhook URLs
+                </Label>
+                <div className="space-y-2">
+                  {webhookUrls.map((url, index) => (
+                    <div key={index} className="flex gap-1.5">
+                      <Input
+                        placeholder="https://discord.com/api/webhooks/..."
+                        value={url}
+                        onChange={(e) => {
+                          const next = [...webhookUrls];
+                          next[index] = e.target.value;
+                          setWebhookUrls(next);
+                        }}
+                      />
+                      {webhookUrls.length > 1 ? (
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          className="h-10 w-10 shrink-0 text-destructive hover:text-destructive"
+                          onClick={() => setWebhookUrls(webhookUrls.filter((_, i) => i !== index))}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      ) : null}
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7 gap-1 text-xs"
+                    onClick={() => setWebhookUrls([...webhookUrls, ""])}
+                  >
+                    <Plus className="h-3 w-3" />
+                    Add URL
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Username (optional)
+                  </Label>
+                  <Input
+                    placeholder="Override bot name"
+                    value={webhookUsername}
+                    onChange={(e) => setWebhookUsername(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Avatar URL (optional)
+                  </Label>
+                  <Input
+                    placeholder="https://..."
+                    value={webhookAvatarUrl}
+                    onChange={(e) => setWebhookAvatarUrl(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </Card>
+
+        {mode === "text" ? (
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Card className="space-y-3 p-4">
+              <div className="space-y-1">
+                <Label htmlFor="textContent">Message Content</Label>
+                <p className="text-xs text-muted-foreground">
+                  Save updates the loaded template. Save as new creates a copy.
+                </p>
+              </div>
+              <textarea
+                id="textContent"
+                key={builderKey}
+                rows={12}
+                className="min-h-[360px] w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                placeholder={"Type your message...\n\nVariables: {{element:userName}}, {{element:memberCount}}"}
+                value={textContent}
+                onChange={(e) => setTextContent(e.target.value)}
+              />
+            </Card>
+
+            <Card className="p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-sm font-semibold text-foreground">
+                    {textSideView === "preview" ? "Preview" : "Elements"}
+                  </h2>
+                  <p className="text-xs text-muted-foreground">
+                    {textSideView === "preview"
+                      ? "Tokens stay visible until they are resolved at send/runtime."
+                      : "Insert server mentions and element tokens into the active field."}
+                  </p>
+                </div>
+                <div className="rounded-md border border-border p-1">
+                  {(["preview", "elements"] as const).map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setTextSideView(value)}
+                      className={cn(
+                        "rounded px-3 py-1.5 text-sm capitalize transition-colors",
+                        textSideView === value
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {value}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {textSideView === "preview" ? (
+                <div className="rounded-lg border border-border bg-[#313338] p-4 text-sm text-[#f2f3f5]">
+                  <div className="mb-2 flex items-center gap-2">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#5865F2] text-sm font-bold text-white">
+                      {webhookUsername ? webhookUsername[0]?.toUpperCase() : "B"}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold">{webhookUsername || "BRM5 Bot"}</span>
+                        <span className="rounded bg-[#5865F2] px-1 text-[10px] font-semibold uppercase text-white">
+                          BOT
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#949ba4]">
+                        Today at {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="min-h-[320px] whitespace-pre-wrap break-words rounded-md bg-black/10 p-3">
+                    {textContent || <span className="text-[#949ba4]">Nothing to preview yet.</span>}
+                  </div>
+                </div>
+              ) : (
+                <ElementSidebar serverId={serverId} className="w-full border-0 bg-transparent shadow-none" />
+              )}
+            </Card>
+          </div>
+        ) : null}
+
+        {mode === "embed" ? (
+          <EmbedBuilder
+            key={builderKey}
+            template={loadedEmbed}
+            onSave={(data) => persistEmbed(data)}
+            onDataChange={setEmbedDraft}
+            isSaving={createEmbed.isPending || updateEmbed.isPending}
+            webhookUsername={sendVia === "webhook" ? webhookUsername : undefined}
+            webhookAvatarUrl={sendVia === "webhook" ? webhookAvatarUrl : undefined}
+            sidebar={<ElementSidebar serverId={serverId} />}
+          />
+        ) : null}
+
+        {mode === "component" ? (
+          <ComponentV2BuilderV2
+            key={builderKey}
+            initialItems={loadedItems}
+            onSave={(items) => persistComponent(items)}
+            onItemsChange={setComponentDraft}
+            isSaving={createContainer.isPending || updateContainer.isPending}
+            serverId={serverId}
+            webhookUsername={sendVia === "webhook" ? webhookUsername : undefined}
+            webhookAvatarUrl={sendVia === "webhook" ? webhookAvatarUrl : undefined}
+            sidebar={<ElementSidebar serverId={serverId} />}
+          />
+        ) : null}
+
+        <MessagesSheet
+          open={sheetOpen}
+          onOpenChange={setSheetOpen}
+          mode={mode}
+          serverId={serverId}
+          templateName={templateName}
+          onTemplateNameChange={setTemplateName}
+          onSave={() => handleSave()}
+          onSaveAsNew={() => handleSave({ forceCreate: true })}
+          isSaving={isSaving}
+          onLoadText={loadText}
+          onLoadEmbed={loadEmbed}
+          onLoadComponent={loadComponent}
         />
-      )}
-
-      {mode === "component" && (
-        <ComponentV2BuilderV2
-          key={builderKey}
-          initialItems={loadedItems}
-          onSave={handleComponentSave}
-          isSaving={createContainer.isPending}
-          submitRef={componentSubmitRef}
-          factionId={factionId}
-          webhookUsername={sendVia === "webhook" ? webhookUsername : undefined}
-          webhookAvatarUrl={sendVia === "webhook" ? webhookAvatarUrl : undefined}
-        />
-      )}
-
-      {/* ── Messages sheet ── */}
-      <MessagesSheet
-        open={sheetOpen}
-        onOpenChange={setSheetOpen}
-        mode={mode}
-        factionId={factionId}
-        templateName={templateName}
-        onTemplateNameChange={setTemplateName}
-        onSave={handleSave}
-        isSaving={isSaving}
-        onLoadText={loadText}
-        onLoadEmbed={loadEmbed}
-        onLoadComponent={loadComponent}
-      />
-    </div>
+      </div>
+    </ElementInsertionProvider>
   );
 }

@@ -9,7 +9,7 @@ export type WsEventType =
 // The envelope every message is wrapped in.
 export interface WsEnvelope<T = unknown> {
   type: WsEventType;
-  factionId: string;
+  serverId: string;
   timestamp: string; // ISO 8601
   payload: T;
 }

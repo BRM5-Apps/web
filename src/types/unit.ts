@@ -1,6 +1,6 @@
 export interface Unit {
   id: string;
-  factionId: string;
+  serverId: string;
   name: string;
   description?: string;
   iconUrl?: string;
@@ -12,6 +12,6 @@ export interface Unit {
 export interface UnitMember {
   id: string;
   unitId: string;
-  factionUserId: string;
+  serverUserId: string;
   joinedAt: string;
 }

@@ -3,47 +3,47 @@ import { api } from "@/lib/api-client";
 import { invalidateRelated } from "@/lib/query-utils";
 
 interface PromoteDemotePayload {
-  factionUserId: string;
+  serverUserId: string;
   reason?: string;
 }
 
 interface KickPayload {
-  factionUserId: string;
+  serverUserId: string;
   reason?: string;
 }
 
-export function usePromoteMember(factionId: string) {
+export function usePromoteMember(serverId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (payload: PromoteDemotePayload) =>
-      api.ranks.promote(factionId, payload),
+      api.ranks.promote(serverId, payload),
     onSuccess: () => {
-      invalidateRelated(queryClient, "members", factionId);
+      invalidateRelated(queryClient, "members", serverId);
     },
   });
 }
 
-export function useDemoteMember(factionId: string) {
+export function useDemoteMember(serverId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (payload: PromoteDemotePayload) =>
-      api.ranks.demote(factionId, payload),
+      api.ranks.demote(serverId, payload),
     onSuccess: () => {
-      invalidateRelated(queryClient, "members", factionId);
+      invalidateRelated(queryClient, "members", serverId);
     },
   });
 }
 
-export function useKickMember(factionId: string) {
+export function useKickMember(serverId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (payload: KickPayload) =>
-      api.members.kick(factionId, payload),
+      api.members.kick(serverId, payload),
     onSuccess: () => {
-      invalidateRelated(queryClient, "members", factionId);
+      invalidateRelated(queryClient, "members", serverId);
     },
   });
 }

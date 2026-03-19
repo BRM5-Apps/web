@@ -1,7 +1,7 @@
 export interface Event {
   id: string;
-  factionId?: string;
-  factionHubId?: string;
+  serverId?: string;
+  serverHubId?: string;
   eventTypeId: string;
   title: string;
   description?: string;
@@ -20,8 +20,8 @@ export interface Event {
 
 export interface EventType {
   id: string;
-  factionId?: string;
-  factionHubId?: string;
+  serverId?: string;
+  serverHubId?: string;
   name: string;
   description?: string;
   defaultPoints: number;
@@ -48,7 +48,7 @@ export interface EventRSVP {
 
 export interface EventRequest {
   id: string;
-  factionId: string;
+  serverId: string;
   requestedById: string;
   title: string;
   description?: string;
@@ -59,8 +59,8 @@ export interface EventRequest {
 export interface EventLog {
   id: string;
   eventId?: string;
-  factionId?: string;
-  factionHubId?: string;
+  serverId?: string;
+  serverHubId?: string;
   loggedById: string;
   vcChannelId?: string;
   eventStartedAt: string;

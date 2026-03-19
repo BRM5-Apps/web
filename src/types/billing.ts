@@ -1,7 +1,7 @@
 export interface Subscription {
   id: string;
-  factionId?: string;
-  factionHubId?: string;
+  serverId?: string;
+  serverHubId?: string;
   stripeCustomerId: string;
   stripeSubscriptionId: string;
   stripePriceId: string;

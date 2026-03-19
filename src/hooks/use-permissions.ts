@@ -2,7 +2,7 @@ import { useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { queryKeys } from "@/lib/query-keys";
-import { useFactionStore } from "@/stores/faction-store";
+import { useServerStore } from "@/stores/server-store";
 
 interface PermissionData {
   permissions: string[];
@@ -15,11 +15,11 @@ function normalizePermissionKey(key: string): string {
   return key.trim();
 }
 
-export function usePermissions(factionId: string) {
+export function usePermissions(serverId: string) {
   const { data, isLoading } = useQuery<PermissionData>({
-    queryKey: queryKeys.permissions.user(factionId),
-    queryFn: ({ signal }) => api.permissions.get(factionId, { signal }),
-    enabled: !!factionId,
+    queryKey: queryKeys.permissions.user(serverId),
+    queryFn: ({ signal }) => api.permissions.get(serverId, { signal }),
+    enabled: !!serverId,
   });
 
   const permissions = useMemo(
@@ -43,7 +43,7 @@ export function useHasPermissions(
   permissions: PermissionInput,
   mode: PermissionMode = "all"
 ): boolean {
-  const userPermissions = useFactionStore((state) => state.userPermissions);
+  const userPermissions = useServerStore((state) => state.userPermissions);
   const userPermissionSet = useMemo(
     () => new Set(userPermissions.map(normalizePermissionKey)),
     [userPermissions]

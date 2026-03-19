@@ -36,7 +36,7 @@ export interface NavSection {
   items: NavItemConfig[];
 }
 
-// Top-level navigation (outside faction context)
+// Top-level navigation (outside server context)
 export const navConfig: NavSection[] = [
   {
     label: "Overview",
@@ -47,14 +47,14 @@ export const navConfig: NavSection[] = [
   {
     label: "Management",
     items: [
-      { href: "/faction", icon: Shield, label: "Servers" },
+      { href: "/server", icon: Shield, label: "Servers" },
     ],
   },
 ];
 
-// Faction-scoped navigation sections
-// hrefs are relative — prepend /faction/[factionId] at render time
-export const factionNavConfig: NavSection[] = [
+// Server-scoped navigation sections
+// hrefs are relative — prepend /server/[serverId] at render time
+export const serverNavConfig: NavSection[] = [
   {
     label: "Overview",
     items: [

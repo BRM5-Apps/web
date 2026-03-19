@@ -6,8 +6,8 @@ import { Providers } from "@/providers/providers";
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
-  title: "FactionHub Dashboard",
-  description: "Manage your Discord factions, events, ranks, and more.",
+  title: "ServerHub Dashboard",
+  description: "Manage your Discord servers, events, ranks, and more.",
   icons: { icon: "/favicon.ico" },
 };
 

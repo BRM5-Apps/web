@@ -3,16 +3,16 @@
 import { useRouter } from "next/navigation";
 import { Plus, AlertCircle, LogOut } from "lucide-react";
 import { signOut } from "next-auth/react";
-import { useAdminGuildsWithFactions, type GuildWithFactionStatus } from "@/hooks/use-admin-guilds";
-import { useFactionStore } from "@/stores/faction-store";
+import { useAdminGuildsWithServers, type GuildWithServerStatus } from "@/hooks/use-admin-guilds";
+import { useServerStore } from "@/stores/server-store";
 import { useAuth } from "@/providers/auth-provider";
 import { cn } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface ServerCardProps {
-  guild: GuildWithFactionStatus;
-  onSelect: (guild: GuildWithFactionStatus) => void;
+  guild: GuildWithServerStatus;
+  onSelect: (guild: GuildWithServerStatus) => void;
 }
 
 // ─── Top bar ──────────────────────────────────────────────────────────────────
@@ -121,7 +121,7 @@ function ServerCard({ guild, onSelect }: ServerCardProps) {
         <div className="min-w-0 flex-1">
           <p className="truncate text-[13px] font-semibold text-foreground">{guild.name}</p>
           <p className="text-xs text-muted-foreground capitalize">
-            {guild.faction?.subscriptionTier ?? "Free"}
+            {guild.server?.subscriptionTier ?? "Free"}
           </p>
         </div>
       </div>
@@ -154,13 +154,13 @@ function AddServerCard() {
 
 export default function SelectServerPage() {
   const router = useRouter();
-  const { data: guilds, isLoading, isError } = useAdminGuildsWithFactions();
-  const { setActiveFaction } = useFactionStore();
+  const { data: guilds, isLoading, isError } = useAdminGuildsWithServers();
+  const { setActiveServer } = useServerStore();
 
-  function handleSelect(guild: GuildWithFactionStatus) {
-    if (!guild.faction) return;
-    setActiveFaction(guild.faction.id, guild.faction);
-    router.push(`/faction/${guild.faction.id}`);
+  function handleSelect(guild: GuildWithServerStatus) {
+    if (!guild.server) return;
+    setActiveServer(guild.server.id, guild.server);
+    router.push(`/server/${guild.server.id}`);
   }
 
   return (
@@ -196,7 +196,7 @@ export default function SelectServerPage() {
               <>
                 {guilds && guilds.length === 0 && (
                   <p className="mb-6 text-[13px] text-muted-foreground">
-                    No eligible servers found. You need Manage Server permission to use FactionHub.
+                    No eligible servers found. You need Manage Server permission to use ServerHub.
                   </p>
                 )}
 

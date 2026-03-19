@@ -248,7 +248,7 @@ interface RowButtonItemProps {
   onChange: (updated: C2Button) => void;
   onDuplicate: () => void;
   onDelete: () => void;
-  factionId?: string;
+  serverId?: string;
 }
 
 function RowButtonItem({
@@ -256,7 +256,7 @@ function RowButtonItem({
   onChange,
   onDuplicate,
   onDelete,
-  factionId,
+  serverId,
 }: RowButtonItemProps) {
   const [editOpen, setEditOpen] = useState(false);
 
@@ -303,7 +303,7 @@ function RowButtonItem({
         onOpenChange={setEditOpen}
         button={button}
         onChange={onChange}
-        factionId={factionId}
+        serverId={serverId}
       />
     </>
   );
@@ -391,10 +391,10 @@ interface RowSelectMenuItemProps {
   onChange: (updated: C2SelectMenu) => void;
   onDuplicate: () => void;
   onDelete: () => void;
-  factionId?: string;
+  serverId?: string;
 }
 
-function RowSelectMenuItem({ menu, onChange, onDuplicate, onDelete, factionId }: RowSelectMenuItemProps) {
+function RowSelectMenuItem({ menu, onChange, onDuplicate, onDelete, serverId }: RowSelectMenuItemProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -423,7 +423,7 @@ function RowSelectMenuItem({ menu, onChange, onDuplicate, onDelete, factionId }:
         onOpenChange={setOpen}
         menu={menu}
         onChange={onChange}
-        factionId={factionId}
+        serverId={serverId}
       />
     </>
   );
@@ -434,10 +434,10 @@ function RowSelectMenuItem({ menu, onChange, onDuplicate, onDelete, factionId }:
 interface RowChildEditorProps {
   child: C2Row;
   onChange: (updated: C2Row) => void;
-  factionId?: string;
+  serverId?: string;
 }
 
-function RowChildEditor({ child, onChange, factionId }: RowChildEditorProps) {
+function RowChildEditor({ child, onChange, serverId }: RowChildEditorProps) {
   const _canAddButton = canAddButton(child.components);
   const _canAddSelect = canAddSelect(child.components);
 
@@ -477,7 +477,7 @@ function RowChildEditor({ child, onChange, factionId }: RowChildEditorProps) {
                 onChange={(updated) => updateComponent(idx, updated)}
                 onDuplicate={() => duplicateComponent(idx)}
                 onDelete={() => deleteComponent(idx)}
-                factionId={factionId}
+                serverId={serverId}
               />
             );
           }
@@ -500,7 +500,7 @@ function RowChildEditor({ child, onChange, factionId }: RowChildEditorProps) {
                 onChange={(updated) => updateComponent(idx, updated)}
                 onDuplicate={() => duplicateComponent(idx)}
                 onDelete={() => deleteComponent(idx)}
-                factionId={factionId}
+                serverId={serverId}
               />
             );
           }
@@ -978,7 +978,7 @@ interface ChildItemEditorProps {
   onMoveDown: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
-  factionId?: string;
+  serverId?: string;
 }
 
 function ChildItemEditor({
@@ -990,7 +990,7 @@ function ChildItemEditor({
   onMoveDown,
   onDuplicate,
   onDelete,
-  factionId,
+  serverId,
 }: ChildItemEditorProps) {
   if (child.type === "section") {
     return (
@@ -1082,7 +1082,7 @@ function ChildItemEditor({
           <RowChildEditor
             child={child}
             onChange={(updated) => onChange(updated)}
-            factionId={factionId}
+            serverId={serverId}
           />
         )}
         {child.type === "media_gallery" && (
@@ -1180,7 +1180,7 @@ interface ContainerEditorProps {
   onMoveDown: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
-  factionId?: string;
+  serverId?: string;
 }
 
 function ContainerEditor({
@@ -1192,7 +1192,7 @@ function ContainerEditor({
   onMoveDown,
   onDuplicate,
   onDelete,
-  factionId,
+  serverId,
 }: ContainerEditorProps) {
   function toggleCollapse() {
     onChange({ ...container, collapsed: !container.collapsed });
@@ -1355,7 +1355,7 @@ function ContainerEditor({
                 onMoveDown={() => moveChild(childIdx, 1)}
                 onDuplicate={() => duplicateChild(childIdx)}
                 onDelete={() => deleteChild(childIdx)}
-                factionId={factionId}
+                serverId={serverId}
               />
             ))}
           </div>
@@ -1376,13 +1376,13 @@ function ContainerEditor({
 interface NonContainerTopLevelEditorProps {
   item: Exclude<C2TopLevelItem, C2Container>;
   onChange: (updated: Exclude<C2TopLevelItem, C2Container>) => void;
-  factionId?: string;
+  serverId?: string;
 }
 
 function NonContainerTopLevelEditor({
   item,
   onChange,
-  factionId,
+  serverId,
 }: NonContainerTopLevelEditorProps) {
   if (item.type === "section") {
     return null; // handled upstream by TopLevelItemEditor
@@ -1415,7 +1415,7 @@ function NonContainerTopLevelEditor({
       <RowChildEditor
         child={item}
         onChange={(updated) => onChange(updated)}
-        factionId={factionId}
+        serverId={serverId}
       />
     );
   }
@@ -1457,7 +1457,7 @@ interface TopLevelItemEditorProps {
   onMoveDown: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
-  factionId?: string;
+  serverId?: string;
 }
 
 function TopLevelItemEditor({
@@ -1469,7 +1469,7 @@ function TopLevelItemEditor({
   onMoveDown,
   onDuplicate,
   onDelete,
-  factionId,
+  serverId,
 }: TopLevelItemEditorProps) {
   if (item.type === "section") {
     return (
@@ -1497,7 +1497,7 @@ function TopLevelItemEditor({
         onMoveDown={onMoveDown}
         onDuplicate={onDuplicate}
         onDelete={onDelete}
-        factionId={factionId}
+        serverId={serverId}
       />
     );
   }
@@ -1555,7 +1555,7 @@ function TopLevelItemEditor({
         <NonContainerTopLevelEditor
           item={item as Exclude<C2TopLevelItem, C2Container>}
           onChange={(updated) => onChange(updated)}
-          factionId={factionId}
+          serverId={serverId}
         />
       </div>
     </div>
@@ -1634,10 +1634,10 @@ function AddTopLevelDropdown({ onAdd, sectionCount = 0 }: AddTopLevelDropdownPro
 export interface EditorPanelProps {
   items: C2TopLevelItem[];
   onChange: (items: C2TopLevelItem[]) => void;
-  factionId?: string;
+  serverId?: string;
 }
 
-export function EditorPanel({ items, onChange, factionId }: EditorPanelProps) {
+export function EditorPanel({ items, onChange, serverId }: EditorPanelProps) {
   function updateItem(index: number, updated: C2TopLevelItem) {
     onChange(items.map((it, i) => (i === index ? updated : it)));
   }
@@ -1694,7 +1694,7 @@ export function EditorPanel({ items, onChange, factionId }: EditorPanelProps) {
             onMoveDown={() => moveDown(idx)}
             onDuplicate={() => duplicate(idx)}
             onDelete={() => remove(idx)}
-            factionId={factionId}
+            serverId={serverId}
           />
         ))}
         <AddTopLevelDropdown

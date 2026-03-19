@@ -3,11 +3,11 @@ import { PERMISSION_KEYS } from "@/lib/constants";
 /** Permission category definitions for the settings UI */
 export const permissionCategories = [
   {
-    label: "Faction",
+    label: "Server",
     permissions: [
-      PERMISSION_KEYS.FACTION_VIEW,
-      PERMISSION_KEYS.FACTION_EDIT,
-      PERMISSION_KEYS.FACTION_DELETE,
+      PERMISSION_KEYS.SERVER_VIEW,
+      PERMISSION_KEYS.SERVER_EDIT,
+      PERMISSION_KEYS.SERVER_DELETE,
     ],
   },
   {

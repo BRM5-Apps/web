@@ -10,7 +10,7 @@ import {
   type RowSelectionState,
   type PaginationState,
 } from "@tanstack/react-table";
-import { useFactionMembers } from "@/hooks/use-faction";
+import { useServerMembers } from "@/hooks/use-server";
 import { useRanks } from "@/hooks/use-ranks";
 import { usePromoteMember, useDemoteMember, useKickMember } from "@/hooks/use-members";
 import { useHasPermission } from "@/hooks/use-permissions";
@@ -45,11 +45,11 @@ import {
   UserX,
   Shield,
 } from "lucide-react";
-import type { FactionMember } from "@/types/faction";
+import type { ServerMember } from "@/types/server";
 
 export default function MembersPage() {
-  const params = useParams<{ factionId: string }>();
-  const factionId = params.factionId;
+  const params = useParams<{ serverId: string }>();
+  const serverId = params.serverId;
 
   // Table state
   const [pagination, setPagination] = useState<PaginationState>({
@@ -64,12 +64,12 @@ export default function MembersPage() {
   // Confirmation dialog state
   const [confirmAction, setConfirmAction] = useState<{
     type: "promote" | "demote" | "kick";
-    member: FactionMember;
+    member: ServerMember;
   } | null>(null);
 
   // Queries
   const sortCol = sorting[0];
-  const { data, isLoading } = useFactionMembers(factionId, {
+  const { data, isLoading } = useServerMembers(serverId, {
     page: pagination.pageIndex + 1,
     limit: pagination.pageSize,
     search: search || undefined,
@@ -77,19 +77,19 @@ export default function MembersPage() {
     sortBy: sortCol?.id,
     sortOrder: sortCol?.desc ? "desc" : "asc",
   });
-  const { data: ranks } = useRanks(factionId);
+  const { data: ranks } = useRanks(serverId);
 
   // Mutations
-  const promoteMutation = usePromoteMember(factionId);
-  const demoteMutation = useDemoteMember(factionId);
-  const kickMutation = useKickMember(factionId);
+  const promoteMutation = usePromoteMember(serverId);
+  const demoteMutation = useDemoteMember(serverId);
+  const kickMutation = useKickMember(serverId);
 
   const canPromote = useHasPermission("members.promote");
   const canDemote = useHasPermission("members.demote");
   const canKick = useHasPermission("members.kick");
 
   // Column definitions
-  const columns = useMemo<ColumnDef<FactionMember, unknown>[]>(
+  const columns = useMemo<ColumnDef<ServerMember, unknown>[]>(
     () => [
       {
         id: "select",
@@ -278,7 +278,7 @@ export default function MembersPage() {
   async function handleConfirm() {
     if (!confirmAction) return;
     const { type, member } = confirmAction;
-    const payload = { factionUserId: member.id };
+    const payload = { serverUserId: member.id };
 
     if (type === "promote") await promoteMutation.mutateAsync(payload);
     else if (type === "demote") await demoteMutation.mutateAsync(payload);
@@ -293,7 +293,7 @@ export default function MembersPage() {
           <p className="text-muted-foreground">
             {data?.total !== undefined
               ? `${data.total.toLocaleString()} total members`
-              : "Manage faction members"}
+              : "Manage server members"}
           </p>
         </div>
         {selectedMembers.length > 0 && (canPromote || canDemote) && (
@@ -307,7 +307,7 @@ export default function MembersPage() {
                 variant="outline"
                 onClick={() => {
                   selectedMembers.forEach((m) =>
-                    promoteMutation.mutate({ factionUserId: m.id })
+                    promoteMutation.mutate({ serverUserId: m.id })
                   );
                   setRowSelection({});
                 }}
@@ -322,7 +322,7 @@ export default function MembersPage() {
                 variant="outline"
                 onClick={() => {
                   selectedMembers.forEach((m) =>
-                    demoteMutation.mutate({ factionUserId: m.id })
+                    demoteMutation.mutate({ serverUserId: m.id })
                   );
                   setRowSelection({});
                 }}
@@ -385,7 +385,7 @@ export default function MembersPage() {
         }
         description={
           confirmAction?.type === "kick"
-            ? `This will remove ${confirmAction.member.username} from the faction. They can rejoin later.`
+            ? `This will remove ${confirmAction.member.username} from the server. They can rejoin later.`
             : confirmAction?.type === "promote"
               ? `${confirmAction?.member.username} will be promoted to the next rank.`
               : `${confirmAction?.member.username} will be demoted to the previous rank.`

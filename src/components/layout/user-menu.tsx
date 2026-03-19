@@ -4,7 +4,7 @@ import { signOut } from "next-auth/react";
 import Link from "next/link";
 import { LogOut, User, CreditCard } from "lucide-react";
 import { useAuth } from "@/providers/auth-provider";
-import { useFactionStore } from "@/stores/faction-store";
+import { useServerStore } from "@/stores/server-store";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,7 +18,7 @@ import {
 
 export function UserMenu() {
   const { user, isAuthenticated } = useAuth();
-  const { activeFaction } = useFactionStore();
+  const { activeServer } = useServerStore();
 
   if (!isAuthenticated || !user) return null;
 
@@ -36,9 +36,9 @@ export function UserMenu() {
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none text-[#F1F1F2]">{user.username}</p>
-            {activeFaction && (
+            {activeServer && (
               <p className="text-xs leading-none text-[#949BA4]">
-                {activeFaction.name}
+                {activeServer.name}
               </p>
             )}
           </div>

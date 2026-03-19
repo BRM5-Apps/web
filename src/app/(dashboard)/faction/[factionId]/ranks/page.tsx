@@ -18,12 +18,12 @@ import { Plus } from "lucide-react";
 import type { RankWithDetails } from "@/types/rank";
 
 export default function RanksPage() {
-  const params = useParams<{ factionId: string }>();
-  const factionId = params.factionId;
+  const params = useParams<{ serverId: string }>();
+  const serverId = params.serverId;
 
-  const { data: ranks, isLoading } = useRanks(factionId);
-  const deleteMutation = useDeleteRank(factionId);
-  const reorderMutation = useReorderRanks(factionId);
+  const { data: ranks, isLoading } = useRanks(serverId);
+  const deleteMutation = useDeleteRank(serverId);
+  const reorderMutation = useReorderRanks(serverId);
 
   const canManage = useHasPermission(PERMISSION_KEYS.RANKS_MANAGE);
 
@@ -148,7 +148,7 @@ export default function RanksPage() {
 
           <TabsContent value="paths" className="mt-4">
             <PromotionPathEditor
-              factionId={factionId}
+              serverId={serverId}
               ranks={sortedRanks}
               canManage={canManage}
             />
@@ -157,7 +157,7 @@ export default function RanksPage() {
 
         {/* Rank form dialog */}
         <RankForm
-          factionId={factionId}
+          serverId={serverId}
           rank={editingRank}
           open={formOpen}
           onOpenChange={setFormOpen}

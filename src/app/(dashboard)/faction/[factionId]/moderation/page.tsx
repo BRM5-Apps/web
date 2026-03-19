@@ -26,10 +26,10 @@ const TYPE_BADGE_CLASSES: Record<Punishment["type"], string> = {
   ban: "bg-red-700/20 text-red-500",
 };
 
-function PunishmentsTab({ factionId }: { factionId: string }) {
+function PunishmentsTab({ serverId }: { serverId: string }) {
   const [filter, setFilter] = useState<"active" | "all">("active");
-  const { data: punishments, isLoading, isError, error, refetch } = usePunishments(factionId);
-  const revoke = useRevokePunishment(factionId);
+  const { data: punishments, isLoading, isError, error, refetch } = usePunishments(serverId);
+  const revoke = useRevokePunishment(serverId);
 
   const filtered =
     filter === "active" ? punishments?.filter((p) => p.isActive) : punishments;
@@ -112,9 +112,9 @@ function PunishmentsTab({ factionId }: { factionId: string }) {
   );
 }
 
-function BlacklistTab({ factionId }: { factionId: string }) {
-  const { data: punishments, isLoading, isError, error, refetch } = usePunishments(factionId);
-  const revoke = useRevokePunishment(factionId);
+function BlacklistTab({ serverId }: { serverId: string }) {
+  const { data: punishments, isLoading, isError, error, refetch } = usePunishments(serverId);
+  const revoke = useRevokePunishment(serverId);
 
   const bans = punishments?.filter((p) => p.type === "ban" && p.isActive) ?? [];
 
@@ -203,14 +203,14 @@ function PromoLocksTab() {
 }
 
 export default function ModerationPage() {
-  const { factionId } = useParams<{ factionId: string }>();
+  const { serverId } = useParams<{ serverId: string }>();
 
   return (
     <div className="space-y-6 max-w-5xl">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Moderation</h1>
         <p className="text-muted-foreground">
-          Manage punishments, blacklists, and promotion locks for your faction.
+          Manage punishments, blacklists, and promotion locks for your server.
         </p>
       </div>
 
@@ -222,11 +222,11 @@ export default function ModerationPage() {
         </TabsList>
 
         <TabsContent value="punishments" className="mt-4">
-          <PunishmentsTab factionId={factionId} />
+          <PunishmentsTab serverId={serverId} />
         </TabsContent>
 
         <TabsContent value="blacklist" className="mt-4">
-          <BlacklistTab factionId={factionId} />
+          <BlacklistTab serverId={serverId} />
         </TabsContent>
 
         <TabsContent value="promo-locks" className="mt-4">

@@ -21,9 +21,11 @@ import type {
   C2RowComponent,
   SelectOption,
   FlowAction,
+  ActionGraphDocument,
   ButtonStyle,
   C2SelectMenuType,
 } from "./types";
+import { actionGraphToLegacyFlow, ensureActionGraph, hasActionGraph } from "./action-graph";
 
 // ── Discord type number mappings ──────────────────────────────────────────────
 
@@ -195,8 +197,12 @@ function convertButton(b: C2Button): object {
   if (b.disabled) {
     result.disabled = true;
   }
-  if (b.flow && b.flow.length > 0) {
-    result.flow = { actions: convertActions(b.flow) };
+  const linearFlow = b.actionGraph ? actionGraphToLegacyFlow(b.actionGraph) : b.flow;
+  if (b.actionGraph) {
+    result.flow_graph = b.actionGraph;
+  }
+  if (linearFlow && linearFlow.length > 0) {
+    result.flow = { actions: convertActions(linearFlow) };
   }
   return result;
 }
@@ -234,20 +240,32 @@ function convertSelectMenu(s: C2SelectMenu): object {
   if (s.menuType === "select") {
     result.options = s.options.map(convertSelectOption);
     const flows: Record<string, object> = {};
+    const flowGraphs: Record<string, ActionGraphDocument> = {};
     for (const opt of s.options) {
-      if (opt.flow && opt.flow.length > 0) {
-        flows[opt.value] = { actions: convertActions(opt.flow) };
+      const linearFlow = opt.actionGraph ? actionGraphToLegacyFlow(opt.actionGraph) : opt.flow;
+      if (opt.actionGraph) {
+        flowGraphs[opt.value] = opt.actionGraph;
+      }
+      if (linearFlow && linearFlow.length > 0) {
+        flows[opt.value] = { actions: convertActions(linearFlow) };
       }
     }
     if (Object.keys(flows).length > 0) {
       result.flows = flows;
     }
+    if (Object.keys(flowGraphs).length > 0) {
+      result.flow_graphs = flowGraphs;
+    }
   } else {
     if (s.defaultValues && s.defaultValues.length > 0) {
       result.default_values = s.defaultValues;
     }
-    if (s.flow && s.flow.length > 0) {
-      result.flow = { actions: convertActions(s.flow) };
+    const linearFlow = s.actionGraph ? actionGraphToLegacyFlow(s.actionGraph) : s.flow;
+    if (s.actionGraph) {
+      result.flow_graph = s.actionGraph;
+    }
+    if (linearFlow && linearFlow.length > 0) {
+      result.flow = { actions: convertActions(linearFlow) };
     }
   }
   return result;
@@ -577,11 +595,8 @@ function parseButton(obj: Record<string, unknown>): C2Button {
     style,
     emoji: emoji?.name as string | undefined,
     disabled: obj.disabled === true,
-    flow: obj.flow
-      ? parseActions(
-          (obj.flow as Record<string, unknown>).actions as unknown[]
-        )
-      : [],
+    flow: parseFlow(obj.flow),
+    actionGraph: parseActionGraph(obj.flow_graph, obj.flow),
   };
 }
 
@@ -613,11 +628,13 @@ function parseSelectMenu(
       ? (obj.options as Record<string, unknown>[])
       : [];
     const rawFlows = (obj.flows as Record<string, Record<string, unknown>>) ?? {};
+    const rawFlowGraphs = (obj.flow_graphs as Record<string, ActionGraphDocument>) ?? {};
 
     options = rawOptions.map((opt) => {
       const optEmoji = opt.emoji as Record<string, unknown> | undefined;
       const optValue = (opt.value as string) ?? "";
       const optFlow = rawFlows[optValue];
+      const legacyFlow = optFlow ? parseActions(optFlow.actions as unknown[]) : [];
       return {
         id: uid(),
         emoji: optEmoji?.name as string | undefined,
@@ -625,20 +642,15 @@ function parseSelectMenu(
         description: opt.description as string | undefined,
         value: optValue,
         default: opt.default === true,
-        flow: optFlow
-          ? parseActions(optFlow.actions as unknown[])
-          : [],
+        flow: legacyFlow,
+        actionGraph: parseActionGraph(rawFlowGraphs[optValue], optFlow),
       };
     });
   } else {
     if (Array.isArray(obj.default_values)) {
       defaultValues = obj.default_values as string[];
     }
-    if (obj.flow) {
-      flow = parseActions(
-        (obj.flow as Record<string, unknown>).actions as unknown[]
-      );
-    }
+    flow = parseFlow(obj.flow)
   }
 
   return {
@@ -652,6 +664,7 @@ function parseSelectMenu(
     options,
     defaultValues,
     flow,
+    actionGraph: parseActionGraph(obj.flow_graph, obj.flow),
   };
 }
 
@@ -704,6 +717,25 @@ function parseActions(raw: unknown[]): FlowAction[] {
   return raw
     .map(parseAction)
     .filter((a): a is FlowAction => a !== null);
+}
+
+function parseFlow(raw: unknown): FlowAction[] {
+  if (!raw || typeof raw !== "object") return [];
+  const flow = raw as Record<string, unknown>;
+  return parseActions((flow.actions as unknown[]) ?? []);
+}
+
+function parseActionGraph(rawGraph: unknown, rawFlow: unknown): ActionGraphDocument | undefined {
+  if (hasActionGraph(rawGraph)) {
+    return rawGraph;
+  }
+
+  const flow = parseFlow(rawFlow);
+  if (flow.length === 0) {
+    return undefined;
+  }
+
+  return ensureActionGraph(flow);
 }
 
 function parseAction(raw: unknown): FlowAction | null {

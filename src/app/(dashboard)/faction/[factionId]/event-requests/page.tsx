@@ -38,17 +38,17 @@ function StatusBadge({ status }: { status: EventRequest["status"] }) {
 
 interface EventRequestsTableProps {
   requests: EventRequest[];
-  factionId: string;
+  serverId: string;
   showActions: boolean;
 }
 
 function EventRequestsTable({
   requests,
-  factionId,
+  serverId,
   showActions,
 }: EventRequestsTableProps) {
-  const approve = useApproveEventRequest(factionId);
-  const deny = useDenyEventRequest(factionId);
+  const approve = useApproveEventRequest(serverId);
+  const deny = useDenyEventRequest(serverId);
 
   if (requests.length === 0) {
     return (
@@ -132,9 +132,9 @@ function LoadingSkeleton() {
 }
 
 export default function EventRequestsPage() {
-  const { factionId } = useParams<{ factionId: string }>();
+  const { serverId } = useParams<{ serverId: string }>();
   const { data: requests, isLoading, isError, error, refetch } =
-    useEventRequests(factionId);
+    useEventRequests(serverId);
 
   const pendingRequests =
     requests?.filter((r) => r.status === "pending") ?? [];
@@ -181,7 +181,7 @@ export default function EventRequestsPage() {
           <TabsContent value="pending">
             <EventRequestsTable
               requests={pendingRequests}
-              factionId={factionId}
+              serverId={serverId}
               showActions
             />
           </TabsContent>
@@ -189,7 +189,7 @@ export default function EventRequestsPage() {
           <TabsContent value="all">
             <EventRequestsTable
               requests={requests}
-              factionId={factionId}
+              serverId={serverId}
               showActions
             />
           </TabsContent>

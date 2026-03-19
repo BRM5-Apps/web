@@ -4,22 +4,22 @@ import { queryKeys } from "@/lib/query-keys";
 import type { Punishment } from "@/types/moderation";
 import { toast } from "sonner";
 
-export function usePunishments(factionId: string) {
+export function usePunishments(serverId: string) {
   return useQuery<Punishment[]>({
-    queryKey: queryKeys.moderation.punishments(factionId),
-    queryFn: ({ signal }) => api.moderation.list(factionId, { signal }),
-    enabled: !!factionId,
+    queryKey: queryKeys.moderation.punishments(serverId),
+    queryFn: ({ signal }) => api.moderation.list(serverId, { signal }),
+    enabled: !!serverId,
   });
 }
 
-export function useRevokePunishment(factionId: string) {
+export function useRevokePunishment(serverId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (punishmentId: string) =>
-      api.moderation.revoke(factionId, punishmentId),
+      api.moderation.revoke(serverId, punishmentId),
     onSuccess: () => {
       qc.invalidateQueries({
-        queryKey: queryKeys.moderation.punishments(factionId),
+        queryKey: queryKeys.moderation.punishments(serverId),
       });
       toast.success("Punishment revoked");
     },

@@ -1,7 +1,7 @@
 export default async function EventDetailPage({
   params,
 }: {
-  params: Promise<{ factionId: string; eventId: string }>;
+  params: Promise<{ serverId: string; eventId: string }>;
 }) {
   const { eventId } = await params;
   return (

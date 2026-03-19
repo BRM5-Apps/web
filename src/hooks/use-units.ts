@@ -5,22 +5,22 @@ import { invalidateRelated } from "@/lib/query-utils";
 import type { Unit } from "@/types/unit";
 import { toast } from "sonner";
 
-export function useUnits(factionId: string) {
+export function useUnits(serverId: string) {
   return useQuery<Unit[]>({
-    queryKey: queryKeys.units.all(factionId),
-    queryFn: ({ signal }) => api.units.list(factionId, { signal }),
-    enabled: !!factionId,
+    queryKey: queryKeys.units.all(serverId),
+    queryFn: ({ signal }) => api.units.list(serverId, { signal }),
+    enabled: !!serverId,
   });
 }
 
-export function useCreateUnit(factionId: string) {
+export function useCreateUnit(serverId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (data: { name: string; description?: string }) =>
-      api.units.create(factionId, data),
+      api.units.create(serverId, data),
     onSuccess: () => {
-      invalidateRelated(queryClient, "units", factionId);
+      invalidateRelated(queryClient, "units", serverId);
       toast.success("Unit created");
     },
     onError: () => {
@@ -29,13 +29,13 @@ export function useCreateUnit(factionId: string) {
   });
 }
 
-export function useDeleteUnit(factionId: string) {
+export function useDeleteUnit(serverId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (unitId: string) => api.units.delete(factionId, unitId),
+    mutationFn: (unitId: string) => api.units.delete(serverId, unitId),
     onSuccess: () => {
-      invalidateRelated(queryClient, "units", factionId);
+      invalidateRelated(queryClient, "units", serverId);
       toast.success("Unit deleted");
     },
     onError: () => {

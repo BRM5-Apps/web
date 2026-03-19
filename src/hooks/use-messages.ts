@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { api } from "@/lib/api-client";
 import { queryKeys } from "@/lib/query-keys";
 
-export function useSendMessage(factionId: string) {
+export function useSendMessage(serverId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: {
@@ -15,22 +15,22 @@ export function useSendMessage(factionId: string) {
       webhook_avatar_url?: string;
       template_type: string;
       template_id: string;
-    }) => api.messages.send(factionId, data),
+    }) => api.messages.send(serverId, data),
     onSuccess: () => {
       toast.success("Message queued — delivering shortly");
       qc.invalidateQueries({
-        queryKey: queryKeys.messages.history(factionId),
+        queryKey: queryKeys.messages.history(serverId),
       });
     },
     onError: () => toast.error("Failed to queue message"),
   });
 }
 
-export function useMessageHistory(factionId: string) {
+export function useMessageHistory(serverId: string) {
   return useQuery({
-    queryKey: queryKeys.messages.history(factionId),
-    queryFn: () => api.messages.history(factionId),
-    enabled: Boolean(factionId),
+    queryKey: queryKeys.messages.history(serverId),
+    queryFn: () => api.messages.history(serverId),
+    enabled: Boolean(serverId),
     staleTime: 1000 * 30,
   });
 }

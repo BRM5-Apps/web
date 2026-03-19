@@ -5,8 +5,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { Settings, Menu, ChevronRight, LogOut } from "lucide-react";
-import { factionNavConfig } from "@/config/nav";
-import { useFactionStore } from "@/stores/faction-store";
+import { serverNavConfig } from "@/config/nav";
+import { useServerStore } from "@/stores/server-store";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useAuth } from "@/providers/auth-provider";
 import { useWebSocket } from "@/hooks/use-websocket";
@@ -41,13 +41,13 @@ interface NavItemsProps {
 
 function NavItems({ expanded }: NavItemsProps) {
   const pathname = usePathname();
-  const { activeFactionId } = useFactionStore();
-  const { hasPermission } = usePermissions(activeFactionId ?? "");
-  const basePath = activeFactionId ? `/faction/${activeFactionId}` : "";
+  const { activeServerId } = useServerStore();
+  const { hasPermission } = usePermissions(activeServerId ?? "");
+  const basePath = activeServerId ? `/server/${activeServerId}` : "";
 
   return (
     <nav className="flex-1 space-y-0.5 px-2 py-3">
-      {factionNavConfig.map((section) => {
+      {serverNavConfig.map((section) => {
         const visibleItems = section.items.filter(
           (item) => !item.permission || hasPermission(item.permission)
         );
@@ -164,7 +164,7 @@ interface SidebarContentProps {
 
 function SidebarContent({ expanded }: SidebarContentProps) {
   const router = useRouter();
-  const { activeFaction, activeFactionId } = useFactionStore();
+  const { activeServer, activeServerId } = useServerStore();
   const { user } = useAuth();
 
   return (
@@ -178,15 +178,15 @@ function SidebarContent({ expanded }: SidebarContentProps) {
           >
             {/* icon */}
             <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-[#404249]">
-              {activeFaction?.iconUrl ? (
+              {activeServer?.iconUrl ? (
                 <img
-                  src={activeFaction.iconUrl}
-                  alt={activeFaction.name}
+                  src={activeServer.iconUrl}
+                  alt={activeServer.name}
                   className="h-8 w-8 rounded-md object-cover"
                 />
               ) : (
                 <span className="text-xs font-bold text-[#F1F1F2]">
-                  {activeFaction?.name?.charAt(0) ?? "B"}
+                  {activeServer?.name?.charAt(0) ?? "B"}
                 </span>
               )}
             </div>
@@ -198,7 +198,7 @@ function SidebarContent({ expanded }: SidebarContentProps) {
               )}
             >
               <span className="truncate text-[13px] font-semibold text-[#F1F1F2]">
-                {activeFaction?.name ?? "Select server"}
+                {activeServer?.name ?? "Select server"}
               </span>
               <ChevronRight className="h-3.5 w-3.5 flex-shrink-0 text-[#949BA4]" />
             </span>
@@ -206,7 +206,7 @@ function SidebarContent({ expanded }: SidebarContentProps) {
         </TooltipTrigger>
         {!expanded && (
           <TooltipContent side="right">
-            {activeFaction?.name ?? "Select server"}
+            {activeServer?.name ?? "Select server"}
           </TooltipContent>
         )}
       </Tooltip>
@@ -244,7 +244,7 @@ function SidebarContent({ expanded }: SidebarContentProps) {
           </span>
           <span className="flex items-center gap-1 flex-shrink-0">
             <Link
-              href={activeFactionId ? `/faction/${activeFactionId}/settings` : "/select-server"}
+              href={activeServerId ? `/server/${activeServerId}/settings` : "/select-server"}
               onClick={(e) => e.stopPropagation()}
               className="text-[#949BA4] hover:text-[#F1F1F2] transition-colors"
             >

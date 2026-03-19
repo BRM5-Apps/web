@@ -16,7 +16,7 @@ interface PermissionGateProps {
   mode?: "any" | "all";
   tooltipOnDenied?: boolean;
   tooltipMessage?: string;
-  factionId?: string;
+  serverId?: string;
 }
 
 export function PermissionGate({

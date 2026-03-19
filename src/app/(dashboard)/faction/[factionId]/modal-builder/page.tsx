@@ -5,8 +5,8 @@ import { DiscordModalBuilder } from "@/components/modal-builder/discord-modal-bu
 import { useCreateModalTemplate } from "@/hooks/use-templates";
 
 export default function ModalBuilderPage() {
-  const { factionId } = useParams<{ factionId: string }>();
-  const createModal = useCreateModalTemplate(factionId);
+  const { serverId } = useParams<{ serverId: string }>();
+  const createModal = useCreateModalTemplate(serverId);
 
   return (
     <div className="-mx-6 -my-6 min-h-screen p-8" style={{ background: "linear-gradient(135deg, #2F2F34 0%, #232327 60%, #342E26 100%)" }}>

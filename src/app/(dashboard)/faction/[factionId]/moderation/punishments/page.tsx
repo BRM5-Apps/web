@@ -26,11 +26,11 @@ const TYPE_BADGE_CLASSES: Record<Punishment["type"], string> = {
 };
 
 export default function PunishmentsPage() {
-  const { factionId } = useParams<{ factionId: string }>();
+  const { serverId } = useParams<{ serverId: string }>();
   const [filter, setFilter] = useState<"active" | "all">("active");
 
-  const { data: punishments, isLoading, isError, error, refetch } = usePunishments(factionId);
-  const revoke = useRevokePunishment(factionId);
+  const { data: punishments, isLoading, isError, error, refetch } = usePunishments(serverId);
+  const revoke = useRevokePunishment(serverId);
 
   const filtered =
     filter === "active"
@@ -42,7 +42,7 @@ export default function PunishmentsPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Punishments</h1>
         <p className="text-muted-foreground">
-          Manage faction punishments and disciplinary actions.
+          Manage server punishments and disciplinary actions.
         </p>
       </div>
 

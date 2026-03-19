@@ -1,4 +1,4 @@
-export const APP_NAME = "FactionHub";
+export const APP_NAME = "ServerHub";
 
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api/v1";
@@ -6,9 +6,9 @@ export const API_BASE_URL =
 // ── Permission Keys ──
 
 export const PERMISSION_KEYS = {
-  FACTION_VIEW: "faction.view",
-  FACTION_EDIT: "faction.edit",
-  FACTION_DELETE: "faction.delete",
+  SERVER_VIEW: "server.view",
+  SERVER_EDIT: "server.edit",
+  SERVER_DELETE: "server.delete",
   MEMBERS_VIEW: "members.view",
   MEMBERS_MANAGE: "members.manage",
   MEMBERS_PROMOTE: "members.promote",
@@ -118,124 +118,131 @@ export const API_ROUTES = {
     get: (userId: string) => `/users/${userId}`,
     update: (userId: string) => `/users/${userId}`,
   },
-  factions: {
-    list: "/factions",
-    create: "/factions",
-    get: (factionId: string) => `/factions/${factionId}`,
-    update: (factionId: string) => `/factions/${factionId}`,
-    delete: (factionId: string) => `/factions/${factionId}`,
+  servers: {
+    list: "/servers",
+    create: "/servers",
+    get: (serverId: string) => `/servers/${serverId}`,
+    update: (serverId: string) => `/servers/${serverId}`,
+    delete: (serverId: string) => `/servers/${serverId}`,
     members: {
-      list: (factionId: string) => `/factions/${factionId}/members`,
-      kick: (factionId: string) => `/factions/${factionId}/members/kick`,
+      list: (serverId: string) => `/servers/${serverId}/members`,
+      kick: (serverId: string) => `/servers/${serverId}/members/kick`,
     },
-    permissions: (factionId: string) => `/factions/${factionId}/permissions`,
-    config: (factionId: string) => `/factions/${factionId}/config`,
-    eventTypes: (factionId: string) => `/factions/${factionId}/event-types`,
-    ranks: (factionId: string) => `/factions/${factionId}/ranks`,
-    rank: (factionId: string, rankId: string) =>
-      `/factions/${factionId}/ranks/${rankId}`,
-    promote: (factionId: string) => `/factions/${factionId}/ranks/promote`,
-    demote: (factionId: string) => `/factions/${factionId}/ranks/demote`,
-    rankPermissions: (factionId: string, rankId: string) =>
-      `/factions/${factionId}/ranks/${rankId}/permissions`,
-    reorderRanks: (factionId: string) =>
-      `/factions/${factionId}/ranks/reorder`,
-    promotionPaths: (factionId: string) =>
-      `/factions/${factionId}/promotion-paths`,
-    promotionPath: (factionId: string, pathId: string) =>
-      `/factions/${factionId}/promotion-paths/${pathId}`,
+    permissions: (serverId: string) => `/servers/${serverId}/permissions`,
+    config: (serverId: string) => `/servers/${serverId}/config`,
+    eventTypes: (serverId: string) => `/servers/${serverId}/event-types`,
+    ranks: (serverId: string) => `/servers/${serverId}/ranks`,
+    rank: (serverId: string, rankId: string) =>
+      `/servers/${serverId}/ranks/${rankId}`,
+    promote: (serverId: string) => `/servers/${serverId}/ranks/promote`,
+    demote: (serverId: string) => `/servers/${serverId}/ranks/demote`,
+    rankPermissions: (serverId: string, rankId: string) =>
+      `/servers/${serverId}/ranks/${rankId}/permissions`,
+    reorderRanks: (serverId: string) =>
+      `/servers/${serverId}/ranks/reorder`,
+    promotionPaths: (serverId: string) =>
+      `/servers/${serverId}/promotion-paths`,
+    promotionPath: (serverId: string, pathId: string) =>
+      `/servers/${serverId}/promotion-paths/${pathId}`,
     events: {
-      list: (factionId: string) => `/factions/${factionId}/events`,
-      create: (factionId: string) => `/factions/${factionId}/events`,
-      update: (factionId: string, eventId: string) =>
-        `/factions/${factionId}/events/${eventId}`,
-      start: (factionId: string, eventId: string) =>
-        `/factions/${factionId}/events/${eventId}/start`,
-      cancel: (factionId: string, eventId: string) =>
-        `/factions/${factionId}/events/${eventId}/cancel`,
-      upcoming: (factionId: string) =>
-        `/factions/${factionId}/events/upcoming`,
-      active: (factionId: string) => `/factions/${factionId}/events/active`,
+      list: (serverId: string) => `/servers/${serverId}/events`,
+      create: (serverId: string) => `/servers/${serverId}/events`,
+      update: (serverId: string, eventId: string) =>
+        `/servers/${serverId}/events/${eventId}`,
+      start: (serverId: string, eventId: string) =>
+        `/servers/${serverId}/events/${eventId}/start`,
+      cancel: (serverId: string, eventId: string) =>
+        `/servers/${serverId}/events/${eventId}/cancel`,
+      upcoming: (serverId: string) =>
+        `/servers/${serverId}/events/upcoming`,
+      active: (serverId: string) => `/servers/${serverId}/events/active`,
     },
     eventRequests: {
-      list: (factionId: string) => `/factions/${factionId}/event-requests`,
-      create: (factionId: string) => `/factions/${factionId}/event-requests`,
-      approve: (factionId: string, requestId: string) =>
-        `/factions/${factionId}/event-requests/${requestId}/approve`,
-      deny: (factionId: string, requestId: string) =>
-        `/factions/${factionId}/event-requests/${requestId}/deny`,
+      list: (serverId: string) => `/servers/${serverId}/event-requests`,
+      create: (serverId: string) => `/servers/${serverId}/event-requests`,
+      approve: (serverId: string, requestId: string) =>
+        `/servers/${serverId}/event-requests/${requestId}/approve`,
+      deny: (serverId: string, requestId: string) =>
+        `/servers/${serverId}/event-requests/${requestId}/deny`,
     },
     templates: {
-      embeds: (factionId: string) => `/factions/${factionId}/embeds`,
-      embed: (factionId: string, templateId: string) =>
-        `/factions/${factionId}/embeds/${templateId}`,
-      containers: (factionId: string) => `/factions/${factionId}/containers`,
-      container: (factionId: string, templateId: string) =>
-        `/factions/${factionId}/containers/${templateId}`,
-      texts: (factionId: string) => `/factions/${factionId}/texts`,
-      text: (factionId: string, templateId: string) =>
-        `/factions/${factionId}/texts/${templateId}`,
-      modals: (factionId: string) => `/factions/${factionId}/modals`,
-      modal: (factionId: string, templateId: string) =>
-        `/factions/${factionId}/modals/${templateId}`,
+      embeds: (serverId: string) => `/servers/${serverId}/embeds`,
+      embed: (serverId: string, templateId: string) =>
+        `/servers/${serverId}/embeds/${templateId}`,
+      containers: (serverId: string) => `/servers/${serverId}/containers`,
+      container: (serverId: string, templateId: string) =>
+        `/servers/${serverId}/containers/${templateId}`,
+      texts: (serverId: string) => `/servers/${serverId}/texts`,
+      text: (serverId: string, templateId: string) =>
+        `/servers/${serverId}/texts/${templateId}`,
+      modals: (serverId: string) => `/servers/${serverId}/modals`,
+      modal: (serverId: string, templateId: string) =>
+        `/servers/${serverId}/modals/${templateId}`,
+    },
+    elements: {
+      list: (serverId: string) => `/servers/${serverId}/elements`,
+      detail: (serverId: string, key: string) => `/servers/${serverId}/elements/${key}`,
+      create: (serverId: string) => `/servers/${serverId}/elements`,
+      resolve: (serverId: string) => `/servers/${serverId}/elements/resolve`,
+      increment: (serverId: string, key: string) => `/servers/${serverId}/elements/${key}/increment`,
     },
     stats: {
-      overview: (factionId: string) => `/factions/${factionId}/stats`,
-      daily: (factionId: string) => `/factions/${factionId}/stats/daily`,
-      leaderboard: (factionId: string) =>
-        `/factions/${factionId}/stats/leaderboard`,
+      overview: (serverId: string) => `/servers/${serverId}/stats`,
+      daily: (serverId: string) => `/servers/${serverId}/stats/daily`,
+      leaderboard: (serverId: string) =>
+        `/servers/${serverId}/stats/leaderboard`,
     },
     moderation: {
-      punish: (factionId: string) => `/factions/${factionId}/punishments`,
-      revoke: (factionId: string, punishmentId: string) =>
-        `/factions/${factionId}/punishments/${punishmentId}/revoke`,
-      appeal: (factionId: string, punishmentId: string) =>
-        `/factions/${factionId}/punishments/${punishmentId}/appeal`,
-      appeals: (factionId: string) =>
-        `/factions/${factionId}/punishment-appeals`,
-      reviewAppeal: (factionId: string, appealId: string) =>
-        `/factions/${factionId}/punishment-appeals/${appealId}/review`,
-      blacklistConfig: (factionId: string) =>
-        `/factions/${factionId}/blacklist-config`,
-      notifications: (factionId: string) =>
-        `/factions/${factionId}/punishment-notifications`,
-      reviewNotification: (factionId: string, notificationId: string) =>
-        `/factions/${factionId}/punishment-notifications/${notificationId}/review`,
+      punish: (serverId: string) => `/servers/${serverId}/punishments`,
+      revoke: (serverId: string, punishmentId: string) =>
+        `/servers/${serverId}/punishments/${punishmentId}/revoke`,
+      appeal: (serverId: string, punishmentId: string) =>
+        `/servers/${serverId}/punishments/${punishmentId}/appeal`,
+      appeals: (serverId: string) =>
+        `/servers/${serverId}/punishment-appeals`,
+      reviewAppeal: (serverId: string, appealId: string) =>
+        `/servers/${serverId}/punishment-appeals/${appealId}/review`,
+      blacklistConfig: (serverId: string) =>
+        `/servers/${serverId}/blacklist-config`,
+      notifications: (serverId: string) =>
+        `/servers/${serverId}/punishment-notifications`,
+      reviewNotification: (serverId: string, notificationId: string) =>
+        `/servers/${serverId}/punishment-notifications/${notificationId}/review`,
     },
     points: {
-      get: (factionId: string, factionUserId: string) =>
-        `/factions/${factionId}/points/${factionUserId}`,
-      award: (factionId: string) => `/factions/${factionId}/points/award`,
-      deduct: (factionId: string) => `/factions/${factionId}/points/deduct`,
-      promotionFlags: (factionId: string) =>
-        `/factions/${factionId}/points/promotion-flags`,
-      processFlags: (factionId: string) =>
-        `/factions/${factionId}/points/promotion-flags/process`,
+      get: (serverId: string, serverUserId: string) =>
+        `/servers/${serverId}/points/${serverUserId}`,
+      award: (serverId: string) => `/servers/${serverId}/points/award`,
+      deduct: (serverId: string) => `/servers/${serverId}/points/deduct`,
+      promotionFlags: (serverId: string) =>
+        `/servers/${serverId}/points/promotion-flags`,
+      processFlags: (serverId: string) =>
+        `/servers/${serverId}/points/promotion-flags/process`,
     },
     units: {
-      list: (factionId: string) => `/factions/${factionId}/units`,
-      create: (factionId: string) => `/factions/${factionId}/units`,
-      update: (factionId: string, unitId: string) =>
-        `/factions/${factionId}/units/${unitId}`,
-      delete: (factionId: string, unitId: string) =>
-        `/factions/${factionId}/units/${unitId}`,
-      members: (factionId: string, unitId: string) =>
-        `/factions/${factionId}/units/${unitId}/members`,
-      addMember: (factionId: string, unitId: string) =>
-        `/factions/${factionId}/units/${unitId}/members`,
+      list: (serverId: string) => `/servers/${serverId}/units`,
+      create: (serverId: string) => `/servers/${serverId}/units`,
+      update: (serverId: string, unitId: string) =>
+        `/servers/${serverId}/units/${unitId}`,
+      delete: (serverId: string, unitId: string) =>
+        `/servers/${serverId}/units/${unitId}`,
+      members: (serverId: string, unitId: string) =>
+        `/servers/${serverId}/units/${unitId}/members`,
+      addMember: (serverId: string, unitId: string) =>
+        `/servers/${serverId}/units/${unitId}/members`,
       removeMember: (
-        factionId: string,
+        serverId: string,
         unitId: string,
-        factionUserId: string
-      ) => `/factions/${factionId}/units/${unitId}/members/${factionUserId}`,
+        serverUserId: string
+      ) => `/servers/${serverId}/units/${unitId}/members/${serverUserId}`,
     },
-    welcomeConfig: (factionId: string) =>
-      `/factions/${factionId}/welcome-config`,
-    messageSend: (factionId: string) => `/factions/${factionId}/messages/send`,
-    messageHistory: (factionId: string) => `/factions/${factionId}/messages/history`,
+    welcomeConfig: (serverId: string) =>
+      `/servers/${serverId}/welcome-config`,
+    messageSend: (serverId: string) => `/servers/${serverId}/messages/send`,
+    messageHistory: (serverId: string) => `/servers/${serverId}/messages/history`,
     schedule: {
-      list: (factionId: string) => `/factions/${factionId}/scheduled-messages`,
-      detail: (factionId: string, id: string) => `/factions/${factionId}/scheduled-messages/${id}`,
+      list: (serverId: string) => `/servers/${serverId}/scheduled-messages`,
+      detail: (serverId: string, id: string) => `/servers/${serverId}/scheduled-messages/${id}`,
     },
   },
   billing: {

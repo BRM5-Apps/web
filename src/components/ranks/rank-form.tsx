@@ -22,7 +22,7 @@ import { Shield } from "lucide-react";
 import type { RankWithDetails } from "@/types/rank";
 
 interface RankFormProps {
-  factionId: string;
+  serverId: string;
   rank?: RankWithDetails | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -44,15 +44,15 @@ function getPermissionCategories() {
   return categories;
 }
 
-export function RankForm({ factionId, rank, open, onOpenChange }: RankFormProps) {
+export function RankForm({ serverId, rank, open, onOpenChange }: RankFormProps) {
   const isEdit = !!rank;
-  const createMutation = useCreateRank(factionId);
-  const updateMutation = useUpdateRank(factionId);
-  const setPermissionsMutation = useSetRankPermissions(factionId);
+  const createMutation = useCreateRank(serverId);
+  const updateMutation = useUpdateRank(serverId);
+  const setPermissionsMutation = useSetRankPermissions(serverId);
 
   // Load current permissions when editing
   const { data: currentPermissions } = useRankPermissions(
-    factionId,
+    serverId,
     rank?.id ?? ""
   );
 
@@ -172,7 +172,7 @@ export function RankForm({ factionId, rank, open, onOpenChange }: RankFormProps)
           <DialogDescription>
             {isEdit
               ? "Update the rank settings and permissions."
-              : "Configure a new rank for your faction."}
+              : "Configure a new rank for your server."}
           </DialogDescription>
         </DialogHeader>
 

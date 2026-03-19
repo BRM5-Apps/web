@@ -1,6 +1,6 @@
 export interface EmbedTemplate {
   id: string;
-  factionId?: string;
+  serverId?: string;
   hubId?: string;
   name: string;
   title?: string;
@@ -24,7 +24,7 @@ export interface EmbedField {
 
 export interface ContainerTemplate {
   id: string;
-  factionId?: string;
+  serverId?: string;
   hubId?: string;
   name: string;
   template_data: { components?: unknown[] };
@@ -35,7 +35,7 @@ export interface ContainerTemplate {
 
 export interface TextTemplate {
   id: string;
-  factionId?: string;
+  serverId?: string;
   hubId?: string;
   name: string;
   content: string;
@@ -45,7 +45,7 @@ export interface TextTemplate {
 
 export interface ModalTemplate {
   id: string;
-  factionId?: string;
+  serverId?: string;
   name: string;
   template_data: Record<string, unknown>; // modal pages/fields JSON
   is_default?: boolean;
@@ -55,7 +55,7 @@ export interface ModalTemplate {
 
 export interface ScheduledMessage {
   id: string;
-  factionId: string;
+  serverId: string;
   embedTemplateId?: string;
   textTemplateId?: string;
   containerTemplateId?: string;
@@ -69,7 +69,7 @@ export interface ScheduledMessage {
 
 export interface MessageSend {
   id: string;
-  faction_id: string;
+  server_id: string;
   channel_id: string;
   template_type: "text" | "embed" | "container";
   template_id: string;

@@ -2,9 +2,9 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { useFaction } from "@/hooks/use-faction";
+import { useServer } from "@/hooks/use-server";
 import { useStats } from "@/hooks/use-stats";
-import { useFactionStore } from "@/stores/faction-store";
+import { useServerStore } from "@/stores/server-store";
 import { StatCard } from "@/components/shared/stat-card";
 import { Loading } from "@/components/shared/loading";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -103,7 +103,7 @@ const featureCards: FeatureCardConfig[] = [
   },
   {
     title: "Analytics",
-    description: "View faction stats, activity trends, and member leaderboard rankings.",
+    description: "View server stats, activity trends, and member leaderboard rankings.",
     icon: BarChart3,
     href: "/stats",
     accent: "text-amber-500 bg-amber-500/10",
@@ -126,8 +126,8 @@ const featureCards: FeatureCardConfig[] = [
 
 // ─── Stats row ────────────────────────────────────────────────────────────────
 
-function FactionStatsRow({ factionId }: { factionId: string }) {
-  const { data: stats, isLoading, isError } = useStats(factionId);
+function ServerStatsRow({ serverId }: { serverId: string }) {
+  const { data: stats, isLoading, isError } = useStats(serverId);
 
   if (isLoading) {
     return (
@@ -160,9 +160,9 @@ function FactionStatsRow({ factionId }: { factionId: string }) {
 
 // ─── Quick actions ────────────────────────────────────────────────────────────
 
-function QuickActions({ factionId }: { factionId: string }) {
+function QuickActions({ serverId }: { serverId: string }) {
   const router = useRouter();
-  const base = `/faction/${factionId}`;
+  const base = `/server/${serverId}`;
   return (
     <div className="flex flex-wrap gap-2">
       <Button variant="outline" size="sm" onClick={() => router.push(`${base}/message-builder`)}>
@@ -222,18 +222,18 @@ function FeatureCard({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ServerOverviewPage() {
-  const params = useParams<{ factionId: string }>();
+  const params = useParams<{ serverId: string }>();
   const router = useRouter();
-  const factionId = params.factionId;
+  const serverId = params.serverId;
 
-  const { setActiveFaction } = useFactionStore();
-  const { data: faction, isLoading } = useFaction(factionId);
+  const { setActiveServer } = useServerStore();
+  const { data: server, isLoading } = useServer(serverId);
 
   useEffect(() => {
-    if (faction) {
-      setActiveFaction(factionId, faction);
+    if (server) {
+      setActiveServer(serverId, server);
     }
-  }, [faction, factionId, setActiveFaction]);
+  }, [server, serverId, setActiveServer]);
 
   if (isLoading) {
     return (
@@ -243,11 +243,11 @@ export default function ServerOverviewPage() {
     );
   }
 
-  if (!faction) {
+  if (!server) {
     return (
       <div className="text-center py-20">
         <p className="text-muted-foreground">Server not found.</p>
-        <Button variant="link" onClick={() => router.push("/faction")}>
+        <Button variant="link" onClick={() => router.push("/server")}>
           Back to servers
         </Button>
       </div>
@@ -258,20 +258,20 @@ export default function ServerOverviewPage() {
     <div className="space-y-6">
       {/* Server header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">{faction.name}</h1>
-        {faction.description && (
-          <p className="text-muted-foreground mt-1">{faction.description}</p>
+        <h1 className="text-3xl font-bold tracking-tight">{server.name}</h1>
+        {server.description && (
+          <p className="text-muted-foreground mt-1">{server.description}</p>
         )}
       </div>
 
       {/* Stats row */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 sm:gap-5">
-        <FactionStatsRow factionId={factionId} />
-        <StatCard label="Subscription" value={faction.subscriptionTier} isLoading={isLoading} />
+        <ServerStatsRow serverId={serverId} />
+        <StatCard label="Subscription" value={server.subscriptionTier} isLoading={isLoading} />
       </div>
 
       {/* Quick actions */}
-      <QuickActions factionId={factionId} />
+      <QuickActions serverId={serverId} />
 
       {/* Feature grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-5">
@@ -279,7 +279,7 @@ export default function ServerOverviewPage() {
           <FeatureCard
             key={feature.href}
             feature={feature}
-            onClick={() => router.push(`/faction/${factionId}${feature.href}`)}
+            onClick={() => router.push(`/server/${serverId}${feature.href}`)}
           />
         ))}
       </div>

@@ -1,6 +1,6 @@
-export interface FactionStats {
+export interface ServerStats {
   id: string;
-  factionId: string;
+  serverId: string;
   totalMembers: number;
   activeMembers: number;
   totalEvents: number;

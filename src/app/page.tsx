@@ -14,7 +14,7 @@ import {
 
 const featureCards = [
   {
-    title: "Faction command center",
+    title: "Server command center",
     description:
       "Manage ranks, rosters, permissions, and structure from one clean dashboard built for organized communities.",
   },
@@ -36,7 +36,7 @@ const featureCards = [
   {
     title: "Reusable templates",
     description:
-      "Create consistent embeds, containers, and text templates for announcements, logs, and faction comms.",
+      "Create consistent embeds, containers, and text templates for announcements, logs, and server comms.",
   },
   {
     title: "Stats that matter",
@@ -50,7 +50,7 @@ const workflowSteps = [
     step: "01",
     title: "Connect your community",
     description:
-      "Bring your faction or hub into a centralized space for members, leadership, and moderators.",
+      "Bring your server or hub into a centralized space for members, leadership, and moderators.",
   },
   {
     step: "02",
@@ -67,7 +67,7 @@ const workflowSteps = [
 ];
 
 const statItems = [
-  { value: "All-in-one", label: "Faction and Discord operations" },
+  { value: "All-in-one", label: "Server and Discord operations" },
   { value: "24/7", label: "Community-ready control center" },
   { value: "Built for teams", label: "Leadership, staff, and members" },
 ];
@@ -98,7 +98,7 @@ export default async function RootPage() {
                 BRM5 Apps
               </p>
               <p className="text-sm text-muted-foreground">
-                Faction and Discord community management
+                Server and Discord community management
               </p>
             </div>
           </div>
@@ -124,11 +124,11 @@ export default async function RootPage() {
         <div className="grid items-center gap-14 lg:grid-cols-[1.15fr_0.85fr]">
           <div className="max-w-3xl">
             <Badge variant="secondary" className="mb-6 border border-primary/20 bg-primary/10 text-primary">
-              Gaming communities • Factions • Discord operations
+              Gaming communities • Servers • Discord operations
             </Badge>
 
             <h1 className="max-w-2xl text-4xl font-black tracking-tight sm:text-5xl lg:text-6xl">
-              Run your faction like a real command center.
+              Run your server like a real command center.
             </h1>
 
             <p className="mt-6 max-w-2xl text-lg leading-8 text-muted-foreground sm:text-xl">
@@ -144,7 +144,7 @@ export default async function RootPage() {
                     <Link href="/dashboard">Open dashboard</Link>
                   </Button>
                   <Button asChild size="lg" variant="outline">
-                    <Link href="/dashboard/faction">View factions</Link>
+                    <Link href="/dashboard/server">View servers</Link>
                   </Button>
                 </>
               ) : (
@@ -176,7 +176,7 @@ export default async function RootPage() {
             <CardHeader>
               <CardTitle className="text-xl">Live community ops overview</CardTitle>
               <CardDescription>
-                A focused workspace for faction leadership, staff teams, and
+                A focused workspace for server leadership, staff teams, and
                 Discord-integrated management.
               </CardDescription>
             </CardHeader>
@@ -233,7 +233,7 @@ export default async function RootPage() {
             Everything your leadership team needs in one place
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            From faction administration to Discord content workflows, the platform is
+            From server administration to Discord content workflows, the platform is
             built for communities that want structure without friction.
           </p>
         </div>
@@ -301,7 +301,7 @@ export default async function RootPage() {
                 Keep Discord clean, professional, and easy to manage
               </h2>
               <p className="mt-4 max-w-2xl text-lg leading-8 text-muted-foreground">
-                Whether you are running a faction, staff group, or wider community hub,
+                Whether you are running a server, staff group, or wider community hub,
                 BRM5 Apps helps your team standardize communication, automate repetitive
                 workflows, and stay aligned during fast-moving operations.
               </p>
@@ -336,7 +336,7 @@ export default async function RootPage() {
           <CardContent className="flex flex-col items-start justify-between gap-6 p-8 lg:flex-row lg:items-center">
             <div className="max-w-2xl">
               <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-                Build a stronger faction hub from day one
+                Build a stronger server hub from day one
               </h2>
               <p className="mt-3 text-muted-foreground">
                 Launch a cleaner, more organized community management experience for
@@ -369,7 +369,7 @@ export default async function RootPage() {
         </Card>
 
         <footer className="mt-10 flex flex-col gap-3 border-t pt-6 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <p>BRM5 Apps — faction and Discord community management.</p>
+          <p>BRM5 Apps — server and Discord community management.</p>
           <p>Built for structured gaming communities that want better tools.</p>
         </footer>
       </section>

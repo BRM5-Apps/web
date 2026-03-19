@@ -57,12 +57,12 @@ function PlanFeatureRow({ label, included }: PlanFeature) {
 }
 
 export default function BillingPage() {
-  const { factionId } = useParams<{ factionId: string }>();
+  const { serverId } = useParams<{ serverId: string }>();
 
   const { data: subscription, isLoading } = useQuery<Subscription | null>({
-    queryKey: queryKeys.billing.subscription(factionId),
+    queryKey: queryKeys.billing.subscription(serverId),
     queryFn: ({ signal }) => api.billing.getSubscription({ signal }).catch(() => null),
-    enabled: !!factionId,
+    enabled: !!serverId,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -90,7 +90,7 @@ export default function BillingPage() {
         { label: "3 event types", included: true },
         { label: "Basic templates", included: true },
         { label: "Component V2 templates", included: false },
-        { label: "Faction Hubs", included: false },
+        { label: "Server Hubs", included: false },
       ],
       cta: "Current Plan",
       ctaVariant: "outline",
@@ -105,7 +105,7 @@ export default function BillingPage() {
         { label: "Unlimited event types", included: true },
         { label: "All template types", included: true },
         { label: "Component V2 templates", included: true },
-        { label: "Faction Hubs", included: false },
+        { label: "Server Hubs", included: false },
       ],
       cta: "Upgrade",
       ctaVariant: "default",
@@ -118,7 +118,7 @@ export default function BillingPage() {
       features: [
         { label: "Unlimited members", included: true },
         { label: "Everything in Pro", included: true },
-        { label: "Faction Hubs", included: true },
+        { label: "Server Hubs", included: true },
         { label: "Priority support", included: true },
       ],
       cta: "Contact Us",

@@ -14,16 +14,16 @@ import { PermissionGate } from "@/components/shared/permission-gate";
 import { Plus, Pencil } from "lucide-react";
 
 export default function ContainerTemplatesPage() {
-  const params = useParams<{ factionId: string }>();
-  const factionId = params.factionId;
+  const params = useParams<{ serverId: string }>();
+  const serverId = params.serverId;
 
-  const { data, isLoading } = useContainerTemplates(factionId);
+  const { data, isLoading } = useContainerTemplates(serverId);
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
 
   const selected = useMemo(() => data?.find((t) => t.id === selectedId) ?? null, [data, selectedId]);
 
-  const createMutation = useCreateContainerTemplate(factionId);
-  const updateMutation = useUpdateContainerTemplate(factionId, selectedId ?? "");
+  const createMutation = useCreateContainerTemplate(serverId);
+  const updateMutation = useUpdateContainerTemplate(serverId, selectedId ?? "");
 
   function handleSave(payload: { name: string; accentColor?: string; components: any[] }) {
     const template_data = { components: payload.components, accentColor: payload.accentColor };

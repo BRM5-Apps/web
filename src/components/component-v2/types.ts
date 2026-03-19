@@ -10,6 +10,7 @@ export interface C2Button {
   emoji?: string;
   disabled: boolean;
   flow: FlowAction[];
+  actionGraph?: ActionGraphDocument;
 }
 
 export interface C2LinkButton {
@@ -36,6 +37,7 @@ export interface SelectOption {
   value: string;       // required, max 100, auto-generated
   default: boolean;
   flow: FlowAction[];
+  actionGraph?: ActionGraphDocument;
 }
 
 export interface C2SelectMenu {
@@ -49,6 +51,7 @@ export interface C2SelectMenu {
   options: SelectOption[];    // used when menuType === "select"
   defaultValues: string[];    // snowflake IDs; used when menuType !== "select"
   flow: FlowAction[];         // used when menuType !== "select"
+  actionGraph?: ActionGraphDocument;
 }
 
 export type C2RowComponent = C2Button | C2LinkButton | C2SelectMenu;
@@ -234,3 +237,41 @@ export type FlowAction =
   | FaSetVariable
   | FaDeleteMessage
   | FaStop;
+
+export type ActionGraphNodeKind = "action" | "condition";
+export type ActionGraphEdgeKind = "next" | "pass" | "fail";
+
+export interface ActionGraphPosition {
+  x: number;
+  y: number;
+}
+
+export interface ActionGraphActionNode {
+  id: string;
+  kind: "action";
+  action: FlowAction;
+  position?: ActionGraphPosition;
+}
+
+export interface ActionGraphConditionNode {
+  id: string;
+  kind: "condition";
+  condition?: Record<string, unknown>;
+  position?: ActionGraphPosition;
+}
+
+export type ActionGraphNode = ActionGraphActionNode | ActionGraphConditionNode;
+
+export interface ActionGraphEdge {
+  id: string;
+  source: string;
+  target: string;
+  kind: ActionGraphEdgeKind;
+}
+
+export interface ActionGraphDocument {
+  version: 1;
+  entry_node_id?: string;
+  nodes: ActionGraphNode[];
+  edges: ActionGraphEdge[];
+}

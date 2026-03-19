@@ -45,11 +45,11 @@ const REPEAT_OPTIONS = [
 ];
 
 function CreateScheduleDialog({
-  factionId,
+  serverId,
   open,
   onOpenChange,
 }: {
-  factionId: string;
+  serverId: string;
   open: boolean;
   onOpenChange: (v: boolean) => void;
 }) {
@@ -59,8 +59,8 @@ function CreateScheduleDialog({
   const [scheduledAt, setScheduledAt] = useState("");
   const [repeatInterval, setRepeatInterval] = useState("none");
 
-  const { embeds, containers, texts, isLoading: templatesLoading } = useAllTemplates(factionId);
-  const create = useCreateSchedule(factionId);
+  const { embeds, containers, texts, isLoading: templatesLoading } = useAllTemplates(serverId);
+  const create = useCreateSchedule(serverId);
 
   const templateOptions =
     templateType === "embed" ? embeds : templateType === "container" ? containers : texts;
@@ -175,11 +175,11 @@ function CreateScheduleDialog({
 }
 
 export default function SchedulePage() {
-  const { factionId } = useParams<{ factionId: string }>();
+  const { serverId } = useParams<{ serverId: string }>();
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const { data: scheduled, isLoading } = useScheduledMessages(factionId);
-  const deleteSchedule = useDeleteSchedule(factionId);
+  const { data: scheduled, isLoading } = useScheduledMessages(serverId);
+  const deleteSchedule = useDeleteSchedule(serverId);
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -268,7 +268,7 @@ export default function SchedulePage() {
       )}
 
       <CreateScheduleDialog
-        factionId={factionId}
+        serverId={serverId}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
       />

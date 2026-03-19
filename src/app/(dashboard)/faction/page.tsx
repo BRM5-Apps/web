@@ -1,31 +1,31 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useAdminGuildsWithFactions, type GuildWithFactionStatus } from "@/hooks/use-admin-guilds";
-import { useFactionStore } from "@/stores/faction-store";
+import { useAdminGuildsWithServers, type GuildWithServerStatus } from "@/hooks/use-admin-guilds";
+import { useServerStore } from "@/stores/server-store";
 import { Loading } from "@/components/shared/loading";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Bot, BotOff, Shield } from "lucide-react";
-import type { Faction } from "@/types/faction";
+import type { Server } from "@/types/server";
 
 const DISCORD_CDN = "https://cdn.discordapp.com";
 
-function guildIconUrl(guild: GuildWithFactionStatus): string | null {
+function guildIconUrl(guild: GuildWithServerStatus): string | null {
   if (!guild.icon) return null;
   const ext = guild.icon.startsWith("a_") ? "gif" : "png";
   return `${DISCORD_CDN}/icons/${guild.id}/${guild.icon}.${ext}?size=128`;
 }
 
-export default function FactionSelectorPage() {
+export default function ServerSelectorPage() {
   const router = useRouter();
-  const { setActiveFaction } = useFactionStore();
-  const { data: guilds, isLoading, isError } = useAdminGuildsWithFactions();
+  const { setActiveServer } = useServerStore();
+  const { data: guilds, isLoading, isError } = useAdminGuildsWithServers();
 
-  function handleSelectFaction(faction: Faction) {
-    setActiveFaction(faction.id, faction);
-    router.push(`/faction/${faction.id}`);
+  function handleSelectServer(server: Server) {
+    setActiveServer(server.id, server);
+    router.push(`/server/${server.id}`);
   }
 
   if (isLoading) {
@@ -75,7 +75,7 @@ export default function FactionSelectorPage() {
           <GuildCard
             key={guild.id}
             guild={guild}
-            onClick={() => handleSelectFaction(guild.faction!)}
+            onClick={() => handleSelectServer(guild.server!)}
           />
         ))}
 
@@ -89,7 +89,7 @@ export default function FactionSelectorPage() {
 }
 
 interface GuildCardProps {
-  guild: GuildWithFactionStatus;
+  guild: GuildWithServerStatus;
   onClick?: () => void;
 }
 
@@ -128,15 +128,15 @@ function GuildCard({ guild, onClick }: GuildCardProps) {
         </div>
       </CardHeader>
 
-      {isActive && guild.faction && (
+      {isActive && guild.server && (
         <CardContent className="pt-0">
-          {guild.faction.description ? (
+          {guild.server.description ? (
             <p className="text-xs text-muted-foreground line-clamp-2">
-              {guild.faction.description}
+              {guild.server.description}
             </p>
           ) : null}
           <div className="mt-2 flex items-center gap-1.5">
-            <TierBadge tier={guild.faction.subscriptionTier} />
+            <TierBadge tier={guild.server.subscriptionTier} />
           </div>
         </CardContent>
       )}
@@ -153,7 +153,7 @@ function GuildCard({ guild, onClick }: GuildCardProps) {
   );
 }
 
-function StatusBadge({ guild }: { guild: GuildWithFactionStatus }) {
+function StatusBadge({ guild }: { guild: GuildWithServerStatus }) {
   if (guild.hasBot) {
     return (
       <span className="inline-flex items-center gap-1 text-xs text-emerald-500">
@@ -170,7 +170,7 @@ function StatusBadge({ guild }: { guild: GuildWithFactionStatus }) {
   );
 }
 
-function TierBadge({ tier }: { tier: Faction["subscriptionTier"] }) {
+function TierBadge({ tier }: { tier: Server["subscriptionTier"] }) {
   const variants: Record<string, "default" | "secondary" | "outline"> = {
     free: "outline",
     pro: "default",

@@ -33,19 +33,19 @@ import { ArrowRight, Plus, Trash2 } from "lucide-react";
 import type { RankWithDetails, PromotionPath } from "@/types/rank";
 
 interface PromotionPathEditorProps {
-  factionId: string;
+  serverId: string;
   ranks: RankWithDetails[];
   canManage: boolean;
 }
 
 export function PromotionPathEditor({
-  factionId,
+  serverId,
   ranks,
   canManage,
 }: PromotionPathEditorProps) {
-  const { data: paths, isLoading } = usePromotionPaths(factionId);
-  const createMutation = useCreatePromotionPath(factionId);
-  const deleteMutation = useDeletePromotionPath(factionId);
+  const { data: paths, isLoading } = usePromotionPaths(serverId);
+  const createMutation = useCreatePromotionPath(serverId);
+  const deleteMutation = useDeletePromotionPath(serverId);
 
   // Form state for new path
   const [fromRankId, setFromRankId] = useState("");

@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, ChevronsUpDown, Plus, Search } from "lucide-react";
-import { useFactions } from "@/hooks/use-faction";
-import { useFactionStore } from "@/stores/faction-store";
+import { useServers } from "@/hooks/use-server";
+import { useServerStore } from "@/stores/server-store";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,29 +18,29 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-export function FactionSwitcher() {
+export function ServerSwitcher() {
   const router = useRouter();
-  const { data: factions, isLoading } = useFactions();
-  const { activeFactionId, setActiveFaction } = useFactionStore();
+  const { data: servers, isLoading } = useServers();
+  const { activeServerId, setActiveServer } = useServerStore();
   const [search, setSearch] = useState("");
 
-  // Normalize factions in case cached data still uses the older
-  // { items: [{ faction, rankId }] } shape from the API client.
-  const factionList =
-    Array.isArray(factions)
-      ? factions
-      : (factions as any)?.items?.map((item: any) => item.faction) ?? [];
+  // Normalize servers in case cached data still uses the older
+  // { items: [{ server, rankId }] } shape from the API client.
+  const serverList =
+    Array.isArray(servers)
+      ? servers
+      : (servers as any)?.items?.map((item: any) => item.server) ?? [];
 
-  const filteredFactions = factionList.filter((f: any) =>
+  const filteredServers = serverList.filter((f: any) =>
     f.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  const activeFaction = factionList.find((f: any) => f.id === activeFactionId);
+  const activeServer = serverList.find((f: any) => f.id === activeServerId);
 
-  function handleSelect(factionId: string) {
-    const faction = factions?.find((f) => f.id === factionId);
-    setActiveFaction(factionId, faction);
-    router.push(`/faction/${factionId}`);
+  function handleSelect(serverId: string) {
+    const server = servers?.find((f) => f.id === serverId);
+    setActiveServer(serverId, server);
+    router.push(`/server/${serverId}`);
   }
 
   return (
@@ -52,7 +52,7 @@ export function FactionSwitcher() {
           disabled={isLoading}
         >
           <span className="truncate">
-            {activeFaction?.name ?? "Select server"}
+            {activeServer?.name ?? "Select server"}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -71,37 +71,37 @@ export function FactionSwitcher() {
         </div>
         <DropdownMenuSeparator />
         <ScrollArea className="max-h-[300px]">
-          {filteredFactions.length === 0 ? (
+          {filteredServers.length === 0 ? (
             <div className="py-6 text-center text-sm text-[#949BA4]">
               No servers found
             </div>
           ) : (
-            filteredFactions.map((faction: any) => (
+            filteredServers.map((server: any) => (
               <DropdownMenuItem
-                key={faction.id}
-                onClick={() => handleSelect(faction.id)}
+                key={server.id}
+                onClick={() => handleSelect(server.id)}
                 className="flex items-center gap-3 px-3 py-2 text-[#DBDEE1] hover:bg-[#35373C] focus:bg-[#35373C] cursor-pointer"
               >
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#404249]">
-                  {faction.iconUrl ? (
+                  {server.iconUrl ? (
                     <img
-                      src={faction.iconUrl}
-                      alt={faction.name}
+                      src={server.iconUrl}
+                      alt={server.name}
                       className="h-6 w-6 rounded"
                     />
                   ) : (
                     <span className="text-xs font-bold text-[#5865F2]">
-                      {faction.name.charAt(0)}
+                      {server.name.charAt(0)}
                     </span>
                   )}
                 </div>
                 <div className="flex-1 truncate">
-                  <p className="text-sm font-medium truncate text-[#F1F1F2]">{faction.name}</p>
+                  <p className="text-sm font-medium truncate text-[#F1F1F2]">{server.name}</p>
                   <p className="text-xs text-[#949BA4] capitalize">
-                    {faction.subscriptionTier}
+                    {server.subscriptionTier}
                   </p>
                 </div>
-                {faction.id === activeFactionId && (
+                {server.id === activeServerId && (
                   <Check className="h-4 w-4 text-[#5865F2]" />
                 )}
               </DropdownMenuItem>
@@ -110,7 +110,7 @@ export function FactionSwitcher() {
         </ScrollArea>
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          onClick={() => router.push("/faction")}
+          onClick={() => router.push("/server")}
           className="gap-2 px-3 py-2 text-[#DBDEE1] hover:bg-[#35373C] focus:bg-[#35373C] cursor-pointer"
         >
           <Plus className="h-4 w-4" />

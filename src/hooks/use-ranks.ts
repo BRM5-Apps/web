@@ -10,83 +10,83 @@ import type {
   Permission,
 } from "@/types/rank";
 
-export function useRanks(factionId: string) {
+export function useRanks(serverId: string) {
   return useQuery<RankWithDetails[]>({
-    queryKey: queryKeys.ranks.all(factionId),
-    queryFn: ({ signal }) => api.ranks.list(factionId, { signal }),
-    enabled: !!factionId,
+    queryKey: queryKeys.ranks.all(serverId),
+    queryFn: ({ signal }) => api.ranks.list(serverId, { signal }),
+    enabled: !!serverId,
   });
 }
 
-export function useRank(factionId: string, rankId: string) {
+export function useRank(serverId: string, rankId: string) {
   return useQuery<RankWithDetails>({
-    queryKey: queryKeys.ranks.detail(factionId, rankId),
-    queryFn: ({ signal }) => api.ranks.get(factionId, rankId, { signal }),
-    enabled: !!factionId && !!rankId,
+    queryKey: queryKeys.ranks.detail(serverId, rankId),
+    queryFn: ({ signal }) => api.ranks.get(serverId, rankId, { signal }),
+    enabled: !!serverId && !!rankId,
   });
 }
 
-export function useCreateRank(factionId: string) {
+export function useCreateRank(serverId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (payload: RankPayload) =>
-      api.ranks.create(factionId, payload),
+      api.ranks.create(serverId, payload),
     onSuccess: () => {
-      invalidateRelated(queryClient, "ranks", factionId);
+      invalidateRelated(queryClient, "ranks", serverId);
     },
   });
 }
 
-export function useUpdateRank(factionId: string) {
+export function useUpdateRank(serverId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: ({ rankId, ...payload }: RankPayload & { rankId: string }) =>
-      api.ranks.update(factionId, rankId, payload),
+      api.ranks.update(serverId, rankId, payload),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.ranks.detail(factionId, variables.rankId),
+        queryKey: queryKeys.ranks.detail(serverId, variables.rankId),
       });
-      invalidateRelated(queryClient, "ranks", factionId);
+      invalidateRelated(queryClient, "ranks", serverId);
     },
   });
 }
 
-export function useDeleteRank(factionId: string) {
+export function useDeleteRank(serverId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (rankId: string) =>
-      api.ranks.delete(factionId, rankId),
+      api.ranks.delete(serverId, rankId),
     onSuccess: () => {
-      invalidateRelated(queryClient, "ranks", factionId);
+      invalidateRelated(queryClient, "ranks", serverId);
     },
   });
 }
 
-export function useReorderRanks(factionId: string) {
+export function useReorderRanks(serverId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (payload: ReorderRanksPayload) =>
-      api.ranks.reorder(factionId, payload),
+      api.ranks.reorder(serverId, payload),
     onSuccess: () => {
-      invalidateRelated(queryClient, "ranks", factionId);
+      invalidateRelated(queryClient, "ranks", serverId);
     },
   });
 }
 
-export function useRankPermissions(factionId: string, rankId: string) {
+export function useRankPermissions(serverId: string, rankId: string) {
   return useQuery<Permission[]>({
-    queryKey: queryKeys.ranks.permissions(factionId, rankId),
+    queryKey: queryKeys.ranks.permissions(serverId, rankId),
     queryFn: ({ signal }) =>
-      api.ranks.getPermissions(factionId, rankId, { signal }),
-    enabled: !!factionId && !!rankId,
+      api.ranks.getPermissions(serverId, rankId, { signal }),
+    enabled: !!serverId && !!rankId,
   });
 }
 
-export function useSetRankPermissions(factionId: string) {
+export function useSetRankPermissions(serverId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -96,12 +96,12 @@ export function useSetRankPermissions(factionId: string) {
     }: {
       rankId: string;
       permissionIds: string[];
-    }) => api.ranks.setPermissions(factionId, rankId, permissionIds),
+    }) => api.ranks.setPermissions(serverId, rankId, permissionIds),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.ranks.permissions(factionId, variables.rankId),
+        queryKey: queryKeys.ranks.permissions(serverId, variables.rankId),
       });
-      invalidateRelated(queryClient, "ranks", factionId);
+      invalidateRelated(queryClient, "ranks", serverId);
     },
   });
 }

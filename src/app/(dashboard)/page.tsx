@@ -2,20 +2,20 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useFactionStore } from "@/stores/faction-store";
+import { useServerStore } from "@/stores/server-store";
 import { Loading } from "@/components/shared/loading";
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { activeFactionId } = useFactionStore();
+  const { activeServerId } = useServerStore();
 
   useEffect(() => {
-    if (activeFactionId) {
-      router.replace(`/faction/${activeFactionId}`);
+    if (activeServerId) {
+      router.replace(`/server/${activeServerId}`);
     } else {
       router.replace("/select-server");
     }
-  }, [activeFactionId, router]);
+  }, [activeServerId, router]);
 
   return (
     <div className="flex items-center justify-center py-20">

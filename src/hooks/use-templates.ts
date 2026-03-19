@@ -20,31 +20,31 @@ const qk = {
 
 // ── Embed Templates ──
 
-export function useEmbedTemplates(factionId: string) {
+export function useEmbedTemplates(serverId: string) {
   return useQuery({
-    queryKey: qk.embeds(factionId),
-    queryFn: () => api.templates.listEmbeds(factionId),
+    queryKey: qk.embeds(serverId),
+    queryFn: () => api.templates.listEmbeds(serverId),
     staleTime: 1000 * 60 * 2,
-    enabled: Boolean(factionId),
+    enabled: Boolean(serverId),
   });
 }
 
-export function useEmbedTemplate(factionId: string, id: string) {
+export function useEmbedTemplate(serverId: string, id: string) {
   return useQuery({
-    queryKey: qk.embed(factionId, id),
-    queryFn: () => api.templates.getEmbed(factionId, id),
-    enabled: Boolean(factionId && id),
+    queryKey: qk.embed(serverId, id),
+    queryFn: () => api.templates.getEmbed(serverId, id),
+    enabled: Boolean(serverId && id),
   });
 }
 
-export function useCreateEmbedTemplate(factionId: string) {
+export function useCreateEmbedTemplate(serverId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: Partial<EmbedTemplate>) => api.templates.createEmbed(factionId, data),
+    mutationFn: (data: Partial<EmbedTemplate>) => api.templates.createEmbed(serverId, data),
     onSuccess: (created) => {
       toast.success("Embed template created");
-      qc.invalidateQueries({ queryKey: qk.embeds(factionId) });
-      qc.setQueryData(qk.embed(factionId, created.id), created);
+      qc.invalidateQueries({ queryKey: qk.embeds(serverId) });
+      qc.setQueryData(qk.embed(serverId, created.id), created);
     },
     onError: (err: unknown) => {
       toast.error(typeof err === "object" && err && "message" in err ? (err as any).message : "Failed to create template");
@@ -52,14 +52,14 @@ export function useCreateEmbedTemplate(factionId: string) {
   });
 }
 
-export function useUpdateEmbedTemplate(factionId: string, id: string) {
+export function useUpdateEmbedTemplate(serverId: string, id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: Partial<EmbedTemplate>) => api.templates.updateEmbed(factionId, id, data),
+    mutationFn: (data: Partial<EmbedTemplate>) => api.templates.updateEmbed(serverId, id, data),
     onSuccess: (updated) => {
       toast.success("Embed template saved");
-      qc.setQueryData(qk.embed(factionId, id), updated);
-      qc.invalidateQueries({ queryKey: qk.embeds(factionId) });
+      qc.setQueryData(qk.embed(serverId, id), updated);
+      qc.invalidateQueries({ queryKey: qk.embeds(serverId) });
     },
     onError: (err: unknown) => {
       toast.error(typeof err === "object" && err && "message" in err ? (err as any).message : "Failed to save template");
@@ -67,14 +67,14 @@ export function useUpdateEmbedTemplate(factionId: string, id: string) {
   });
 }
 
-export function useDeleteEmbedTemplate(factionId: string) {
+export function useDeleteEmbedTemplate(serverId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => api.templates.deleteEmbed(factionId, id),
+    mutationFn: (id: string) => api.templates.deleteEmbed(serverId, id),
     onSuccess: (_res, id) => {
       toast.success("Embed template deleted");
-      qc.invalidateQueries({ queryKey: qk.embeds(factionId) });
-      qc.removeQueries({ queryKey: qk.embed(factionId, id) });
+      qc.invalidateQueries({ queryKey: qk.embeds(serverId) });
+      qc.removeQueries({ queryKey: qk.embed(serverId, id) });
     },
     onError: () => toast.error("Failed to delete template"),
   });
@@ -82,57 +82,57 @@ export function useDeleteEmbedTemplate(factionId: string) {
 
 // ── Container Templates ──
 
-export function useContainerTemplates(factionId: string) {
+export function useContainerTemplates(serverId: string) {
   return useQuery({
-    queryKey: qk.containers(factionId),
-    queryFn: () => api.templates.listContainers(factionId),
+    queryKey: qk.containers(serverId),
+    queryFn: () => api.templates.listContainers(serverId),
     staleTime: 1000 * 60 * 2,
-    enabled: Boolean(factionId),
+    enabled: Boolean(serverId),
   });
 }
 
-export function useContainerTemplate(factionId: string, id: string) {
+export function useContainerTemplate(serverId: string, id: string) {
   return useQuery({
-    queryKey: qk.container(factionId, id),
-    queryFn: () => api.templates.getContainer(factionId, id),
-    enabled: Boolean(factionId && id),
+    queryKey: qk.container(serverId, id),
+    queryFn: () => api.templates.getContainer(serverId, id),
+    enabled: Boolean(serverId && id),
   });
 }
 
-export function useCreateContainerTemplate(factionId: string) {
+export function useCreateContainerTemplate(serverId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: Partial<ContainerTemplate>) => api.templates.createContainer(factionId, data),
+    mutationFn: (data: Partial<ContainerTemplate>) => api.templates.createContainer(serverId, data),
     onSuccess: (created) => {
       toast.success("Container template created");
-      qc.invalidateQueries({ queryKey: qk.containers(factionId) });
-      qc.setQueryData(qk.container(factionId, created.id), created);
+      qc.invalidateQueries({ queryKey: qk.containers(serverId) });
+      qc.setQueryData(qk.container(serverId, created.id), created);
     },
     onError: (err: ApiError) => toast.error(err?.message ?? "Failed to create container"),
   });
 }
 
-export function useUpdateContainerTemplate(factionId: string, id: string) {
+export function useUpdateContainerTemplate(serverId: string, id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: Partial<ContainerTemplate>) => api.templates.updateContainer(factionId, id, data),
+    mutationFn: (data: Partial<ContainerTemplate>) => api.templates.updateContainer(serverId, id, data),
     onSuccess: (updated) => {
       toast.success("Container template saved");
-      qc.setQueryData(qk.container(factionId, id), updated);
-      qc.invalidateQueries({ queryKey: qk.containers(factionId) });
+      qc.setQueryData(qk.container(serverId, id), updated);
+      qc.invalidateQueries({ queryKey: qk.containers(serverId) });
     },
     onError: () => toast.error("Failed to save container"),
   });
 }
 
-export function useDeleteContainerTemplate(factionId: string) {
+export function useDeleteContainerTemplate(serverId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => api.templates.deleteContainer(factionId, id),
+    mutationFn: (id: string) => api.templates.deleteContainer(serverId, id),
     onSuccess: (_res, id) => {
       toast.success("Container template deleted");
-      qc.invalidateQueries({ queryKey: qk.containers(factionId) });
-      qc.removeQueries({ queryKey: qk.container(factionId, id) });
+      qc.invalidateQueries({ queryKey: qk.containers(serverId) });
+      qc.removeQueries({ queryKey: qk.container(serverId, id) });
     },
     onError: () => toast.error("Failed to delete container"),
   });
@@ -140,57 +140,57 @@ export function useDeleteContainerTemplate(factionId: string) {
 
 // ── Text Templates ──
 
-export function useTextTemplates(factionId: string) {
+export function useTextTemplates(serverId: string) {
   return useQuery({
-    queryKey: qk.texts(factionId),
-    queryFn: () => api.templates.listTexts(factionId),
+    queryKey: qk.texts(serverId),
+    queryFn: () => api.templates.listTexts(serverId),
     staleTime: 1000 * 60 * 2,
-    enabled: Boolean(factionId),
+    enabled: Boolean(serverId),
   });
 }
 
-export function useTextTemplate(factionId: string, id: string) {
+export function useTextTemplate(serverId: string, id: string) {
   return useQuery({
-    queryKey: qk.text(factionId, id),
-    queryFn: () => api.templates.getText(factionId, id),
-    enabled: Boolean(factionId && id),
+    queryKey: qk.text(serverId, id),
+    queryFn: () => api.templates.getText(serverId, id),
+    enabled: Boolean(serverId && id),
   });
 }
 
-export function useCreateTextTemplate(factionId: string) {
+export function useCreateTextTemplate(serverId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: Partial<TextTemplate>) => api.templates.createText(factionId, data),
+    mutationFn: (data: Partial<TextTemplate>) => api.templates.createText(serverId, data),
     onSuccess: (created) => {
       toast.success("Text template created");
-      qc.invalidateQueries({ queryKey: qk.texts(factionId) });
-      qc.setQueryData(qk.text(factionId, created.id), created);
+      qc.invalidateQueries({ queryKey: qk.texts(serverId) });
+      qc.setQueryData(qk.text(serverId, created.id), created);
     },
     onError: () => toast.error("Failed to create text template"),
   });
 }
 
-export function useUpdateTextTemplate(factionId: string, id: string) {
+export function useUpdateTextTemplate(serverId: string, id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: Partial<TextTemplate>) => api.templates.updateText(factionId, id, data),
+    mutationFn: (data: Partial<TextTemplate>) => api.templates.updateText(serverId, id, data),
     onSuccess: (updated) => {
       toast.success("Text template saved");
-      qc.setQueryData(qk.text(factionId, id), updated);
-      qc.invalidateQueries({ queryKey: qk.texts(factionId) });
+      qc.setQueryData(qk.text(serverId, id), updated);
+      qc.invalidateQueries({ queryKey: qk.texts(serverId) });
     },
     onError: () => toast.error("Failed to save text template"),
   });
 }
 
-export function useDeleteTextTemplate(factionId: string) {
+export function useDeleteTextTemplate(serverId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => api.templates.deleteText(factionId, id),
+    mutationFn: (id: string) => api.templates.deleteText(serverId, id),
     onSuccess: (_res, id) => {
       toast.success("Text template deleted");
-      qc.invalidateQueries({ queryKey: qk.texts(factionId) });
-      qc.removeQueries({ queryKey: qk.text(factionId, id) });
+      qc.invalidateQueries({ queryKey: qk.texts(serverId) });
+      qc.removeQueries({ queryKey: qk.text(serverId, id) });
     },
     onError: () => toast.error("Failed to delete text template"),
   });
@@ -198,80 +198,80 @@ export function useDeleteTextTemplate(factionId: string) {
 
 // ── Modal Templates ──
 
-export function useModalTemplates(factionId: string) {
+export function useModalTemplates(serverId: string) {
   return useQuery({
-    queryKey: qk.modals(factionId),
-    queryFn: () => api.templates.listModals(factionId),
+    queryKey: qk.modals(serverId),
+    queryFn: () => api.templates.listModals(serverId),
     staleTime: 1000 * 60 * 2,
-    enabled: Boolean(factionId),
+    enabled: Boolean(serverId),
   });
 }
 
-export function useCreateModalTemplate(factionId: string) {
+export function useCreateModalTemplate(serverId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: Partial<ModalTemplate>) => api.templates.createModal(factionId, data),
+    mutationFn: (data: Partial<ModalTemplate>) => api.templates.createModal(serverId, data),
     onSuccess: (created) => {
       toast.success("Modal template saved");
-      qc.invalidateQueries({ queryKey: qk.modals(factionId) });
-      qc.setQueryData(qk.modal(factionId, created.id), created);
+      qc.invalidateQueries({ queryKey: qk.modals(serverId) });
+      qc.setQueryData(qk.modal(serverId, created.id), created);
     },
     onError: () => toast.error("Failed to save modal template"),
   });
 }
 
-export function useUpdateModalTemplate(factionId: string, id: string) {
+export function useUpdateModalTemplate(serverId: string, id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: Partial<ModalTemplate>) => api.templates.updateModal(factionId, id, data),
+    mutationFn: (data: Partial<ModalTemplate>) => api.templates.updateModal(serverId, id, data),
     onSuccess: (updated) => {
       toast.success("Modal template saved");
-      qc.setQueryData(qk.modal(factionId, id), updated);
-      qc.invalidateQueries({ queryKey: qk.modals(factionId) });
+      qc.setQueryData(qk.modal(serverId, id), updated);
+      qc.invalidateQueries({ queryKey: qk.modals(serverId) });
     },
     onError: () => toast.error("Failed to save modal template"),
   });
 }
 
-export function useDeleteModalTemplate(factionId: string) {
+export function useDeleteModalTemplate(serverId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => api.templates.deleteModal(factionId, id),
+    mutationFn: (id: string) => api.templates.deleteModal(serverId, id),
     onSuccess: (_res, id) => {
       toast.success("Modal template deleted");
-      qc.invalidateQueries({ queryKey: qk.modals(factionId) });
-      qc.removeQueries({ queryKey: qk.modal(factionId, id) });
+      qc.invalidateQueries({ queryKey: qk.modals(serverId) });
+      qc.removeQueries({ queryKey: qk.modal(serverId, id) });
     },
     onError: () => toast.error("Failed to delete modal template"),
   });
 }
 
-// ── All templates for a faction (for Send Output picker) ──
+// ── All templates for a server (for Send Output picker) ──
 
-export function useAllTemplates(factionId: string) {
+export function useAllTemplates(serverId: string) {
   const embeds = useQuery({
-    queryKey: qk.embeds(factionId),
-    queryFn: () => api.templates.listEmbeds(factionId),
+    queryKey: qk.embeds(serverId),
+    queryFn: () => api.templates.listEmbeds(serverId),
     staleTime: 1000 * 60 * 2,
-    enabled: Boolean(factionId),
+    enabled: Boolean(serverId),
   });
   const containers = useQuery({
-    queryKey: qk.containers(factionId),
-    queryFn: () => api.templates.listContainers(factionId),
+    queryKey: qk.containers(serverId),
+    queryFn: () => api.templates.listContainers(serverId),
     staleTime: 1000 * 60 * 2,
-    enabled: Boolean(factionId),
+    enabled: Boolean(serverId),
   });
   const texts = useQuery({
-    queryKey: qk.texts(factionId),
-    queryFn: () => api.templates.listTexts(factionId),
+    queryKey: qk.texts(serverId),
+    queryFn: () => api.templates.listTexts(serverId),
     staleTime: 1000 * 60 * 2,
-    enabled: Boolean(factionId),
+    enabled: Boolean(serverId),
   });
   const modals = useQuery({
-    queryKey: qk.modals(factionId),
-    queryFn: () => api.templates.listModals(factionId),
+    queryKey: qk.modals(serverId),
+    queryFn: () => api.templates.listModals(serverId),
     staleTime: 1000 * 60 * 2,
-    enabled: Boolean(factionId),
+    enabled: Boolean(serverId),
   });
 
   return {

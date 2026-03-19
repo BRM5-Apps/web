@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight, Home } from "lucide-react";
-import { useFactionStore } from "@/stores/faction-store";
+import { useServerStore } from "@/stores/server-store";
 import { cn } from "@/lib/utils";
 
 const segmentLabels: Record<string, string> = {
   dashboard: "Dashboard",
-  faction: "Servers",
+  server: "Servers",
   members: "Members",
   ranks: "Ranks",
   units: "Units",
@@ -32,7 +32,7 @@ const segmentLabels: Record<string, string> = {
 
 export function Breadcrumbs() {
   const pathname = usePathname();
-  const { activeFaction } = useFactionStore();
+  const { activeServer } = useServerStore();
 
   const segments = pathname.split("/").filter(Boolean);
 
@@ -43,10 +43,10 @@ export function Breadcrumbs() {
     const segment = segments[i];
     hrefAccumulator += `/${segment}`;
 
-    // Skip faction IDs — replace with faction name
-    if (segments[i - 1] === "faction" && segment !== "faction") {
+    // Skip server IDs — replace with server name
+    if (segments[i - 1] === "server" && segment !== "server") {
       crumbs.push({
-        label: activeFaction?.name ?? "Faction",
+        label: activeServer?.name ?? "Server",
         href: hrefAccumulator,
       });
       continue;
