@@ -61,8 +61,8 @@ export default function DashboardLayout({
     <WebSocketProvider>
       <div className="flex h-screen overflow-hidden bg-background">
         <Sidebar />
-        <main className="flex-1 overflow-y-auto pl-14 bg-background">
-          <div className="mx-auto max-w-screen-xl px-6 py-6">
+        <main className="flex-1 overflow-y-auto bg-background md:pl-[312px]">
+          <div className="mx-auto max-w-screen-xl px-4 py-4 md:px-6 md:py-6">
             {children}
           </div>
         </main>

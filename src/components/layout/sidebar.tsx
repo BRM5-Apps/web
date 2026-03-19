@@ -1,324 +1,73 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { signOut } from "next-auth/react";
-import { Settings, Menu, ChevronRight, LogOut } from "lucide-react";
-import { serverNavConfig } from "@/config/nav";
-import { useServerStore } from "@/stores/server-store";
-import { usePermissions } from "@/hooks/use-permissions";
-import { useAuth } from "@/providers/auth-provider";
-import { useWebSocket } from "@/hooks/use-websocket";
-import { cn } from "@/lib/utils";
+import { Menu } from "lucide-react";
+import { ServerList } from "./server-list";
+import { ChannelList } from "./channel-list";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
 
-// ─── WS status dot ────────────────────────────────────────────────────────────
-
-function WsStatusDot() {
-  const { status } = useWebSocket();
-  const dotClass = {
-    connected: "bg-emerald-500",
-    connecting: "bg-amber-400 animate-pulse",
-    disconnected: "bg-[#949BA4]",
-  }[status];
-  return (
-    // ring matches sidebar bg #1E1F22 to create gap between dot and avatar
-    <span
-      title={`WebSocket: ${status}`}
-      className={cn("absolute bottom-0 right-0 h-2 w-2 rounded-full ring-1 ring-[#1E1F22]", dotClass)}
-    />
-  );
-}
-
-// ─── Nav items ────────────────────────────────────────────────────────────────
-
-interface NavItemsProps {
-  expanded: boolean;
-}
-
-function NavItems({ expanded }: NavItemsProps) {
-  const pathname = usePathname();
-  const { activeServerId } = useServerStore();
-  const { hasPermission } = usePermissions(activeServerId ?? "");
-  const basePath = activeServerId ? `/server/${activeServerId}` : "";
-
-  return (
-    <nav className="flex-1 space-y-0.5 px-2 py-3">
-      {serverNavConfig.map((section) => {
-        const visibleItems = section.items.filter(
-          (item) => !item.permission || hasPermission(item.permission)
-        );
-        if (visibleItems.length === 0) return null;
-
-        return (
-          <div key={section.label}>
-            {/* Section label — only visible when expanded */}
-            <span
-              className={cn(
-                "block px-3 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wider text-[#949BA4] transition-all duration-150 overflow-hidden whitespace-nowrap",
-                expanded ? "max-w-[200px] opacity-100" : "max-w-0 opacity-0"
-              )}
-            >
-              {section.label}
-            </span>
-
-            {visibleItems.map((item) => {
-              const fullHref = `${basePath}${item.href}`;
-              const isActive =
-                item.href === ""
-                  ? pathname === basePath || pathname === `${basePath}/`
-                  : pathname.startsWith(fullHref);
-              const Icon = item.icon;
-
-              // Filter children by permission
-              const visibleChildren = item.children
-                ? item.children.filter(
-                    (child) => !child.permission || hasPermission(child.permission)
-                  )
-                : [];
-
-              return (
-                <div key={item.href}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Link
-                        href={fullHref}
-                        className={cn(
-                          "flex items-center rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors duration-100",
-                          isActive
-                            ? "bg-[#404249] text-[#F1F1F2] border-l-2 border-[#5865F2]"
-                            : "text-[#949BA4] hover:bg-[#35373C] hover:text-[#F1F1F2]"
-                        )}
-                      >
-                        <Icon className="h-4 w-4 flex-shrink-0" />
-                        <span
-                          className={cn(
-                            "overflow-hidden whitespace-nowrap transition-all duration-150",
-                            expanded ? "max-w-[200px] opacity-100 ml-2" : "max-w-0 opacity-0"
-                          )}
-                        >
-                          {item.label}
-                        </span>
-                      </Link>
-                    </TooltipTrigger>
-                    {!expanded && (
-                      <TooltipContent side="right">{item.label}</TooltipContent>
-                    )}
-                  </Tooltip>
-
-                  {/* Nested children — rendered when expanded */}
-                  {visibleChildren.length > 0 && (
-                    <div
-                      className={cn(
-                        "overflow-hidden transition-all duration-150",
-                        expanded ? "max-h-96" : "max-h-0"
-                      )}
-                    >
-                      {visibleChildren.map((child) => {
-                        const childHref = `${basePath}${child.href}`;
-                        const isChildActive = pathname.startsWith(childHref);
-                        const ChildIcon = child.icon;
-                        return (
-                          <Link
-                            key={child.href}
-                            href={childHref}
-                            className={cn(
-                              "flex items-center rounded-md pl-7 pr-3 py-1.5 text-[13px] font-medium transition-colors duration-100",
-                              isChildActive
-                                ? "bg-[#404249] text-[#F1F1F2] border-l-2 border-[#5865F2]"
-                                : "text-[#949BA4] hover:bg-[#35373C] hover:text-[#F1F1F2]"
-                            )}
-                          >
-                            <ChildIcon className="h-4 w-4 flex-shrink-0" />
-                            <span
-                              className={cn(
-                                "overflow-hidden whitespace-nowrap transition-all duration-150",
-                                expanded ? "max-w-[200px] opacity-100 ml-2" : "max-w-0 opacity-0"
-                              )}
-                            >
-                              {child.label}
-                            </span>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        );
-      })}
-    </nav>
-  );
-}
-
-// ─── Sidebar content (shared between desktop + mobile Sheet) ─────────────────
-
-interface SidebarContentProps {
-  expanded: boolean;
-}
-
-function SidebarContent({ expanded }: SidebarContentProps) {
-  const router = useRouter();
-  const { activeServer, activeServerId } = useServerStore();
-  const { user } = useAuth();
-
-  return (
-    <div className="flex h-full flex-col">
-      {/* Server switcher */}
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            onClick={() => router.push("/select-server")}
-            className="flex items-center gap-2 border-b border-[#3F4147] px-3 py-3 w-full text-left hover:bg-[#35373C] transition-colors duration-100"
-          >
-            {/* icon */}
-            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-[#404249]">
-              {activeServer?.iconUrl ? (
-                <img
-                  src={activeServer.iconUrl}
-                  alt={activeServer.name}
-                  className="h-8 w-8 rounded-md object-cover"
-                />
-              ) : (
-                <span className="text-xs font-bold text-[#F1F1F2]">
-                  {activeServer?.name?.charAt(0) ?? "B"}
-                </span>
-              )}
-            </div>
-            {/* label — only visible when expanded */}
-            <span
-              className={cn(
-                "flex flex-1 items-center justify-between overflow-hidden whitespace-nowrap transition-all duration-150",
-                expanded ? "max-w-[200px] opacity-100" : "max-w-0 opacity-0"
-              )}
-            >
-              <span className="truncate text-[13px] font-semibold text-[#F1F1F2]">
-                {activeServer?.name ?? "Select server"}
-              </span>
-              <ChevronRight className="h-3.5 w-3.5 flex-shrink-0 text-[#949BA4]" />
-            </span>
-          </button>
-        </TooltipTrigger>
-        {!expanded && (
-          <TooltipContent side="right">
-            {activeServer?.name ?? "Select server"}
-          </TooltipContent>
-        )}
-      </Tooltip>
-
-      {/* Nav items */}
-      <ScrollArea className="flex-1">
-        <NavItems expanded={expanded} />
-      </ScrollArea>
-
-      {/* User row */}
-      <div className="flex items-center gap-2 border-t border-[#3F4147] px-3 py-3">
-        <div className="relative flex-shrink-0">
-          {user?.avatarUrl ? (
-            <img
-              src={user.avatarUrl}
-              alt={user.username}
-              className="h-8 w-8 rounded-full object-cover"
-            />
-          ) : (
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#404249] text-xs font-bold text-[#F1F1F2]">
-              {user?.username?.charAt(0)?.toUpperCase() ?? "?"}
-            </div>
-          )}
-          <WsStatusDot />
-        </div>
-
-        <span
-          className={cn(
-            "flex flex-1 items-center justify-between overflow-hidden whitespace-nowrap transition-all duration-150",
-            expanded ? "max-w-[200px] opacity-100" : "max-w-0 opacity-0"
-          )}
-        >
-          <span className="truncate text-[13px] font-medium text-[#F1F1F2]">
-            {user?.username ?? ""}
-          </span>
-          <span className="flex items-center gap-1 flex-shrink-0">
-            <Link
-              href={activeServerId ? `/server/${activeServerId}/settings` : "/select-server"}
-              onClick={(e) => e.stopPropagation()}
-              className="text-[#949BA4] hover:text-[#F1F1F2] transition-colors"
-            >
-              <Settings className="h-4 w-4" />
-            </Link>
-            <button
-              onClick={async () => {
-                await fetch("/api/auth/clear", { method: "POST" });
-                await signOut({ callbackUrl: "/login" });
-              }}
-              className="text-[#949BA4] hover:text-destructive transition-colors"
-              aria-label="Log out"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
-          </span>
-        </span>
-      </div>
-    </div>
-  );
-}
-
-// ─── Desktop sidebar ──────────────────────────────────────────────────────────
-
+/**
+ * Discord-style sidebar with:
+ * - Far left: Server list (guild icons)
+ * - Right side: Channel list (navigation categories)
+ */
 function DesktopSidebar() {
-  const [expanded, setExpanded] = useState(false);
-
   return (
-    <aside
-      className={cn(
-        "fixed left-0 top-0 z-40 hidden h-screen flex-col bg-[#1E1F22]",
-        "transition-[width] duration-150 ease-out md:flex",
-        expanded ? "w-56" : "w-14"
-      )}
-      onMouseEnter={() => setExpanded(true)}
-      onMouseLeave={() => setExpanded(false)}
-    >
-      <SidebarContent expanded={expanded} />
-    </aside>
+    <>
+      <ServerList />
+      <ChannelList />
+    </>
   );
 }
 
-// ─── Mobile sidebar ───────────────────────────────────────────────────────────
-
+/**
+ * Mobile sidebar with hamburger menu
+ */
 function MobileSidebar() {
   const [open, setOpen] = useState(false);
 
   return (
     <>
+      {/* Mobile menu button */}
       <button
         onClick={() => setOpen(true)}
-        className="fixed left-3 top-3 z-50 flex h-9 w-9 items-center justify-center rounded-md bg-[#1E1F22] text-[#F1F1F2] md:hidden"
+        className={cn(
+          "fixed left-3 top-3 z-50 flex h-10 w-10 items-center justify-center rounded-full",
+          "bg-[#1E1F22] text-white shadow-lg md:hidden"
+        )}
         aria-label="Open navigation"
       >
         <Menu className="h-5 w-5" />
       </button>
 
+      {/* Mobile sheet with both server and channel lists */}
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="left" className="w-56 p-0 bg-[#1E1F22] border-r border-[#3F4147]">
+        <SheetContent side="left" className="w-[312px] p-0 bg-transparent border-0">
           <SheetTitle className="sr-only">Navigation</SheetTitle>
-          <SidebarContent expanded={true} />
+          <div className="flex h-full">
+            <div className="w-[72px] bg-[#1E1F22]">
+              <ServerList />
+            </div>
+            <div className="w-[240px] bg-[#2B2D31]">
+              <ChannelList />
+            </div>
+          </div>
         </SheetContent>
       </Sheet>
     </>
   );
 }
 
-// ─── Public export ────────────────────────────────────────────────────────────
-
 export function Sidebar() {
   return (
-    <TooltipProvider delayDuration={0}>
-      <DesktopSidebar />
-      <MobileSidebar />
-    </TooltipProvider>
+    <>
+      <div className="hidden md:block">
+        <DesktopSidebar />
+      </div>
+      <div className="md:hidden">
+        <MobileSidebar />
+      </div>
+    </>
   );
 }
