@@ -55,8 +55,8 @@ const config: Config = {
           foreground: "hsl(var(--sidebar-foreground))",
           accent: "hsl(var(--sidebar-accent))",
         },
-        faction: {
-          DEFAULT: "hsl(var(--faction-accent))",
+        Server: {
+          DEFAULT: "hsl(var(--Server-accent))",
         },
         discord: {
           blurple: "#5865F2",
