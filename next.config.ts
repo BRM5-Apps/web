@@ -16,6 +16,12 @@ for (const envVar of requiredEnvVars) {
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Fix for clientReferenceManifest error in Next.js 15
+  outputFileTracing: false,
+  experimental: {
+    // Ensure client components work properly
+    serverActions: {},
+  },
   images: {
     remotePatterns: [
       {
