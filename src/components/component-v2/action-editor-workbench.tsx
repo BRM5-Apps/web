@@ -12,15 +12,25 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { ElementSidebar } from "@/components/elements/element-sidebar";
+import { ChevronLeft, ChevronRight, PanelLeft, MousePointer2, GitBranch, Check, X, ArrowRight, Trash2 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ensureActionGraph, actionGraphToLegacyFlow, isLinearizableGraph, legacyFlowToGraph } from "./action-graph";
-import { makeAction, ActionCard, AddActionDropdown, computeErrors } from "./flow-editor";
+import { makeAction, ActionCard, AddActionDropdown, computeErrors, actionLabel } from "./flow-editor";
+import { ActionFields } from "./action-fields";
+import { VisualActionEditor } from "./visual-action-editor";
+import { ConditionBuilder, createCondition } from "./condition-builder";
 import type {
   ActionGraphDocument,
   ActionGraphEdgeKind,
   ActionGraphNode,
   FlowAction,
   FlowActionType,
-  FaCheck,
 } from "./types";
 
 function uid() {
@@ -49,6 +59,17 @@ export function ActionEditorWorkbench({
   const [mode, setMode] = useState<"linear" | "node">("linear");
   const [draftGraph, setDraftGraph] = useState<ActionGraphDocument>(() => ensureActionGraph(actions, graph));
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>(graph?.entry_node_id);
+  const [leftPanelOpen, setLeftPanelOpen] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("action-editor-panel-open") !== "false";
+    }
+    return true;
+  });
+
+  // Persist panel state
+  useEffect(() => {
+    localStorage.setItem("action-editor-panel-open", String(leftPanelOpen));
+  }, [leftPanelOpen]);
 
   useEffect(() => {
     if (!open) return;
@@ -97,7 +118,7 @@ export function ActionEditorWorkbench({
     const node: ActionGraphNode =
       kind === "action"
         ? { id: uid(), kind, action: makeAction(actionType), position: { x: 0, y: 0 } }
-        : { id: uid(), kind, condition: {}, position: { x: 0, y: 0 } };
+        : { id: uid(), kind, position: { x: 0, y: 0 } };
 
     setDraftGraph((current) => ({
       ...current,
@@ -125,7 +146,7 @@ export function ActionEditorWorkbench({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[96vw] h-[92vh] overflow-hidden p-0">
+      <DialogContent className="max-w-[98vw] h-[96vh] overflow-hidden p-0">
         <DialogTitle className="sr-only">{title}</DialogTitle>
         <div className="flex h-full flex-col bg-[#1e1f22] text-white">
           <div className="flex items-center justify-between border-b border-[#3f4147] px-6 py-4">
@@ -154,11 +175,34 @@ export function ActionEditorWorkbench({
             </div>
           </div>
 
-          <div className="grid min-h-0 flex-1 gap-0 xl:grid-cols-[320px_minmax(0,1fr)_320px]">
-            <div className="min-h-0 border-r border-[#3f4147] bg-[#2b2d31] p-4">
-              {serverId ? <ElementSidebar serverId={serverId} className="h-full border-[#3f4147] bg-[#2b2d31]" /> : null}
+          <div
+            className="grid min-h-0 flex-1 gap-0"
+            style={{
+              gridTemplateColumns:
+                mode === "node"
+                  ? leftPanelOpen
+                    ? "320px 1fr"
+                    : "48px 1fr"
+                  : "320px 1fr 320px",
+            }}
+          >
+            {/* Left Panel - Elements */}
+            <div className="min-h-0 border-r border-[#3f4147] bg-[#2b2d31] flex flex-col">
+              <button
+                onClick={() => setLeftPanelOpen(!leftPanelOpen)}
+                className="w-full h-10 flex items-center justify-center border-b border-[#3f4147] hover:bg-[#3f4147] transition-colors"
+                title={leftPanelOpen ? "Hide elements panel" : "Show elements panel"}
+              >
+                <PanelLeft className={cn("w-5 h-5", !leftPanelOpen && "rotate-180")} />
+              </button>
+              {serverId && leftPanelOpen ? (
+                <div className="flex-1 p-4 overflow-hidden">
+                  <ElementSidebar serverId={serverId} className="h-full border-[#3f4147] bg-[#2b2d31]" />
+                </div>
+              ) : null}
             </div>
 
+            {/* Center - Canvas */}
             <div className="min-h-0 border-r border-[#3f4147]">
               {mode === "linear" ? (
                 <LinearActionPane
@@ -170,26 +214,28 @@ export function ActionEditorWorkbench({
                   onSwitchToNode={() => setMode("node")}
                 />
               ) : (
-                <NodeCanvas
+                <VisualActionEditor
                   graph={draftGraph}
-                  selectedNodeId={selectedNodeId}
-                  onSelect={setSelectedNodeId}
-                  onAddNode={addNode}
+                  onChange={setDraftGraph}
+                  serverId={serverId}
                 />
               )}
             </div>
 
-            <div className="min-h-0 bg-[#232428]">
-              <NodeInspector
-                serverId={serverId}
-                selectedNode={selectedNode}
-                nodeOptions={nodeOptions}
-                graph={draftGraph}
-                onNodeChange={upsertNode}
-                onRemoveNode={removeNode}
-                onSetEdge={setEdge}
-              />
-            </div>
+            {/* Right Panel - Only in linear mode */}
+            {mode === "linear" && (
+              <div className="min-h-0 bg-[#232428]">
+                <NodeInspector
+                  serverId={serverId}
+                  selectedNode={selectedNode}
+                  nodeOptions={nodeOptions}
+                  graph={draftGraph}
+                  onNodeChange={upsertNode}
+                  onRemoveNode={removeNode}
+                  onSetEdge={setEdge}
+                />
+              </div>
+            )}
           </div>
         </div>
       </DialogContent>
@@ -277,56 +323,6 @@ function LinearActionPane({
   );
 }
 
-function NodeCanvas({
-  graph,
-  selectedNodeId,
-  onSelect,
-  onAddNode,
-}: {
-  graph: ActionGraphDocument;
-  selectedNodeId?: string;
-  onSelect: (nodeId: string) => void;
-  onAddNode: (kind: "action" | "condition", actionType?: FlowActionType) => void;
-}) {
-  return (
-    <ScrollArea className="h-full">
-      <div className="space-y-4 p-6">
-        <div className="flex flex-wrap items-center gap-2">
-          <AddActionDropdown onAdd={(type) => onAddNode("action", type)} />
-          <Button variant="outline" onClick={() => onAddNode("condition")}>Add Condition Node</Button>
-        </div>
-        <div className="grid gap-3 md:grid-cols-2">
-          {graph.nodes.map((node) => (
-            <button
-              key={node.id}
-              type="button"
-              onClick={() => onSelect(node.id)}
-              className={cn(
-                "rounded-lg border p-4 text-left transition-colors",
-                selectedNodeId === node.id
-                  ? "border-[#5865F2] bg-[#5865F2]/10"
-                  : "border-[#3f4147] bg-[#111214] hover:border-[#5865F2]/50"
-              )}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <div className="text-xs uppercase tracking-wide text-[#b5bac1]">{node.kind}</div>
-                  <div className="mt-1 text-sm font-semibold">
-                    {node.kind === "action" ? node.action.type : "check_condition"}
-                  </div>
-                </div>
-                {graph.entry_node_id === node.id && (
-                  <span className="rounded bg-[#5865F2] px-2 py-1 text-[10px] font-semibold uppercase">Entry</span>
-                )}
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-    </ScrollArea>
-  );
-}
-
 function NodeInspector({
   serverId,
   selectedNode,
@@ -351,75 +347,219 @@ function NodeInspector({
 
   if (!selectedNode) {
     return (
-      <div className="flex h-full items-center justify-center p-6 text-center text-sm text-[#b5bac1]">
-        Select a node to edit its configuration and connections.
+      <div className="flex h-full flex-col items-center justify-center p-6 text-center">
+        <div className="w-16 h-16 rounded-full bg-[#2b2d31] flex items-center justify-center mb-4">
+          <MousePointer2 className="w-8 h-8 text-[#b5bac1]" />
+        </div>
+        <p className="text-sm font-medium text-white mb-1">No Node Selected</p>
+        <p className="text-xs text-[#b5bac1]">
+          Click on a node in the canvas to edit its properties and connections.
+        </p>
       </div>
     );
   }
 
+  const getEdgeColor = (kind: ActionGraphEdgeKind) => {
+    switch (kind) {
+      case "pass": return "#10b981";
+      case "fail": return "#ef4444";
+      case "next": default: return "#6b7280";
+    }
+  };
+
   return (
     <ScrollArea className="h-full">
       <div className="space-y-5 p-5">
+        {/* Header */}
         <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-semibold">{selectedNode.kind === "action" ? selectedNode.action.type : "condition"}</p>
-            <p className="text-xs text-[#b5bac1]">Node ID: {selectedNode.id}</p>
+          <div className="flex items-center gap-2">
+            <div
+              className="w-3 h-3 rounded-full"
+              style={{ backgroundColor: selectedNode.kind === "action" ? "#5865F2" : "#8b5cf6" }}
+            />
+            <div>
+              <p className="text-sm font-semibold text-white">
+                {selectedNode.kind === "action" ? selectedNode.action.type.replace(/_/g, " ") : "Check Condition"}
+              </p>
+              <p className="text-xs text-[#b5bac1]">ID: {selectedNode.id.slice(0, 8)}...</p>
+            </div>
           </div>
-          <Button variant="destructive" size="sm" onClick={() => onRemoveNode(selectedNode.id)}>Delete</Button>
+          <Button variant="destructive" size="sm" onClick={() => onRemoveNode(selectedNode.id)}>
+            <Trash2 className="w-4 h-4" />
+          </Button>
         </div>
 
-        {selectedNode.kind === "action" ? (
-          <ActionCard
-            action={selectedNode.action}
-            index={0}
-            total={1}
-            serverId={serverId}
-            onChange={(updated) => onNodeChange({ ...selectedNode, action: updated })}
-            onMoveUp={() => {}}
-            onMoveDown={() => {}}
-            onDuplicate={() => {}}
-            onDelete={() => onRemoveNode(selectedNode.id)}
-          />
-        ) : (
-          <div className="space-y-2">
-            <Label>Condition JSON</Label>
-            <textarea
-              rows={8}
-              className="w-full rounded-md border border-[#3f4147] bg-[#111214] px-3 py-2 text-sm outline-none"
-              value={JSON.stringify(selectedNode.condition ?? {}, null, 2)}
-              onChange={(e) => {
-                try {
-                  const next = JSON.parse(e.target.value || "{}");
-                  onNodeChange({ ...selectedNode, condition: next });
-                } catch {
-                  // keep draft text externalized only on valid JSON
-                }
-              }}
-            />
-          </div>
-        )}
+        {/* Configuration Section */}
+        <div className="space-y-3">
+          <Label className="text-xs text-[#b5bac1] uppercase tracking-wide">Configuration</Label>
 
-        <div className="space-y-3 rounded-md border border-[#3f4147] bg-[#111214] p-4">
-          <p className="text-sm font-semibold">Connections</p>
           {selectedNode.kind === "action" ? (
-            <EdgeSelect
-              label="Next"
-              value={nextTarget}
-              options={nodeOptions}
-              sourceId={selectedNode.id}
-              kind="next"
-              onSetEdge={onSetEdge}
-            />
+            <div className="border border-[#3f4147] rounded-md p-4 bg-[#1e1f22]">
+              <ActionFields
+                action={selectedNode.action}
+                onChange={(updated: FlowAction) => onNodeChange({ ...selectedNode, action: updated })}
+                serverId={serverId}
+              />
+            </div>
           ) : (
-            <>
-              <EdgeSelect label="Pass" value={passTarget} options={nodeOptions} sourceId={selectedNode.id} kind="pass" onSetEdge={onSetEdge} />
-              <EdgeSelect label="Fail" value={failTarget} options={nodeOptions} sourceId={selectedNode.id} kind="fail" onSetEdge={onSetEdge} />
-              <EdgeSelect label="After Condition" value={nextTarget} options={nodeOptions} sourceId={selectedNode.id} kind="next" onSetEdge={onSetEdge} />
-            </>
+            <div className="space-y-3">
+              <div className="bg-[#8b5cf6]/10 border border-[#8b5cf6]/30 rounded-md p-3">
+                <div className="flex items-center gap-2 text-[#8b5cf6] mb-1">
+                  <GitBranch className="w-4 h-4" />
+                  <span className="text-sm font-medium">If/Else Branch</span>
+                </div>
+                <p className="text-xs text-[#b5bac1]">
+                  This node splits the flow. Use the connection selectors below to set where each branch goes.
+                </p>
+              </div>
+              <div className="border border-[#3f4147] rounded-md p-3 bg-[#1e1f22]">
+                <ConditionBuilder
+                  condition={selectedNode.condition ?? createCondition("equal")}
+                  onChange={(updated) => updated && onNodeChange({ ...selectedNode, condition: updated })}
+                />
+              </div>
+              {!selectedNode.condition && (
+                <div className="flex gap-2 flex-wrap">
+                  <Button variant="outline" size="sm" onClick={() => onNodeChange({ ...selectedNode, condition: createCondition("equal") })}>
+                    + Equal
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => onNodeChange({ ...selectedNode, condition: createCondition("and") })}>
+                    + And
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => onNodeChange({ ...selectedNode, condition: createCondition("member_has_role") })}>
+                    + Has Role
+                  </Button>
+                </div>
+              )}
+            </div>
           )}
         </div>
+
+        {/* Connections Section */}
+        <div className="space-y-3">
+          <Label className="text-xs text-[#b5bac1] uppercase tracking-wide">Connections</Label>
+
+          <div className="space-y-2">
+            {selectedNode.kind === "action" ? (
+              <ConnectionSelect
+                label="Next"
+                description="Continue to next action"
+                value={nextTarget}
+                options={nodeOptions}
+                sourceId={selectedNode.id}
+                kind="next"
+                color={getEdgeColor("next")}
+                onSetEdge={onSetEdge}
+              />
+            ) : (
+              <>
+                <ConnectionSelect
+                  label="If True"
+                  description="When condition passes"
+                  value={passTarget}
+                  options={nodeOptions}
+                  sourceId={selectedNode.id}
+                  kind="pass"
+                  color={getEdgeColor("pass")}
+                  onSetEdge={onSetEdge}
+                />
+                <ConnectionSelect
+                  label="If False"
+                  description="When condition fails"
+                  value={failTarget}
+                  options={nodeOptions}
+                  sourceId={selectedNode.id}
+                  kind="fail"
+                  color={getEdgeColor("fail")}
+                  onSetEdge={onSetEdge}
+                />
+                <ConnectionSelect
+                  label="After Check"
+                  description="Always continue here after condition"
+                  value={nextTarget}
+                  options={nodeOptions}
+                  sourceId={selectedNode.id}
+                  kind="next"
+                  color={getEdgeColor("next")}
+                  onSetEdge={onSetEdge}
+                />
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Help Section */}
+        {selectedNode.kind === "condition" && (
+          <div className="bg-[#2b2d31] rounded-md p-3 border border-[#3f4147]">
+            <p className="text-xs text-[#b5bac1] mb-2">How If/Else Works:</p>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-[#10b981]" />
+                <span className="text-xs text-white">True (Green) - Condition matches</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-[#ef4444]" />
+                <span className="text-xs text-white">False (Red) - Condition fails</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-[#6b7280]" />
+                <span className="text-xs text-white">After (Grey) - Always runs after</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </ScrollArea>
+  );
+}
+
+function ConnectionSelect({
+  label,
+  description,
+  value,
+  options,
+  sourceId,
+  kind,
+  color,
+  onSetEdge,
+}: {
+  label: React.ReactNode;
+  description?: string;
+  value?: string;
+  options: { id: string; label: string }[];
+  sourceId: string;
+  kind: ActionGraphEdgeKind;
+  color: string;
+  onSetEdge: (source: string, kind: ActionGraphEdgeKind, target?: string) => void;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between">
+        <Label className="text-sm text-white flex items-center gap-2">{label}</Label>
+        {value && (
+          <button
+            onClick={() => onSetEdge(sourceId, kind, undefined)}
+            className="text-[10px] text-red-400 hover:text-red-300"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+      {description && <p className="text-[10px] text-[#b5bac1]">{description}</p>}
+      <select
+        value={value ?? ""}
+        onChange={(e) => onSetEdge(sourceId, kind, e.target.value || undefined)}
+        className="w-full rounded-md border border-[#3f4147] bg-[#1e1f22] px-3 py-2 text-sm text-white outline-none focus:border-[#5865F2]"
+        style={{ borderLeftWidth: "3px", borderLeftColor: value ? color : "transparent" }}
+      >
+        <option value="">No connection</option>
+        {options.map((option) => (
+          <option key={option.id} value={option.id}>
+            {option.label} ({option.id.slice(0, 8)})
+          </option>
+        ))}
+      </select>
+    </div>
   );
 }
 

@@ -767,7 +767,7 @@ export default function MessageBuilderPage() {
         </Card>
 
         {mode === "text" ? (
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid items-start gap-6 lg:grid-cols-2">
             <Card className="space-y-3 p-4">
               <div className="space-y-1">
                 <Label htmlFor="textContent">Message Content</Label>
@@ -786,7 +786,7 @@ export default function MessageBuilderPage() {
               />
             </Card>
 
-            <Card className="p-4">
+            <Card className="h-fit p-4">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div>
                   <h2 className="text-sm font-semibold text-foreground">

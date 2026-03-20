@@ -5,6 +5,7 @@ import type {
   ActionGraphNode,
   FlowAction,
   FaCheck,
+  ConditionNode,
 } from "./types";
 
 function uid() {

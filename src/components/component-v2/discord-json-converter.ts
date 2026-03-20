@@ -333,7 +333,16 @@ function convertAction(action: FlowAction): object {
     case "do_nothing":
       break;
     case "wait":
-      base.seconds = action.seconds;
+      // Convert duration to seconds based on unit
+      const multipliers: Record<string, number> = {
+        seconds: 1,
+        minutes: 60,
+        hours: 3600,
+        days: 86400,
+        weeks: 604800,
+        months: 2592000, // Approximate
+      };
+      base.seconds = action.duration * (multipliers[action.unit] || 1);
       break;
     case "check":
       if (action.condition) {
@@ -345,8 +354,8 @@ function convertAction(action: FlowAction): object {
     case "add_role":
     case "remove_role":
     case "toggle_role":
-      if (action.roleId) {
-        base.role_id = action.roleId;
+      if (action.roleIds && action.roleIds.length > 0) {
+        base.role_ids = action.roleIds;
       }
       break;
     case "send_output":
@@ -755,33 +764,56 @@ function parseAction(raw: unknown): FlowAction | null {
     case "do_nothing":
       return { id, type: "do_nothing" };
 
-    case "wait":
-      return { id, type: "wait", seconds: (obj.seconds as number) ?? 0 };
+    case "wait": {
+      const seconds = (obj.seconds as number) ?? 0;
+      let duration = seconds;
+      let unit: "seconds" | "minutes" | "hours" | "days" | "weeks" | "months" = "seconds";
+
+      // Convert to appropriate unit
+      if (seconds >= 2592000 && seconds % 2592000 === 0) {
+        duration = seconds / 2592000;
+        unit = "months";
+      } else if (seconds >= 604800 && seconds % 604800 === 0) {
+        duration = seconds / 604800;
+        unit = "weeks";
+      } else if (seconds >= 86400 && seconds % 86400 === 0) {
+        duration = seconds / 86400;
+        unit = "days";
+      } else if (seconds >= 3600 && seconds % 3600 === 0) {
+        duration = seconds / 3600;
+        unit = "hours";
+      } else if (seconds >= 60 && seconds % 60 === 0) {
+        duration = seconds / 60;
+        unit = "minutes";
+      }
+
+      return { id, type: "wait", duration, unit };
+    }
 
     case "check":
       return {
         id,
         type: "check",
-        condition: obj.function as Record<string, unknown> | undefined,
+        condition: obj.function as import("./types").ConditionNode | undefined,
         passBranch: parseActions(obj.then as unknown[]),
         failBranch: parseActions(obj.else as unknown[]),
       };
 
     case "add_role":
-      return { id, type: "add_role", roleId: obj.role_id as string | undefined };
+      return { id, type: "add_role", roleIds: (obj.role_ids as string[]) ?? (obj.role_id ? [obj.role_id as string] : []) };
 
     case "remove_role":
       return {
         id,
         type: "remove_role",
-        roleId: obj.role_id as string | undefined,
+        roleIds: (obj.role_ids as string[]) ?? (obj.role_id ? [obj.role_id as string] : []),
       };
 
     case "toggle_role":
       return {
         id,
         type: "toggle_role",
-        roleId: obj.role_id as string | undefined,
+        roleIds: (obj.role_ids as string[]) ?? (obj.role_id ? [obj.role_id as string] : []),
       };
 
     case "send_output":

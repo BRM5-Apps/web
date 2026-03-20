@@ -55,7 +55,7 @@ export function makeAction(type: FlowActionType): FlowAction {
     case "do_nothing":
       return { id: uid(), type: "do_nothing" };
     case "wait":
-      return { id: uid(), type: "wait", seconds: 5 };
+      return { id: uid(), type: "wait", duration: 5, unit: "seconds" };
     case "check":
       return {
         id: uid(),
@@ -65,11 +65,11 @@ export function makeAction(type: FlowActionType): FlowAction {
         failBranch: [],
       };
     case "add_role":
-      return { id: uid(), type: "add_role", roleId: undefined };
+      return { id: uid(), type: "add_role", roleIds: [] };
     case "remove_role":
-      return { id: uid(), type: "remove_role", roleId: undefined };
+      return { id: uid(), type: "remove_role", roleIds: [] };
     case "toggle_role":
-      return { id: uid(), type: "toggle_role", roleId: undefined };
+      return { id: uid(), type: "toggle_role", roleIds: [] };
     case "send_output":
       return {
         id: uid(),
@@ -115,7 +115,7 @@ export function actionLabel(action: FlowAction): string {
     case "do_nothing":
       return "Do Nothing";
     case "wait":
-      return `Wait ${action.seconds}s`;
+      return `Wait ${action.duration}${action.unit === "seconds" ? "s" : action.unit === "minutes" ? "m" : "h"}`;
     case "check":
       return "Check";
     case "add_role":
@@ -144,9 +144,9 @@ export function computeErrors(actions: FlowAction[]): string[] {
       (action.type === "add_role" ||
         action.type === "remove_role" ||
         action.type === "toggle_role") &&
-      !action.roleId
+      !action.roleIds?.length
     ) {
-      errors.push(`Required (actions.${idx}.roleId)`);
+      errors.push(`Required (actions.${idx}.roleIds)`);
     }
     if (action.type === "create_thread" && !action.name.trim()) {
       errors.push(`Required (actions.${idx}.name)`);
@@ -307,17 +307,17 @@ export function ActionFields({ action, onChange, serverId }: ActionFieldsProps) 
       <div className="flex items-center gap-2">
         <button
           type="button"
-          onClick={() => onChange({ ...a, seconds: Math.max(1, a.seconds - 1) })}
+          onClick={() => onChange({ ...a, duration: Math.max(1, a.duration - 1) })}
           className="flex h-7 w-7 items-center justify-center rounded bg-[#1e1f22] border border-[#3f4147] text-white hover:bg-[#3f4147]"
         >
           −
         </button>
         <span className="min-w-[3rem] text-center text-sm text-white">
-          {a.seconds}s
+          {a.duration}s
         </span>
         <button
           type="button"
-          onClick={() => onChange({ ...a, seconds: a.seconds + 1 })}
+          onClick={() => onChange({ ...a, duration: a.duration + 1 })}
           className="flex h-7 w-7 items-center justify-center rounded bg-[#1e1f22] border border-[#3f4147] text-white hover:bg-[#3f4147]"
         >
           +
@@ -378,9 +378,9 @@ export function ActionFields({ action, onChange, serverId }: ActionFieldsProps) 
     const a = action as FaAddRole | FaRemoveRole | FaToggleRole;
     return (
       <select
-        value={a.roleId ?? ""}
+        value={a.roleIds?.[0] ?? ""}
         onChange={(e) =>
-          onChange({ ...a, roleId: e.target.value || undefined } as FlowAction)
+          onChange({ ...a, roleIds: e.target.value ? [e.target.value] : [] } as FlowAction)
         }
         className="w-full rounded bg-[#1e1f22] border border-[#3f4147] px-2 py-1.5 text-sm text-gray-300 outline-none"
       >

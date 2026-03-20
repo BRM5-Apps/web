@@ -104,7 +104,7 @@ export function ComponentV2BuilderV2({
 
   return (
     <div className="space-y-4">
-      <div className="grid max-w-[1000px] gap-6 lg:grid-cols-2">
+      <div className="grid max-w-[1000px] items-start gap-6 lg:grid-cols-2">
           {/* Left: Editor */}
           <div>
             <div className="mb-2">

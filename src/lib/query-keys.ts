@@ -150,4 +150,61 @@ export const queryKeys = {
     detail: (serverId: string, pathId: string) =>
       [...queryKeys.promotionPaths.all(serverId), pathId] as const,
   },
+
+  // ── Platform Extensions ──
+  webhookTriggers: {
+    all: (serverId: string) => ["servers", serverId, "webhook-triggers"] as const,
+    detail: (serverId: string, triggerId: string) =>
+      [...queryKeys.webhookTriggers.all(serverId), triggerId] as const,
+    history: (serverId: string, triggerId: string) =>
+      [...queryKeys.webhookTriggers.detail(serverId, triggerId), "history"] as const,
+  },
+
+  scheduledSequences: {
+    all: (serverId: string) => ["servers", serverId, "scheduled-sequences"] as const,
+    detail: (serverId: string, sequenceId: string) =>
+      [...queryKeys.scheduledSequences.all(serverId), sequenceId] as const,
+    history: (serverId: string, sequenceId: string) =>
+      [...queryKeys.scheduledSequences.detail(serverId, sequenceId), "history"] as const,
+  },
+
+  multiStepModules: {
+    all: (serverId: string) => ["servers", serverId, "multi-step-modules"] as const,
+    detail: (serverId: string, moduleId: string) =>
+      [...queryKeys.multiStepModules.all(serverId), moduleId] as const,
+    sessions: (serverId: string, moduleId: string) =>
+      [...queryKeys.multiStepModules.detail(serverId, moduleId), "sessions"] as const,
+  },
+
+  analytics: {
+    events: (serverId: string, filters?: Record<string, unknown>) =>
+      ["servers", serverId, "analytics", "events", filters] as const,
+    dashboard: (serverId: string) =>
+      ["servers", serverId, "analytics", "dashboard"] as const,
+    summary: (serverId: string, dateRange?: Record<string, unknown>) =>
+      ["servers", serverId, "analytics", "summary", dateRange] as const,
+    userActivity: (serverId: string, userId: string) =>
+      ["servers", serverId, "analytics", "users", userId, "activity"] as const,
+    topEvents: (serverId: string) =>
+      ["servers", serverId, "analytics", "top-events"] as const,
+    metrics: (serverId: string, metricType: string) =>
+      ["servers", serverId, "analytics", "metrics", metricType] as const,
+  },
+
+  marketplace: {
+    templates: (filters?: Record<string, unknown>) =>
+      ["marketplace", "templates", filters] as const,
+    featured: () => ["marketplace", "featured"] as const,
+    detail: (templateId: string) =>
+      ["marketplace", "templates", templateId] as const,
+    ratings: (templateId: string) =>
+      ["marketplace", "templates", templateId, "ratings"] as const,
+    myRating: (templateId: string) =>
+      ["marketplace", "templates", templateId, "my-rating"] as const,
+    stats: (templateId: string) =>
+      ["marketplace", "templates", templateId, "stats"] as const,
+    importHistory: (serverId: string) =>
+      ["servers", serverId, "marketplace", "import-history"] as const,
+    myTemplates: () => ["marketplace", "my-templates"] as const,
+  },
 } as const;

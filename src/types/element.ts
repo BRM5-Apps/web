@@ -5,7 +5,19 @@ export type ElementType =
   | "RANK"
   | "MODULE_FIELD"
   | "CUSTOM_COUNTER"
+  | "CUSTOM_VARIABLE"
   | "STATIC";
+
+export interface CustomVariable {
+  id: string;
+  name: string;
+  key: string;
+  defaultValue?: string;
+  description?: string;
+  scope: "global" | "user" | "session";
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface ElementCounterMeta {
   current_value: number;

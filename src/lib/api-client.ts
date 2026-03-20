@@ -992,4 +992,246 @@ export const api = {
         opts
       ),
   },
+
+  // ── Platform Extensions ──
+  webhookTriggers: {
+    list: (serverId: string, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/platform-extensions").WebhookTrigger[]>(
+        `/servers/${serverId}/webhook-triggers`,
+        undefined,
+        opts
+      ),
+    get: (serverId: string, triggerId: string, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/platform-extensions").WebhookTrigger>(
+        `/servers/${serverId}/webhook-triggers/${triggerId}`,
+        undefined,
+        opts
+      ),
+    create: (serverId: string, data: import("@/types/platform-extensions").CreateWebhookTriggerPayload, opts?: RequestOptions) =>
+      apiClient.post<import("@/types/platform-extensions").WebhookTrigger>(
+        `/servers/${serverId}/webhook-triggers`,
+        data,
+        opts
+      ),
+    update: (serverId: string, triggerId: string, data: import("@/types/platform-extensions").UpdateWebhookTriggerPayload, opts?: RequestOptions) =>
+      apiClient.patch<import("@/types/platform-extensions").WebhookTrigger>(
+        `/servers/${serverId}/webhook-triggers/${triggerId}`,
+        data,
+        opts
+      ),
+    delete: (serverId: string, triggerId: string, opts?: RequestOptions) =>
+      apiClient.delete<void>(`/servers/${serverId}/webhook-triggers/${triggerId}`, opts),
+    history: (serverId: string, triggerId: string, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/platform-extensions").WebhookTriggerExecution[]>(
+        `/servers/${serverId}/webhook-triggers/${triggerId}/history`,
+        undefined,
+        opts
+      ),
+  },
+
+  scheduledSequences: {
+    list: (serverId: string, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/platform-extensions").ScheduledSequence[]>(
+        `/servers/${serverId}/scheduled-sequences`,
+        undefined,
+        opts
+      ),
+    get: (serverId: string, sequenceId: string, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/platform-extensions").ScheduledSequence>(
+        `/servers/${serverId}/scheduled-sequences/${sequenceId}`,
+        undefined,
+        opts
+      ),
+    create: (serverId: string, data: import("@/types/platform-extensions").CreateScheduledSequencePayload, opts?: RequestOptions) =>
+      apiClient.post<import("@/types/platform-extensions").ScheduledSequence>(
+        `/servers/${serverId}/scheduled-sequences`,
+        data,
+        opts
+      ),
+    update: (serverId: string, sequenceId: string, data: import("@/types/platform-extensions").UpdateScheduledSequencePayload, opts?: RequestOptions) =>
+      apiClient.patch<import("@/types/platform-extensions").ScheduledSequence>(
+        `/servers/${serverId}/scheduled-sequences/${sequenceId}`,
+        data,
+        opts
+      ),
+    delete: (serverId: string, sequenceId: string, opts?: RequestOptions) =>
+      apiClient.delete<void>(`/servers/${serverId}/scheduled-sequences/${sequenceId}`, opts),
+    execute: (serverId: string, sequenceId: string, opts?: RequestOptions) =>
+      apiClient.post<void>(`/servers/${serverId}/scheduled-sequences/${sequenceId}/execute`, undefined, opts),
+    history: (serverId: string, sequenceId: string, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/platform-extensions").ScheduledSequenceExecution[]>(
+        `/servers/${serverId}/scheduled-sequences/${sequenceId}/history`,
+        undefined,
+        opts
+      ),
+    validateCron: (data: { cron_expression: string; timezone?: string }, opts?: RequestOptions) =>
+      apiClient.post<import("@/types/platform-extensions").CronValidationResult>(
+        `/scheduled-sequences/validate-cron`,
+        data,
+        opts
+      ),
+  },
+
+  multiStepModules: {
+    list: (serverId: string, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/platform-extensions").MultiStepModule[]>(
+        `/servers/${serverId}/multi-step-modules`,
+        undefined,
+        opts
+      ),
+    get: (serverId: string, moduleId: string, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/platform-extensions").MultiStepModule>(
+        `/servers/${serverId}/multi-step-modules/${moduleId}`,
+        undefined,
+        opts
+      ),
+    create: (serverId: string, data: import("@/types/platform-extensions").CreateMultiStepModulePayload, opts?: RequestOptions) =>
+      apiClient.post<import("@/types/platform-extensions").MultiStepModule>(
+        `/servers/${serverId}/multi-step-modules`,
+        data,
+        opts
+      ),
+    update: (serverId: string, moduleId: string, data: import("@/types/platform-extensions").UpdateMultiStepModulePayload, opts?: RequestOptions) =>
+      apiClient.patch<import("@/types/platform-extensions").MultiStepModule>(
+        `/servers/${serverId}/multi-step-modules/${moduleId}`,
+        data,
+        opts
+      ),
+    delete: (serverId: string, moduleId: string, opts?: RequestOptions) =>
+      apiClient.delete<void>(`/servers/${serverId}/multi-step-modules/${moduleId}`, opts),
+    addStep: (serverId: string, moduleId: string, data: import("@/types/platform-extensions").AddModuleStepPayload, opts?: RequestOptions) =>
+      apiClient.post<import("@/types/platform-extensions").ModuleStep>(
+        `/servers/${serverId}/multi-step-modules/${moduleId}/steps`,
+        data,
+        opts
+      ),
+    updateStep: (serverId: string, moduleId: string, stepId: string, data: import("@/types/platform-extensions").AddModuleStepPayload, opts?: RequestOptions) =>
+      apiClient.patch<import("@/types/platform-extensions").ModuleStep>(
+        `/servers/${serverId}/multi-step-modules/${moduleId}/steps/${stepId}`,
+        data,
+        opts
+      ),
+    deleteStep: (serverId: string, moduleId: string, stepId: string, opts?: RequestOptions) =>
+      apiClient.delete<void>(`/servers/${serverId}/multi-step-modules/${moduleId}/steps/${stepId}`, opts),
+  },
+
+  analytics: {
+    trackEvent: (serverId: string, data: import("@/types/platform-extensions").TrackEventPayload, opts?: RequestOptions) =>
+      apiClient.post<void>(`/servers/${serverId}/analytics-events/track`, data, opts),
+    getEvents: (serverId: string, filters?: Record<string, unknown>, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/platform-extensions").AnalyticsEvent[]>(
+        `/servers/${serverId}/analytics-events/events`,
+        filters,
+        opts
+      ),
+    getDashboard: (serverId: string, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/platform-extensions").DashboardStats>(
+        `/servers/${serverId}/analytics-events/dashboard`,
+        undefined,
+        opts
+      ),
+    getSummary: (serverId: string, dateRange?: Record<string, unknown>, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/platform-extensions").EventSummary>(
+        `/servers/${serverId}/analytics-events/summary`,
+        dateRange,
+        opts
+      ),
+    getUserActivity: (serverId: string, userId: string, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/platform-extensions").UserActivity>(
+        `/servers/${serverId}/analytics-events/users/${userId}/activity`,
+        undefined,
+        opts
+      ),
+    getTopEvents: (serverId: string, opts?: RequestOptions) =>
+      apiClient.get<Array<{ eventType: string; count: number }>>(
+        `/servers/${serverId}/analytics-events/top-events`,
+        undefined,
+        opts
+      ),
+    getMetrics: (serverId: string, metricType: string, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/platform-extensions").AnalyticsMetric[]>(
+        `/servers/${serverId}/analytics-events/metrics/${metricType}`,
+        undefined,
+        opts
+      ),
+  },
+
+  marketplace: {
+    listTemplates: (filters?: Record<string, unknown>, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/platform-extensions").MarketplaceTemplate[]>(
+        `/marketplace/templates`,
+        filters,
+        opts
+      ),
+    searchTemplates: (query: string, filters?: Record<string, unknown>, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/platform-extensions").MarketplaceTemplate[]>(
+        `/marketplace/templates/search`,
+        { q: query, ...filters },
+        opts
+      ),
+    getFeatured: (limit?: number, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/platform-extensions").MarketplaceTemplate[]>(
+        `/marketplace/templates/featured`,
+        limit ? { limit } : undefined,
+        opts
+      ),
+    getTemplate: (templateId: string, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/platform-extensions").MarketplaceTemplate>(
+        `/marketplace/templates/${templateId}`,
+        undefined,
+        opts
+      ),
+    getTemplateStats: (templateId: string, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/platform-extensions").TemplateStats>(
+        `/marketplace/templates/${templateId}/stats`,
+        undefined,
+        opts
+      ),
+    publishTemplate: (templateId: string, data: import("@/types/platform-extensions").PublishTemplatePayload, opts?: RequestOptions) =>
+      apiClient.post<import("@/types/platform-extensions").MarketplaceTemplate>(
+        `/marketplace/templates/${templateId}/publish`,
+        data,
+        opts
+      ),
+    updateTemplate: (templateId: string, data: import("@/types/platform-extensions").UpdateMarketplaceTemplatePayload, opts?: RequestOptions) =>
+      apiClient.patch<import("@/types/platform-extensions").MarketplaceTemplate>(
+        `/marketplace/templates/${templateId}`,
+        data,
+        opts
+      ),
+    unpublishTemplate: (templateId: string, opts?: RequestOptions) =>
+      apiClient.delete<void>(`/marketplace/templates/${templateId}`, opts),
+    rateTemplate: (templateId: string, data: import("@/types/platform-extensions").RateTemplatePayload, opts?: RequestOptions) =>
+      apiClient.post<void>(`/marketplace/templates/${templateId}/rate`, data, opts),
+    getRatings: (templateId: string, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/platform-extensions").MarketplaceRating[]>(
+        `/marketplace/templates/${templateId}/ratings`,
+        undefined,
+        opts
+      ),
+    getMyRating: (templateId: string, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/platform-extensions").MarketplaceRating>(
+        `/marketplace/templates/${templateId}/my-rating`,
+        undefined,
+        opts
+      ),
+    importTemplate: (serverId: string, templateId: string, data?: import("@/types/platform-extensions").ImportTemplatePayload, opts?: RequestOptions) =>
+      apiClient.post<import("@/types/platform-extensions").MarketplaceImport>(
+        `/marketplace/templates/${templateId}/import`,
+        { serverId, ...data },
+        opts
+      ),
+    getImportHistory: (serverId: string, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/platform-extensions").MarketplaceImport[]>(
+        `/servers/${serverId}/marketplace/import-history`,
+        undefined,
+        opts
+      ),
+    getMyTemplates: (opts?: RequestOptions) =>
+      apiClient.get<import("@/types/platform-extensions").MarketplaceTemplate[]>(
+        `/marketplace/my-templates`,
+        undefined,
+        opts
+      ),
+  },
 };

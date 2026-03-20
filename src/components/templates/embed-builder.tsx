@@ -111,7 +111,7 @@ export function EmbedBuilder({ template, isSaving, onSave, onDataChange, submitR
 
   return (
     <FormProvider {...form}>
-      <div className={sidebar ? "grid max-w-[1000px] gap-6 lg:grid-cols-[400px_minmax(0,1fr)] xl:grid-cols-[420px_minmax(0,1fr)]" : "grid gap-6 lg:grid-cols-[400px_1fr] xl:grid-cols-[420px_1fr]"}>
+      <div className={sidebar ? "grid max-w-[1000px] items-start gap-6 lg:grid-cols-[400px_minmax(0,1fr)] xl:grid-cols-[420px_minmax(0,1fr)]" : "grid items-start gap-6 lg:grid-cols-[400px_1fr] xl:grid-cols-[420px_1fr]"}>
           {/* Left: Form */}
           <Card className="p-4">
             <div className="space-y-5">
@@ -203,7 +203,7 @@ export function EmbedBuilder({ template, isSaving, onSave, onDataChange, submitR
           </Card>
 
           {/* Right: Live Preview */}
-          <div className="rounded-md border p-4">
+          <div className="h-fit rounded-md border p-4">
             <div className="mb-3 flex items-center justify-between">
               <div className="text-sm font-medium text-muted-foreground">
                 {sideView === "preview" ? "Live Preview" : "Elements"}
