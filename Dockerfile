@@ -21,20 +21,15 @@ ENV NODE_ENV=production
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
+# Copy standalone output
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-
-# Copy required server files for Next.js 15
-COPY --from=builder --chown=nextjs:nodejs /app/.next/server ./.next/server
-COPY --from=builder --chown=nextjs:nodejs /app/.next/app-build-manifest.json ./.next/
-COPY --from=builder --chown=nextjs:nodejs /app/.next/build-manifest.json ./.next/
-COPY --from=builder --chown=nextjs:nodejs /app/.next/react-loadable-manifest.json ./.next/
-COPY --from=builder --chown=nextjs:nodejs /app/.next/routes-manifest.json ./.next/
 
 USER nextjs
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
+# Use the standalone server.js (doesn't need node_modules)
 CMD ["node", "server.js"]
