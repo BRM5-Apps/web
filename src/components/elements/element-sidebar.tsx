@@ -25,11 +25,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { useServer } from "@/hooks/use-server";
 import { useDiscordGuildInventory } from "@/hooks/use-discord-guild-inventory";
 import { useElements } from "@/hooks/use-elements";
 import { useCustomVariables, generateVariableKey } from "@/hooks/use-custom-variables";
 import { useElementInsertion } from "./element-insertion-provider";
+import { useServer } from "@/hooks/use-server";
 import {
   Dialog,
   DialogContent,
@@ -163,11 +163,17 @@ export function ElementSidebar({
     ? expandedCategoriesRaw
     : [];
 
-  const { data, isLoading } = useElements(serverId);
+  const { data, isLoading, error: elementsError } = useElements(serverId);
+
+  // Use the useServer hook to get discordGuildId
   const server = useServer(serverId);
-  const guildInventory = useDiscordGuildInventory(server.data?.discordGuildId);
+  // Triple-nested: data.server.server.discordGuildId (data -> ServerWithMeta -> inner Server)
+  const discordGuildId = server.data?.server?.server?.discordGuildId ?? undefined;
+
+  const guildInventory = useDiscordGuildInventory(discordGuildId);
   const { insertToken } = useElementInsertion();
   const customVars = useCustomVariables(serverId);
+  const customVarsLoading = !customVars.isLoaded;
 
   const toggleCategory = useCallback((category: string) => {
     setExpandedCategories((prev: unknown) => {
@@ -255,13 +261,23 @@ export function ElementSidebar({
       return acc;
     }, {});
 
-    // Sort categories according to user preference
-    return categoryOrder
-      .filter((cat) => groups[cat] && groups[cat].length > 0)
-      .map((category) => ({
-        category,
-        items: groups[category],
-      }));
+    // Get all categories that have items
+    const allCategories = Object.keys(groups);
+
+    // Sort categories: first by user preference order, then any remaining categories alphabetically
+    const orderedCategories = [
+      // First, categories in the user's preferred order that exist
+      ...categoryOrder.filter((cat) => groups[cat] && groups[cat].length > 0),
+      // Then any other categories not in the order list, sorted alphabetically
+      ...allCategories
+        .filter((cat) => !categoryOrder.includes(cat))
+        .sort((a, b) => a.localeCompare(b)),
+    ];
+
+    return orderedCategories.map((category) => ({
+      category,
+      items: groups[category],
+    }));
   }, [allItems, query, categoryOrder]);
 
   async function copyToken(token: string, id: string) {
@@ -344,7 +360,9 @@ export function ElementSidebar({
     <aside
       className={cn(
         "rounded-lg border border-border bg-card transition-all flex flex-col",
-        collapsed ? "w-[52px]" : "w-full lg:w-[340px]",
+        collapsed ? "w-[52px]" : "w-full",
+        // Only apply fixed width on large screens if no override className is provided
+        collapsed ? "" : "lg:w-[340px]",
         className
       )}
     >
@@ -385,16 +403,27 @@ export function ElementSidebar({
 
           <ScrollArea className="flex-1">
             <div className="space-y-1 p-2">
-              {(isLoading || server.isLoading || guildInventory.isLoading) && (
+              {(isLoading || !discordGuildId || guildInventory.isLoading || customVarsLoading) && (
                 <div className="py-8 text-center">
                   <div className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                   <p className="mt-2 text-sm text-muted-foreground">Loading elements...</p>
                 </div>
               )}
 
-              {!isLoading && !server.isLoading && !guildInventory.isLoading && grouped.length === 0 && (
-                <div className="py-8 text-center">
-                  <p className="text-sm text-muted-foreground">No elements match this search.</p>
+              {!isLoading && discordGuildId && !guildInventory.isLoading && !customVarsLoading && grouped.length === 0 && (
+                <div className="py-8 text-center space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    {query.trim() ? "No elements match this search." : "No elements available."}
+                  </p>
+                  {!query.trim() && (
+                    <p className="text-xs text-muted-foreground">
+                      {elementsError
+                        ? `Elements error: ${elementsError.message}`
+                        : guildInventory.error
+                          ? "Failed to load Discord data. Please refresh the page."
+                          : `Found ${data?.length ?? 0} system elements, ${guildInventory.data?.roles?.length ?? 0} roles, ${guildInventory.data?.channels?.length ?? 0} channels, ${guildInventory.data?.users?.length ?? 0} users.`}
+                    </p>
+                  )}
                 </div>
               )}
 

@@ -181,9 +181,9 @@ export function ActionEditorWorkbench({
               gridTemplateColumns:
                 mode === "node"
                   ? leftPanelOpen
-                    ? "320px 1fr"
-                    : "48px 1fr"
-                  : "320px 1fr 320px",
+                    ? "320px 1fr 320px"
+                    : "48px 1fr 320px"
+                  : "320px 1fr",
             }}
           >
             {/* Left Panel - Elements */}
@@ -222,8 +222,8 @@ export function ActionEditorWorkbench({
               )}
             </div>
 
-            {/* Right Panel - Only in linear mode */}
-            {mode === "linear" && (
+            {/* Right Panel - Only in node mode */}
+            {mode === "node" && (
               <div className="min-h-0 bg-[#232428]">
                 <NodeInspector
                   serverId={serverId}

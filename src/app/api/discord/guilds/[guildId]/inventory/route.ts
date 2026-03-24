@@ -2,84 +2,30 @@ import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
 import type { DiscordGuildInventory, DiscordGuildChannel, DiscordGuildRole, DiscordGuildUser } from "@/types/discord-inventory";
 
-const DISCORD_API_BASE = "https://discord.com/api/v10";
-const MEMBER_PAGE_SIZE = 1000;
-const MAX_MEMBER_PAGES = 20;
-
-interface DiscordApiRole {
-  id: string;
-  name: string;
-  color: number;
-  position: number;
-  managed: boolean;
-}
-
-interface DiscordApiChannel {
-  id: string;
-  name: string;
-  type: number;
-  position: number;
-  parent_id?: string | null;
-}
-
-interface DiscordApiMember {
-  user?: {
+// Response shape from Go backend cache
+interface BackendGuildCache {
+  guildId: string;
+  roles: Array<{
+    id: string;
+    name: string;
+    color: number;
+    position: number;
+    icon?: string;
+  }>;
+  channels: Array<{
+    id: string;
+    name: string;
+    type: number;
+    position: number;
+    parentId?: string;
+  }>;
+  users: Array<{
     id: string;
     username: string;
-    global_name?: string | null;
-    avatar?: string | null;
-    bot?: boolean;
-  };
-}
-
-async function discordBotFetch<T>(path: string, botToken: string): Promise<T> {
-  const response = await fetch(`${DISCORD_API_BASE}${path}`, {
-    headers: {
-      Authorization: `Bot ${botToken}`,
-    },
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Discord API ${response.status}: ${text}`);
-  }
-
-  return response.json() as Promise<T>;
-}
-
-async function fetchAllMembers(guildId: string, botToken: string): Promise<DiscordGuildUser[]> {
-  const members: DiscordGuildUser[] = [];
-  let after = "0";
-
-  for (let page = 0; page < MAX_MEMBER_PAGES; page += 1) {
-    const batch = await discordBotFetch<DiscordApiMember[]>(
-      `/guilds/${guildId}/members?limit=${MEMBER_PAGE_SIZE}&after=${after}`,
-      botToken
-    );
-
-    if (batch.length === 0) {
-      break;
-    }
-
-    for (const member of batch) {
-      if (!member.user) continue;
-      members.push({
-        id: member.user.id,
-        username: member.user.username,
-        global_name: member.user.global_name ?? null,
-        avatar: member.user.avatar ?? null,
-        bot: member.user.bot ?? false,
-      });
-    }
-
-    after = batch[batch.length - 1]?.user?.id ?? after;
-    if (batch.length < MEMBER_PAGE_SIZE) {
-      break;
-    }
-  }
-
-  return members;
+    globalName?: string;
+    avatarUrl?: string;
+    bot: boolean;
+  }>;
 }
 
 export async function GET(
@@ -91,24 +37,45 @@ export async function GET(
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const botToken = process.env.DISCORD_BOT_TOKEN || process.env.TOKEN;
-  if (!botToken) {
-    return NextResponse.json({ error: "Discord bot token is not configured" }, { status: 500 });
-  }
-
   const { guildId } = await context.params;
   if (!guildId) {
     return NextResponse.json({ error: "Missing guild id" }, { status: 400 });
   }
 
-  try {
-    const [rolesResponse, channelsResponse, users] = await Promise.all([
-      discordBotFetch<DiscordApiRole[]>(`/guilds/${guildId}/roles`, botToken),
-      discordBotFetch<DiscordApiChannel[]>(`/guilds/${guildId}/channels`, botToken),
-      fetchAllMembers(guildId, botToken),
-    ]);
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+  const botApiKey = process.env.BOT_API_KEY;
+  if (!botApiKey) {
+    return NextResponse.json({ error: "Bot API key is not configured" }, { status: 500 });
+  }
 
-    const roles: DiscordGuildRole[] = rolesResponse
+  try {
+    // Fetch from Go backend cache (populated by bot event handlers)
+    const response = await fetch(
+      `${apiBaseUrl.replace(/\/$/, "")}/bot/discord-events/guild/${guildId}/cache`,
+      {
+        headers: {
+          "x-bot-api-key": botApiKey,
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+      }
+    );
+
+    if (!response.ok) {
+      const text = await response.text();
+      console.error(`Backend cache fetch failed: ${response.status} ${text}`);
+      return NextResponse.json(
+        { error: `Failed to fetch guild cache: ${response.status}` },
+        { status: response.status }
+      );
+    }
+
+    // Go API wraps responses in {success, data, error} envelope
+    const envelope = await response.json();
+    const cache: BackendGuildCache = envelope.data ?? { guildId, roles: [], channels: [], users: [] };
+
+    // Map cache data to the expected inventory format
+    const roles: DiscordGuildRole[] = cache.roles
       .filter((role) => role.name !== "@everyone")
       .sort((a, b) => b.position - a.position)
       .map((role) => ({
@@ -116,28 +83,38 @@ export async function GET(
         name: role.name,
         color: role.color,
         position: role.position,
-        managed: role.managed,
+        managed: Boolean(role.icon), // roles with icons are often managed (bot roles)
       }));
 
-    const channels: DiscordGuildChannel[] = channelsResponse
+    const channels: DiscordGuildChannel[] = cache.channels
       .sort((a, b) => a.position - b.position)
       .map((channel) => ({
         id: channel.id,
         name: channel.name,
         type: channel.type,
         position: channel.position,
-        parent_id: channel.parent_id ?? null,
+        parent_id: channel.parentId ?? null,
+      }));
+
+    const users: DiscordGuildUser[] = cache.users
+      .sort((a, b) => {
+        const left = a.globalName || a.username;
+        const right = b.globalName || b.username;
+        return left.localeCompare(right);
+      })
+      .map((user) => ({
+        id: user.id,
+        username: user.username,
+        global_name: user.globalName ?? null,
+        avatar: user.avatarUrl ?? null,
+        bot: user.bot,
       }));
 
     const payload: DiscordGuildInventory = {
       guild_id: guildId,
       roles,
       channels,
-      users: users.sort((a, b) => {
-        const left = a.global_name || a.username;
-        const right = b.global_name || b.username;
-        return left.localeCompare(right);
-      }),
+      users,
     };
 
     return NextResponse.json(payload);

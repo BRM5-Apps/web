@@ -103,21 +103,23 @@ export function ComponentV2BuilderV2({
   }, [jsonText]);
 
   return (
-    <div className="space-y-4">
-      <div className="grid max-w-[1000px] items-start gap-6 lg:grid-cols-2">
+    <div className="space-y-4 flex flex-col min-h-0">
+      <div className="grid max-w-[1000px] items-start justify-items-stretch gap-6 lg:grid-cols-2">
           {/* Left: Editor */}
-          <div>
-            <div className="mb-2">
+          <div className="flex flex-col self-start">
+            <div className="mb-1.5 h-6 flex items-center shrink-0">
               <h2 className="text-sm font-semibold text-foreground">Components</h2>
             </div>
-            <div className="overflow-hidden rounded-lg border border-border bg-card">
-              <EditorPanel items={items} onChange={setItems} serverId={serverId} />
+            <div className="rounded-lg border border-border bg-card overflow-hidden">
+              <div className="max-h-[600px] overflow-auto">
+                <EditorPanel items={items} onChange={setItems} serverId={serverId} />
+              </div>
             </div>
           </div>
 
           {/* Right: Preview */}
-          <div>
-            <div className="mb-2 flex items-center justify-between gap-3">
+          <div className="flex flex-col self-start">
+            <div className="mb-1.5 h-6 flex items-center justify-between gap-3 shrink-0">
               <h2 className="text-sm font-semibold text-foreground">
                 {sideView === "preview" ? "Preview" : "Elements"}
               </h2>
@@ -140,12 +142,16 @@ export function ComponentV2BuilderV2({
                 </div>
               ) : null}
             </div>
-            <div className="overflow-hidden rounded-lg border border-border">
-              {sideView === "elements" && sidebar ? (
-                <div className="p-4">{sidebar}</div>
-              ) : (
-                <PreviewPanel items={items} webhookUsername={webhookUsername} webhookAvatarUrl={webhookAvatarUrl} />
-              )}
+            <div className="rounded-lg border border-border bg-card overflow-hidden">
+              <div className="max-h-[600px] overflow-auto">
+                {sideView === "elements" && sidebar ? (
+                  <div className="h-full [&>*]:!w-full [&>*]:!border-0 [&>*]:!bg-transparent [&>*]:!shadow-none">
+                    {sidebar}
+                  </div>
+                ) : (
+                  <PreviewPanel items={items} webhookUsername={webhookUsername} webhookAvatarUrl={webhookAvatarUrl} />
+                )}
+              </div>
             </div>
           </div>
       </div>

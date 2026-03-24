@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/select";
 import { ChevronUp, ChevronDown, Copy, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { DiscordCheckbox } from "@/components/shared/discord-checkbox";
 import { useAllTemplates } from "@/hooks/use-templates";
 import type {
   FlowAction,
@@ -43,6 +44,10 @@ import type {
   SendOutputKind,
   SendOutputTemplateType,
 } from "./types";
+
+// Re-export uid for nested action handling
+export { uid };
+
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -272,15 +277,12 @@ function SendOutputFields({ action, onChange, serverId }: SendOutputFieldsProps)
 
       {/* Hidden (ephemeral) — only relevant for messages */}
       {action.outputKind === "message" && (
-        <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={action.hidden}
-            onChange={(e) => onChange({ ...action, hidden: e.target.checked })}
-            className="accent-[#5865F2]"
-          />
-          Hidden (ephemeral)
-        </label>
+        <DiscordCheckbox
+          checked={action.hidden}
+          onChange={(v) => onChange({ ...action, hidden: v })}
+          label="Hidden (ephemeral)"
+          size="sm"
+        />
       )}
     </div>
   );
@@ -329,44 +331,7 @@ export function ActionFields({ action, onChange, serverId }: ActionFieldsProps) 
   if (action.type === "check") {
     const a = action as FaCheck;
     return (
-      <div className="space-y-2">
-        <select
-          value={a.functionId ?? ""}
-          onChange={(e) =>
-            onChange({ ...a, functionId: e.target.value || undefined })
-          }
-          className="w-full rounded bg-[#1e1f22] border border-[#3f4147] px-2 py-1.5 text-sm text-gray-300 outline-none"
-        >
-          <option value="">Select function…</option>
-        </select>
-        <div className="h-px bg-[#3f4147]" />
-        <div className="rounded bg-[#1e1f22] border border-[#3f4147] p-2 text-xs text-gray-400">
-          <p className="font-medium text-gray-300 mb-1">If passes →</p>
-          <button
-            type="button"
-            className="text-[#5865F2] hover:underline text-xs"
-            onClick={() => {}}
-          >
-            + Add Action
-          </button>
-          {a.passBranch.length === 0 && (
-            <p className="mt-1 italic text-gray-500">No actions</p>
-          )}
-        </div>
-        <div className="rounded bg-[#1e1f22] border border-[#3f4147] p-2 text-xs text-gray-400">
-          <p className="font-medium text-gray-300 mb-1">Otherwise →</p>
-          <button
-            type="button"
-            className="text-[#5865F2] hover:underline text-xs"
-            onClick={() => {}}
-          >
-            + Add Action
-          </button>
-          {a.failBranch.length === 0 && (
-            <p className="mt-1 italic text-gray-500">No actions</p>
-          )}
-        </div>
-      </div>
+      <CheckActionFields action={a} onChange={onChange} />
     );
   }
 
@@ -539,34 +504,25 @@ export function ActionFields({ action, onChange, serverId }: ActionFieldsProps) 
             className="w-full resize-y rounded bg-[#1e1f22] border border-[#3f4147] px-2 py-1.5 text-sm text-white placeholder:text-gray-500 outline-none"
           />
         </div>
-        <div className="space-y-1">
-          <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={a.hidden}
-              onChange={(e) => onChange({ ...a, hidden: e.target.checked })}
-              className="accent-[#5865F2]"
-            />
-            Hidden (ephemeral)
-          </label>
-          <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={a.silent}
-              onChange={(e) => onChange({ ...a, silent: e.target.checked })}
-              className="accent-[#5865F2]"
-            />
-            Silent
-          </label>
-          <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={a.hideEmbeds}
-              onChange={(e) => onChange({ ...a, hideEmbeds: e.target.checked })}
-              className="accent-[#5865F2]"
-            />
-            Hide embeds
-          </label>
+        <div className="space-y-2">
+          <DiscordCheckbox
+            checked={a.hidden}
+            onChange={(v) => onChange({ ...a, hidden: v })}
+            label="Hidden (ephemeral)"
+            size="sm"
+          />
+          <DiscordCheckbox
+            checked={a.silent}
+            onChange={(v) => onChange({ ...a, silent: v })}
+            label="Silent"
+            size="sm"
+          />
+          <DiscordCheckbox
+            checked={a.hideEmbeds}
+            onChange={(v) => onChange({ ...a, hideEmbeds: v })}
+            label="Hide embeds"
+            size="sm"
+          />
         </div>
       </div>
     );
@@ -601,6 +557,186 @@ export function AddActionDropdown({ onAdd }: AddActionDropdownProps) {
         ))}
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+// ── CheckActionFields ───────────────────────────────────────────────────────────
+
+interface CheckActionFieldsProps {
+  action: FaCheck;
+  onChange: (updated: FlowAction) => void;
+}
+
+function CheckActionFields({ action, onChange }: CheckActionFieldsProps) {
+  function addActionToBranch(branch: "passBranch" | "failBranch", type: FlowActionType) {
+    const newAction = makeAction(type);
+    const updatedBranch = [...action[branch], newAction];
+    onChange({
+      ...action,
+      [branch]: updatedBranch,
+    });
+  }
+
+  function updateBranchAction(
+    branch: "passBranch" | "failBranch",
+    index: number,
+    updated: FlowAction
+  ) {
+    const updatedBranch = action[branch].map((a, i) => (i === index ? updated : a));
+    onChange({
+      ...action,
+      [branch]: updatedBranch,
+    });
+  }
+
+  function moveBranchAction(branch: "passBranch" | "failBranch", index: number, direction: -1 | 1) {
+    const arr = [...action[branch]];
+    const target = index + direction;
+    if (target < 0 || target >= arr.length) return;
+    [arr[index], arr[target]] = [arr[target], arr[index]];
+    onChange({
+      ...action,
+      [branch]: arr,
+    });
+  }
+
+  function duplicateBranchAction(branch: "passBranch" | "failBranch", index: number) {
+    const copy = { ...action[branch][index], id: uid() };
+    const updatedBranch = [...action[branch]];
+    updatedBranch.splice(index + 1, 0, copy);
+    onChange({
+      ...action,
+      [branch]: updatedBranch,
+    });
+  }
+
+  function deleteBranchAction(branch: "passBranch" | "failBranch", index: number) {
+    onChange({
+      ...action,
+      [branch]: action[branch].filter((_, i) => i !== index),
+    });
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded bg-[#1e1f22] border border-[#3f4147] p-2">
+        <p className="font-medium text-gray-300 mb-2 text-xs">If passes →</p>
+        <div className="space-y-2">
+          {action.passBranch.map((branchAction, idx) => (
+            <div key={branchAction.id} className="rounded border border-[#5865F2]/30 bg-[#5865F2]/5 p-2">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-medium text-white">{actionLabel(branchAction)}</span>
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    disabled={idx === 0}
+                    onClick={() => moveBranchAction("passBranch", idx, -1)}
+                    className={cn(
+                      "flex h-5 w-5 items-center justify-center rounded text-gray-400 hover:text-white hover:bg-[#3f4147]",
+                      idx === 0 && "opacity-50 cursor-not-allowed"
+                    )}
+                  >
+                    <ChevronUp className="h-3 w-3" />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={idx === action.passBranch.length - 1}
+                    onClick={() => moveBranchAction("passBranch", idx, 1)}
+                    className={cn(
+                      "flex h-5 w-5 items-center justify-center rounded text-gray-400 hover:text-white hover:bg-[#3f4147]",
+                      idx === action.passBranch.length - 1 && "opacity-50 cursor-not-allowed"
+                    )}
+                  >
+                    <ChevronDown className="h-3 w-3" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => duplicateBranchAction("passBranch", idx)}
+                    className="flex h-5 w-5 items-center justify-center rounded text-gray-400 hover:text-white hover:bg-[#3f4147]"
+                  >
+                    <Copy className="h-3 w-3" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => deleteBranchAction("passBranch", idx)}
+                    className="flex h-5 w-5 items-center justify-center rounded text-gray-400 hover:text-red-400 hover:bg-[#3f4147]"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </div>
+              </div>
+              <ActionFields
+                action={branchAction}
+                onChange={(updated) => updateBranchAction("passBranch", idx, updated)}
+              />
+            </div>
+          ))}
+          {action.passBranch.length === 0 && (
+            <p className="text-xs text-gray-500 italic">No actions</p>
+          )}
+          <AddActionDropdown onAdd={(type) => addActionToBranch("passBranch", type)} />
+        </div>
+      </div>
+
+      <div className="rounded bg-[#1e1f22] border border-[#3f4147] p-2">
+        <p className="font-medium text-gray-300 mb-2 text-xs">Otherwise →</p>
+        <div className="space-y-2">
+          {action.failBranch.map((branchAction, idx) => (
+            <div key={branchAction.id} className="rounded border border-[#5865F2]/30 bg-[#5865F2]/5 p-2">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-medium text-white">{actionLabel(branchAction)}</span>
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    disabled={idx === 0}
+                    onClick={() => moveBranchAction("failBranch", idx, -1)}
+                    className={cn(
+                      "flex h-5 w-5 items-center justify-center rounded text-gray-400 hover:text-white hover:bg-[#3f4147]",
+                      idx === 0 && "opacity-50 cursor-not-allowed"
+                    )}
+                  >
+                    <ChevronUp className="h-3 w-3" />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={idx === action.failBranch.length - 1}
+                    onClick={() => moveBranchAction("failBranch", idx, 1)}
+                    className={cn(
+                      "flex h-5 w-5 items-center justify-center rounded text-gray-400 hover:text-white hover:bg-[#3f4147]",
+                      idx === action.failBranch.length - 1 && "opacity-50 cursor-not-allowed"
+                    )}
+                  >
+                    <ChevronDown className="h-3 w-3" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => duplicateBranchAction("failBranch", idx)}
+                    className="flex h-5 w-5 items-center justify-center rounded text-gray-400 hover:text-white hover:bg-[#3f4147]"
+                  >
+                    <Copy className="h-3 w-3" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => deleteBranchAction("failBranch", idx)}
+                    className="flex h-5 w-5 items-center justify-center rounded text-gray-400 hover:text-red-400 hover:bg-[#3f4147]"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </div>
+              </div>
+              <ActionFields
+                action={branchAction}
+                onChange={(updated) => updateBranchAction("failBranch", idx, updated)}
+              />
+            </div>
+          ))}
+          {action.failBranch.length === 0 && (
+            <p className="text-xs text-gray-500 italic">No actions</p>
+          )}
+          <AddActionDropdown onAdd={(type) => addActionToBranch("failBranch", type)} />
+        </div>
+      </div>
+    </div>
   );
 }
 

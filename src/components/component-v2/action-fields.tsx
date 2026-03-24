@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import { Trash2 } from "lucide-react";
 import {
   Select,
@@ -11,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
+import { DiscordCheckbox } from "@/components/shared/discord-checkbox";
 import { useAllTemplates } from "@/hooks/use-templates";
 import type {
   FlowAction,
@@ -299,49 +300,47 @@ function SendOutputFields({
 
       {action.outputKind === "message" && (
         <div className="space-y-3 pt-2 border-t border-[#3f4147]">
-          <Label className="text-xs text-[#b5bac1] uppercase tracking-wide">Message Options</Label>
+          <Label className="text-xs text-[#b5bac1] uppercase tracking-wide">Delivery Mode</Label>
 
-          <div className="flex items-center gap-2">
-            <Switch
+          <div className="flex rounded overflow-hidden border border-[#3f4147]">
+            {(["send", "reply", "edit", "edit_original"] as const).map((mode) => {
+              const labels: Record<string, string> = { send: "Send", reply: "Reply", edit: "Edit", edit_original: "Edit Original" };
+              const isActive =
+                mode === "reply" ? (action.reply || false) :
+                mode === "edit" ? (action.edit || false) :
+                mode === "edit_original" ? (action.editOriginal || false) :
+                !action.reply && !action.edit && !action.editOriginal;
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => {
+                    const base = { ...action, reply: false, edit: false, editOriginal: false, replyEphemeral: false };
+                    if (mode === "reply") onChange({ ...base, reply: true });
+                    else if (mode === "edit") onChange({ ...base, edit: true, hidden: false });
+                    else if (mode === "edit_original") onChange({ ...base, editOriginal: true, hidden: false });
+                    else onChange(base);
+                  }}
+                  className={cn(
+                    "flex-1 py-1.5 text-xs font-medium transition-colors",
+                    isActive ? "bg-[#5865F2] text-white" : "bg-[#1e1f22] text-gray-400 hover:text-white"
+                  )}
+                >
+                  {labels[mode]}
+                </button>
+              );
+            })}
+          </div>
+
+          {!action.edit && !action.editOriginal && (
+            <DiscordCheckbox
               checked={action.hidden}
-              onCheckedChange={(v) => onChange({ ...action, hidden: v, reply: v ? false : action.reply })}
+              onChange={(v) => onChange({ ...action, hidden: v })}
+              label="Ephemeral"
+              description="Only visible to the user who triggered the action"
+              size="sm"
             />
-            <Label className="text-xs text-[#b5bac1]">Hidden (ephemeral)</Label>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Switch
-              checked={action.reply || false}
-              onCheckedChange={(v) => onChange({ ...action, reply: v, hidden: v ? false : action.hidden, edit: v ? false : action.edit })}
-            />
-            <Label className="text-xs text-[#b5bac1]">Reply to triggering message</Label>
-          </div>
-
-          {action.reply && (
-            <div className="flex items-center gap-2 pl-6">
-              <Switch
-                checked={action.replyEphemeral || false}
-                onCheckedChange={(v) => onChange({ ...action, replyEphemeral: v })}
-              />
-              <Label className="text-xs text-[#b5bac1]">Reply as ephemeral</Label>
-            </div>
           )}
-
-          <div className="flex items-center gap-2">
-            <Switch
-              checked={action.edit || false}
-              onCheckedChange={(v) => onChange({ ...action, edit: v, hidden: v ? false : action.hidden, reply: v ? false : action.reply })}
-            />
-            <Label className="text-xs text-[#b5bac1]">Edit triggering message</Label>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Switch
-              checked={action.editOriginal || false}
-              onCheckedChange={(v) => onChange({ ...action, editOriginal: v })}
-            />
-            <Label className="text-xs text-[#b5bac1]">Edit original response</Label>
-          </div>
         </div>
       )}
     </div>
@@ -488,29 +487,24 @@ function StopFields({ action, onChange }: { action: FaStop; onChange: (a: FlowAc
       </div>
 
       <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <Switch
-            checked={action.hidden}
-            onCheckedChange={(v) => onChange({ ...action, hidden: v })}
-          />
-          <Label className="text-xs text-[#b5bac1]">Hidden (ephemeral)</Label>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Switch
-            checked={action.silent}
-            onCheckedChange={(v) => onChange({ ...action, silent: v })}
-          />
-          <Label className="text-xs text-[#b5bac1]">Silent</Label>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Switch
-            checked={action.hideEmbeds}
-            onCheckedChange={(v) => onChange({ ...action, hideEmbeds: v })}
-          />
-          <Label className="text-xs text-[#b5bac1]">Hide Embeds</Label>
-        </div>
+        <DiscordCheckbox
+          checked={action.hidden}
+          onChange={(v) => onChange({ ...action, hidden: v })}
+          label="Hidden (ephemeral)"
+          size="sm"
+        />
+        <DiscordCheckbox
+          checked={action.silent}
+          onChange={(v) => onChange({ ...action, silent: v })}
+          label="Silent"
+          size="sm"
+        />
+        <DiscordCheckbox
+          checked={action.hideEmbeds}
+          onChange={(v) => onChange({ ...action, hideEmbeds: v })}
+          label="Hide Embeds"
+          size="sm"
+        />
       </div>
     </div>
   );

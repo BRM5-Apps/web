@@ -181,8 +181,10 @@ export const api = {
       }>(API_ROUTES.servers.list, undefined, opts);
       return view.items.map((item) => item.server);
     },
-    get: (serverId: string, opts?: RequestOptions) =>
-      apiClient.get<Server>(API_ROUTES.servers.get(serverId), undefined, opts),
+    get: (serverId: string, opts?: RequestOptions) => {
+      // Backend returns ServerWithMeta { server: Server, member_count }
+      return apiClient.get<{ server: Server; member_count: number }>(API_ROUTES.servers.get(serverId), undefined, opts);
+    },
     create: (data: Partial<Server>, opts?: RequestOptions) =>
       apiClient.post<Server>(API_ROUTES.servers.create, data, opts),
     update: (

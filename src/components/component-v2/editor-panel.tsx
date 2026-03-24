@@ -22,6 +22,9 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { DiscordCheckbox } from "@/components/shared/discord-checkbox";
+import { EnhancedEmojiPicker } from "@/components/shared/enhanced-emoji-picker";
+import { FileUploadZone } from "./file-upload-zone";
 import { ButtonEditDialog } from "./button-edit-dialog";
 import { LinkButtonEditDialog } from "./link-button-edit-dialog";
 import { SelectMenuEditDialog } from "./select-menu-edit-dialog";
@@ -366,10 +369,12 @@ function RowLinkButtonItem({ btn, onChange, onDuplicate, onDelete }: RowLinkButt
               placeholder="https://example.com"
             />
           </div>
-          <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
-            <input type="checkbox" checked={btn.disabled} onChange={(e) => onChange({ ...btn, disabled: e.target.checked })} className="accent-[#5865F2]" />
-            Disabled
-          </label>
+          <DiscordCheckbox
+            checked={btn.disabled}
+            onChange={(v) => onChange({ ...btn, disabled: v })}
+            label="Disabled"
+            size="sm"
+          />
         </div>
       )}
     </>
@@ -578,22 +583,69 @@ function RowChildEditor({ child, onChange, serverId }: RowChildEditorProps) {
 interface MediaGalleryChildEditorProps {
   child: C2MediaGallery;
   onChange: (updated: C2MediaGallery) => void;
+  serverId?: string;
 }
 
 function MediaGalleryChildEditor({
   child,
   onChange,
+  serverId,
 }: MediaGalleryChildEditorProps) {
-  void child;
-  void onChange;
+  function addItem() {
+    onChange({ ...child, items: [...child.items, { url: "" }] });
+  }
+
+  function updateItem(index: number, url: string) {
+    const items = [...child.items];
+    items[index] = { url };
+    onChange({ ...child, items });
+  }
+
+  function removeItem(index: number) {
+    onChange({ ...child, items: child.items.filter((_, i) => i !== index) });
+  }
+
   return (
-    <Button
-      variant="ghost"
-      size="sm"
-      className="h-7 text-xs text-[#5865F2] border border-[#5865F2]/40 hover:bg-[#5865F2]/10"
-    >
-      + Add Media
-    </Button>
+    <div className="space-y-2">
+      {child.items.map((item, idx) => (
+        <div key={idx} className="flex items-center gap-2">
+          {item.url && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={item.url}
+              alt=""
+              className="h-8 w-8 rounded object-cover flex-shrink-0 border border-[#3f4147]"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+            />
+          )}
+          <div className="flex-1">
+            <FileUploadZone
+              value={item.url}
+              onChange={(url) => updateItem(idx, url || "")}
+              serverId={serverId}
+              accept="image/*"
+              placeholder="Upload an image or paste URL"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => removeItem(idx)}
+            className="p-1 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded flex-shrink-0"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      ))}
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="h-7 text-xs text-[#5865F2] border border-[#5865F2]/40 hover:bg-[#5865F2]/10"
+        onClick={addItem}
+      >
+        + Add Media
+      </Button>
+    </div>
   );
 }
 
@@ -602,26 +654,19 @@ function MediaGalleryChildEditor({
 interface FileChildEditorProps {
   child: C2File;
   onChange: (updated: C2File) => void;
+  serverId?: string;
 }
 
-function FileChildEditor({ child, onChange }: FileChildEditorProps) {
-  void child;
-  void onChange;
+function FileChildEditor({ child, onChange, serverId }: FileChildEditorProps) {
   return (
-    <div className="flex gap-2">
-      <Button
-        size="sm"
-        className="h-7 text-xs bg-[#5865F2] hover:bg-[#4752c4] text-white"
-      >
-        + Add File
-      </Button>
-      <Button
-        size="sm"
-        variant="outline"
-        className="h-7 text-xs border-[#3f4147] text-gray-300"
-      >
-        Paste File
-      </Button>
+    <div className="space-y-2">
+      <FileUploadZone
+        value={child.fileUrl}
+        onChange={(url) => onChange({ ...child, fileUrl: url })}
+        serverId={serverId}
+        accept="*/*"
+        placeholder="Upload a file to Discord CDN"
+      />
     </div>
   );
 }
@@ -653,15 +698,12 @@ function SeparatorChildEditor({ child, onChange }: SeparatorChildEditorProps) {
           </button>
         ))}
       </div>
-      <label className="flex items-center gap-1.5 text-xs text-gray-300 cursor-pointer">
-        <input
-          type="checkbox"
-          checked={child.dividerLine}
-          onChange={(e) => onChange({ ...child, dividerLine: e.target.checked })}
-          className="accent-[#5865F2]"
-        />
-        Divider Line
-      </label>
+      <DiscordCheckbox
+        checked={child.dividerLine}
+        onChange={(v) => onChange({ ...child, dividerLine: v })}
+        label="Divider Line"
+        size="sm"
+      />
     </div>
   );
 }
@@ -677,6 +719,7 @@ interface SectionEditorProps {
   onMoveDown: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
+  serverId?: string;
 }
 
 function SectionEditor({
@@ -688,6 +731,7 @@ function SectionEditor({
   onMoveDown,
   onDuplicate,
   onDelete,
+  serverId,
 }: SectionEditorProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [linkBtnDialogOpen, setLinkBtnDialogOpen] = useState(false);
@@ -922,30 +966,22 @@ function SectionEditor({
 
                 {section.accessory.type === "thumbnail" && (
                   <div className="space-y-2">
-                    <input
+                    <FileUploadZone
                       value={section.accessory.url}
-                      onChange={(e) => updateThumbnailUrl(e.target.value)}
-                      className={cn(
-                        "w-full rounded bg-[#1e1f22] border px-2 py-1.5 text-xs text-white outline-none placeholder:text-gray-500",
-                        section.accessory.url === "" ? "border-red-500/70" : "border-[#3f4147]"
-                      )}
-                      placeholder="Image URL (jpg, png, webp, gif)"
+                      onChange={(url) => updateThumbnailUrl(url || "")}
+                      serverId={serverId}
+                      accept="image/*"
+                      placeholder="Upload thumbnail to Discord CDN"
                     />
-                    <div className="flex gap-1.5">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 flex-1 text-xs border-[#3f4147] text-gray-300"
-                      >
-                        Paste File
-                      </Button>
-                      <Button
-                        size="sm"
-                        className="h-7 flex-1 text-xs bg-[#5865F2] hover:bg-[#4752c4] text-white"
-                      >
-                        Add File
-                      </Button>
-                    </div>
+                    {section.accessory.url && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={section.accessory.url}
+                        alt="Thumbnail preview"
+                        className="h-16 w-16 rounded object-cover border border-[#3f4147]"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                      />
+                    )}
                     {gifDetected && (
                       <p className="text-xs text-yellow-400/90 bg-yellow-400/10 border border-yellow-400/20 rounded px-2 py-1">
                         GIF detected — consider converting the link so Discord displays it properly.
@@ -1003,6 +1039,7 @@ function ChildItemEditor({
         onMoveDown={onMoveDown}
         onDuplicate={onDuplicate}
         onDelete={onDelete}
+        serverId={serverId}
       />
     );
   }
@@ -1089,12 +1126,14 @@ function ChildItemEditor({
           <MediaGalleryChildEditor
             child={child}
             onChange={(updated) => onChange(updated)}
+            serverId={serverId}
           />
         )}
         {child.type === "file" && (
           <FileChildEditor
             child={child}
             onChange={(updated) => onChange(updated)}
+            serverId={serverId}
           />
         )}
         {child.type === "separator" && (
@@ -1302,17 +1341,12 @@ function ContainerEditor({
       {!container.collapsed && (
         <div className="p-3 space-y-3">
           {/* Spoiler */}
-          <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={container.spoiler}
-              onChange={(e) =>
-                onChange({ ...container, spoiler: e.target.checked })
-              }
-              className="accent-[#5865F2]"
-            />
-            Mark as spoiler
-          </label>
+          <DiscordCheckbox
+            checked={container.spoiler}
+            onChange={(v) => onChange({ ...container, spoiler: v })}
+            label="Mark as spoiler"
+            size="md"
+          />
 
           {/* Sidebar color */}
           <div className="flex items-center gap-3">
@@ -1424,6 +1458,7 @@ function NonContainerTopLevelEditor({
       <MediaGalleryChildEditor
         child={item}
         onChange={(updated) => onChange(updated)}
+        serverId={serverId}
       />
     );
   }
@@ -1432,6 +1467,7 @@ function NonContainerTopLevelEditor({
       <FileChildEditor
         child={item}
         onChange={(updated) => onChange(updated)}
+        serverId={serverId}
       />
     );
   }
@@ -1482,6 +1518,7 @@ function TopLevelItemEditor({
         onMoveDown={onMoveDown}
         onDuplicate={onDuplicate}
         onDelete={onDelete}
+        serverId={serverId}
       />
     );
   }
@@ -1672,7 +1709,7 @@ export function EditorPanel({ items, onChange, serverId }: EditorPanelProps) {
   }
 
   return (
-    <div>
+    <ScrollArea className="h-full w-full">
       <div className="space-y-3 p-4">
         {items.length === 0 && (
           <div className="flex flex-col items-center gap-2 py-10 text-center text-gray-500">
@@ -1702,6 +1739,6 @@ export function EditorPanel({ items, onChange, serverId }: EditorPanelProps) {
           sectionCount={items.filter((i) => i.type === "section").length}
         />
       </div>
-    </div>
+    </ScrollArea>
   );
 }

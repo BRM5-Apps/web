@@ -32,5 +32,6 @@ export function useMessageHistory(serverId: string) {
     queryFn: () => api.messages.history(serverId),
     enabled: Boolean(serverId),
     staleTime: 1000 * 30,
+    retry: false,
   });
 }

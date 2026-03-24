@@ -20,6 +20,7 @@ export function usePermissions(serverId: string) {
     queryKey: queryKeys.permissions.user(serverId),
     queryFn: ({ signal }) => api.permissions.get(serverId, { signal }),
     enabled: !!serverId,
+    retry: false,
   });
 
   const permissions = useMemo(

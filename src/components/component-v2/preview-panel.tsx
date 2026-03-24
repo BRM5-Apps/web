@@ -33,9 +33,11 @@ const BUTTON_COLORS: Record<ButtonStyle, { bg: string; text: string }> = {
 interface PreviewItemProps {
   item: C2TopLevelItem | C2ContainerChild;
   theme: DiscordTheme;
+  revealedSpoilers: Set<string>;
+  onRevealSpoiler: (id: string) => void;
 }
 
-function PreviewItem({ item, theme }: PreviewItemProps) {
+function PreviewItem({ item, theme, revealedSpoilers, onRevealSpoiler }: PreviewItemProps) {
   const tokens = discordThemes[theme];
 
   if (item.type === "text") {
@@ -296,6 +298,7 @@ function PreviewItem({ item, theme }: PreviewItemProps) {
 
   if (item.type === "container") {
     const container = item as C2Container;
+    const isSpoilerHidden = container.spoiler && !revealedSpoilers.has(container.id);
     return (
       <div
         className="relative overflow-hidden rounded-md"
@@ -314,12 +317,12 @@ function PreviewItem({ item, theme }: PreviewItemProps) {
           className={cn(
             "flex flex-col gap-2 p-3",
             container.accentColor && "pl-4",
-            container.spoiler && "blur-sm select-none"
+            isSpoilerHidden && "blur-md select-none"
           )}
         >
           {container.children.length > 0 ? (
             container.children.map((child) => (
-              <PreviewItem key={child.id} item={child} theme={theme} />
+              <PreviewItem key={child.id} item={child} theme={theme} revealedSpoilers={revealedSpoilers} onRevealSpoiler={onRevealSpoiler} />
             ))
           ) : (
             <span
@@ -330,15 +333,21 @@ function PreviewItem({ item, theme }: PreviewItemProps) {
             </span>
           )}
         </div>
-        {container.spoiler && (
+        {isSpoilerHidden && (
           <div
-            className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-md text-xs font-medium"
-            style={{
-              backgroundColor: `${tokens.containerBg}cc`,
-              color: tokens.textSecondary,
+            className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-md transition-opacity hover:opacity-90"
+            style={{ backgroundColor: tokens.containerBg }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onRevealSpoiler(container.id);
             }}
           >
-            Spoiler — click to reveal
+            <span
+              className="rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider shadow-lg"
+              style={{ backgroundColor: "#232428", color: "#b5bac1" }}
+            >
+              Spoiler
+            </span>
           </div>
         )}
       </div>
@@ -358,7 +367,12 @@ export interface PreviewPanelProps {
 
 export function PreviewPanel({ items, webhookUsername, webhookAvatarUrl }: PreviewPanelProps) {
   const [theme, setTheme] = useState<DiscordTheme>("dark");
+  const [revealedSpoilers, setRevealedSpoilers] = useState<Set<string>>(new Set());
   const tokens = discordThemes[theme];
+
+  function handleRevealSpoiler(id: string) {
+    setRevealedSpoilers((prev) => new Set(prev).add(id));
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -392,7 +406,7 @@ export function PreviewPanel({ items, webhookUsername, webhookAvatarUrl }: Previ
       </div>
 
       {/* Preview area */}
-      <div className="flex-1">
+      <ScrollArea className="flex-1">
         <div
           className="min-h-[200px] p-4"
           style={{ backgroundColor: tokens.messageBg }}
@@ -447,14 +461,14 @@ export function PreviewPanel({ items, webhookUsername, webhookAvatarUrl }: Previ
               ) : (
                 <div className="flex flex-col gap-2">
                   {items.map((item) => (
-                    <PreviewItem key={item.id} item={item} theme={theme} />
+                    <PreviewItem key={item.id} item={item} theme={theme} revealedSpoilers={revealedSpoilers} onRevealSpoiler={handleRevealSpoiler} />
                   ))}
                 </div>
               )}
             </div>
           </div>
         </div>
-      </div>
+      </ScrollArea>
     </div>
   );
 }
