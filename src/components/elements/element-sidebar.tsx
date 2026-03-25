@@ -2,8 +2,6 @@
 
 import { useMemo, useState, useCallback, useEffect } from "react";
 import {
-  ChevronLeft,
-  ChevronRight,
   ChevronDown,
   ChevronUp,
   Search,
@@ -11,14 +9,11 @@ import {
   Users,
   Shield,
   Hash,
-  MoreHorizontal,
   Copy,
   Check,
   MousePointerClick,
-  Variable,
   Plus,
   Trash2,
-  Edit,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
@@ -147,7 +142,6 @@ export function ElementSidebar({
   className?: string;
 }) {
   const [query, setQuery] = useState("");
-  const [collapsed, setCollapsed] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isCreateVarOpen, setIsCreateVarOpen] = useState(false);
   const [newVarName, setNewVarName] = useState("");
@@ -165,10 +159,9 @@ export function ElementSidebar({
 
   const { data, isLoading, error: elementsError } = useElements(serverId);
 
-  // Use the useServer hook to get discordGuildId
   const server = useServer(serverId);
-  // Triple-nested: data.server.server.discordGuildId (data -> ServerWithMeta -> inner Server)
-  const discordGuildId = server.data?.server?.server?.discordGuildId ?? undefined;
+  // API returns nested server object: { server: { server: Server }, member_count }
+  const discordGuildId = (server.data as { server?: { server?: { discordGuildId?: string } } })?.server?.server?.discordGuildId ?? undefined;
 
   const guildInventory = useDiscordGuildInventory(discordGuildId);
   const { insertToken } = useElementInsertion();
@@ -359,51 +352,35 @@ export function ElementSidebar({
   return (
     <aside
       className={cn(
-        "rounded-lg border border-border bg-card transition-all flex flex-col",
-        collapsed ? "w-[52px]" : "w-full",
-        // Only apply fixed width on large screens if no override className is provided
-        collapsed ? "" : "lg:w-[340px]",
+        "flex flex-col rounded-lg border border-border bg-card overflow-hidden",
         className
       )}
+      style={{ height: "calc(100vh - 200px)" }}
     >
-      <div className="flex items-center justify-between border-b border-border px-3 py-3">
-        {!collapsed && (
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold">Elements</p>
-            <p className="text-xs text-muted-foreground truncate">
-              Drag or click to insert tokens
-            </p>
-          </div>
-        )}
-        <Button
-          type="button"
-          size="icon"
-          variant="ghost"
-          className="h-8 w-8 shrink-0"
-          onClick={() => setCollapsed((value) => !value)}
-          aria-label={collapsed ? "Expand element sidebar" : "Collapse element sidebar"}
-        >
-          {collapsed ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-        </Button>
+      <div className="flex items-center justify-between border-b border-border px-3 py-3 shrink-0">
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold">Elements</p>
+          <p className="text-xs text-muted-foreground truncate">
+            Drag or click to insert tokens
+          </p>
+        </div>
       </div>
 
-      {!collapsed && (
-        <>
-          <div className="border-b border-border px-3 py-3">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search elements..."
-                className="pl-8 h-9"
-              />
-            </div>
-          </div>
+      <div className="border-b border-border px-3 py-3 shrink-0">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search elements..."
+            className="pl-8 h-9"
+          />
+        </div>
+      </div>
 
-          <ScrollArea className="flex-1">
-            <div className="space-y-1 p-2">
-              {(isLoading || !discordGuildId || guildInventory.isLoading || customVarsLoading) && (
+      <ScrollArea className="flex-1 min-h-0 h-0">
+        <div className="space-y-1 p-2">
+          {(isLoading || !discordGuildId || guildInventory.isLoading || customVarsLoading) && (
                 <div className="py-8 text-center">
                   <div className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                   <p className="mt-2 text-sm text-muted-foreground">Loading elements...</p>
@@ -508,7 +485,7 @@ export function ElementSidebar({
                     </div>
 
                     {isExpanded && (
-                      <div className="p-1.5 space-y-1 bg-background">
+                    <div className="p-1.5 space-y-1 bg-background">
                         {items.map((item) => {
                           const isRole = item.category === "discord_roles" && "roleData" in item;
                           const isUser = item.category === "discord_users" && "userData" in item;
@@ -603,8 +580,6 @@ export function ElementSidebar({
               </DialogFooter>
             </DialogContent>
           </Dialog>
-        </>
-      )}
     </aside>
   );
 }
