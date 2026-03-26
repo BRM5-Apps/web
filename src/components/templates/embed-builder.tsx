@@ -12,6 +12,12 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { EmbedPreview } from "@/components/discord-preview/embed-preview";
 import { type DiscordTheme } from "@/components/discord-preview/discord-theme";
 import { JsonImportDialog } from "@/components/templates/json-import";
@@ -105,9 +111,33 @@ export function EmbedBuilder({ template, isSaving, onSave, onDataChange, submitR
     return () => { submitRef.current = null; };
   }, [submitRef, form]);
 
+  // Use a ref to track the previous values object so we only call onDataChange
+  // when content actually changes — not just when form.watch() returns a new reference.
+  const prevValuesRef = useRef(values);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    onDataChange?.(values);
-  }, [values, onDataChange]);
+    const prev = prevValuesRef.current;
+    const next = values;
+    // Shallow compare all primitive fields; deep compare fields array
+    const hasChanged =
+      next.name !== prev.name ||
+      next.title !== prev.title ||
+      next.description !== prev.description ||
+      next.color !== prev.color ||
+      next.timestamp !== prev.timestamp ||
+      next.isDefault !== prev.isDefault ||
+      next.imageUrl !== prev.imageUrl ||
+      next.thumbnailUrl !== prev.thumbnailUrl ||
+      next.footerText !== prev.footerText ||
+      next.authorName !== prev.authorName ||
+      next.authorIconUrl !== prev.authorIconUrl ||
+      next.authorUrl !== prev.authorUrl ||
+      JSON.stringify(next.fields) !== JSON.stringify(prev.fields);
+    if (hasChanged) {
+      prevValuesRef.current = next;
+      onDataChange?.(next);
+    }
+  });
 
   return (
     <FormProvider {...form}>
@@ -171,8 +201,8 @@ export function EmbedBuilder({ template, isSaving, onSave, onDataChange, submitR
 
             <Separator />
 
-            <Section title="Media">
-              <TextField name="imageUrl" label="Image URL" placeholder="https://..." />
+            <Section title="Images">
+              <TextField name="imageUrl" label="Large Image URL" placeholder="https://..." />
               <TextField name="thumbnailUrl" label="Thumbnail URL" placeholder="https://..." />
             </Section>
 
@@ -187,7 +217,32 @@ export function EmbedBuilder({ template, isSaving, onSave, onDataChange, submitR
               </div>
             </Section>
 
-              <div className="flex gap-2 pt-2">
+            <Separator />
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button type="button" variant="outline" size="sm" className="gap-1.5">
+                  <Plus className="h-4 w-4" />
+                  Add
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="bg-[#2b2d31] border-[#3f4147] text-white">
+                <DropdownMenuItem
+                  onClick={() => {}}
+                  className="cursor-pointer text-sm"
+                >
+                  Add Embed
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {}}
+                  className="cursor-pointer text-sm"
+                >
+                  Add Row
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <div className="flex gap-2 pt-2">
                 <Button type="button" variant="outline" size="sm" onClick={() => setJsonOpen(true)}>
                   <Upload className="mr-2 h-4 w-4" /> Import JSON
                 </Button>
@@ -489,11 +544,14 @@ function TextAreaField({ name, label, placeholder, withVariables, rows = 4 }: Ba
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children }: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div>
-      <div className="mb-2 text-sm font-medium text-muted-foreground">{title}</div>
-      <div className="space-y-3">{children}</div>
+    <div className="space-y-3">
+      <div className="text-sm font-semibold text-muted-foreground">{title}</div>
+      {children}
     </div>
   );
 }

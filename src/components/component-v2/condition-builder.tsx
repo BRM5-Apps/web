@@ -126,7 +126,7 @@ export function createCondition(operator: ConditionOperator): ConditionNode {
   }
 }
 
-function createDefaultCondition(): ConditionNode {
+export function createDefaultCondition(): ConditionNode {
   return {
     id: uid(),
     operator: "equal",

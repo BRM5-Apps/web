@@ -20,6 +20,7 @@ import {
   Keyboard,
   ExternalLink,
   X,
+  BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DiscordCheckbox } from "@/components/shared/discord-checkbox";
@@ -28,6 +29,7 @@ import { FileUploadZone } from "./file-upload-zone";
 import { ButtonEditDialog } from "./button-edit-dialog";
 import { LinkButtonEditDialog } from "./link-button-edit-dialog";
 import { SelectMenuEditDialog } from "./select-menu-edit-dialog";
+import { StatsCardEditDialog } from "./stats-card-edit-dialog";
 import type {
   C2TopLevelItem,
   C2ContainerChild,
@@ -35,6 +37,7 @@ import type {
   C2Text,
   C2Row,
   C2MediaGallery,
+  C2MediaGalleryItem,
   C2File,
   C2Separator,
   C2Button,
@@ -595,9 +598,9 @@ function MediaGalleryChildEditor({
     onChange({ ...child, items: [...child.items, { url: "" }] });
   }
 
-  function updateItem(index: number, url: string) {
+  function updateItem(index: number, item: C2MediaGalleryItem) {
     const items = [...child.items];
-    items[index] = { url };
+    items[index] = item;
     onChange({ ...child, items });
   }
 
@@ -608,43 +611,154 @@ function MediaGalleryChildEditor({
   return (
     <div className="space-y-2">
       {child.items.map((item, idx) => (
-        <div key={idx} className="flex items-center gap-2">
-          {item.url && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={item.url}
-              alt=""
-              className="h-8 w-8 rounded object-cover flex-shrink-0 border border-[#3f4147]"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-            />
-          )}
-          <div className="flex-1">
-            <FileUploadZone
-              value={item.url}
-              onChange={(url) => updateItem(idx, url || "")}
-              serverId={serverId}
-              accept="image/*"
-              placeholder="Upload an image or paste URL"
-            />
+        <MediaGalleryItemEditor
+          key={idx}
+          item={item}
+          onChange={(updated) => updateItem(idx, updated)}
+          serverId={serverId}
+          onRemove={() => removeItem(idx)}
+        />
+      ))}
+      <div className="flex gap-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 text-xs text-[#5865F2] border border-[#5865F2]/40 hover:bg-[#5865F2]/10"
+          onClick={addItem}
+        >
+          + Add Image
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 text-xs text-[#5865F2] border border-[#5865F2]/40 hover:bg-[#5865F2]/10"
+          onClick={() =>
+            onChange({
+              ...child,
+              items: [
+                ...child.items,
+                {
+                  statCard: {
+                    layout: "standard",
+                    width: 600,
+                    height: 400,
+                    backgroundColor: "#1a1a2e",
+                    textColor: "#ffffff",
+                    accentColor: "#5865F2",
+                    borderRadius: 12,
+                    showTitle: true,
+                    title: "Server Statistics",
+                    titleSize: 24,
+                    showTimestamp: true,
+                    footerText: "",
+                    stats: [
+                      { element: "member_count", label: "Members", format: "compact" as const },
+                      { element: "online_count", label: "Online", format: "number" as const },
+                    ],
+                    showGraph: true,
+                    graphType: "line" as const,
+                    graphTimeRange: "30d" as const,
+                    graphColor: "#5865F2",
+                  },
+                },
+              ],
+            })
+          }
+        >
+          + Add Stats Card
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ── MediaGalleryItemEditor ───────────────────────────────────────────────────
+
+interface MediaGalleryItemEditorProps {
+  item: C2MediaGalleryItem;
+  onChange: (updated: C2MediaGalleryItem) => void;
+  serverId?: string;
+  onRemove: () => void;
+}
+
+function MediaGalleryItemEditor({
+  item,
+  onChange,
+  serverId,
+  onRemove,
+}: MediaGalleryItemEditorProps) {
+  const [editOpen, setEditOpen] = useState(false);
+
+  if (item.statCard) {
+    // Compact card display for stat cards — click to open editor dialog
+    const title = item.statCard?.title || "Stats Card";
+    const statCount = item.statCard?.stats?.length ?? 0;
+    return (
+      <>
+        <div
+          className="flex items-center gap-2 rounded border border-[#5865F2]/40 bg-[#5865F2]/10 px-3 py-2 cursor-pointer hover:bg-[#5865F2]/20 transition-colors"
+          onClick={() => setEditOpen(true)}
+        >
+          <BarChart3 className="h-4 w-4 text-[#5865F2] flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-[#DBDEE1] truncate">
+              {title}
+            </p>
+            <p className="text-xs text-[#B5BAC1]">
+              {statCount} stat{statCount !== 1 ? "s" : ""}
+              {item.statCard?.showGraph ? " · Graph" : ""}
+            </p>
           </div>
+          <span className="text-xs text-[#80848E]">Click to edit</span>
           <button
             type="button"
-            onClick={() => removeItem(idx)}
+            onClick={(e) => { e.stopPropagation(); onRemove(); }}
             className="p-1 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded flex-shrink-0"
           >
             <Trash2 className="h-3.5 w-3.5" />
           </button>
         </div>
-      ))}
-      <Button
+        <StatsCardEditDialog
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          statCard={item.statCard}
+          serverId={serverId}
+          onChange={(statCard) => onChange({ url: undefined, statCard })}
+        />
+      </>
+    );
+  }
+
+  // Static URL mode
+  return (
+    <div className="flex items-center gap-2">
+      {item.url && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={item.url}
+          alt=""
+          className="h-8 w-8 rounded object-cover flex-shrink-0 border border-[#3f4147]"
+          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+        />
+      )}
+      <div className="flex-1">
+        <FileUploadZone
+          value={item.url}
+          onChange={(url) => onChange({ url: url || "", statCard: undefined })}
+          serverId={serverId}
+          accept="image/*"
+          placeholder="Upload an image or paste URL"
+        />
+      </div>
+      <button
         type="button"
-        variant="ghost"
-        size="sm"
-        className="h-7 text-xs text-[#5865F2] border border-[#5865F2]/40 hover:bg-[#5865F2]/10"
-        onClick={addItem}
+        onClick={onRemove}
+        className="p-1 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded flex-shrink-0"
       >
-        + Add Media
-      </Button>
+        <Trash2 className="h-3.5 w-3.5" />
+      </button>
     </div>
   );
 }
@@ -1233,7 +1347,7 @@ function ContainerEditor({
   onDelete,
   serverId,
 }: ContainerEditorProps) {
-  function toggleCollapse() {
+  function toggleChildrenCollapse() {
     onChange({ ...container, collapsed: !container.collapsed });
   }
 
@@ -1280,9 +1394,9 @@ function ContainerEditor({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={toggleCollapse}
+            onClick={toggleChildrenCollapse}
             className="text-gray-400 hover:text-white"
-            title={container.collapsed ? "Expand" : "Collapse"}
+            title={container.collapsed ? "Expand content" : "Collapse content"}
           >
             <ChevronRight
               className={cn(
@@ -1337,47 +1451,63 @@ function ContainerEditor({
         </div>
       </div>
 
-      {/* Body */}
-      {!container.collapsed && (
-        <div className="p-3 space-y-3">
-          {/* Spoiler */}
-          <DiscordCheckbox
-            checked={container.spoiler}
-            onChange={(v) => onChange({ ...container, spoiler: v })}
-            label="Mark as spoiler"
-            size="md"
-          />
+      {/* Config — always visible */}
+      <div className="px-3 py-2 border-t border-[#3f4147]/50 space-y-2">
+        {/* Spoiler */}
+        <DiscordCheckbox
+          checked={container.spoiler}
+          onChange={(v) => onChange({ ...container, spoiler: v })}
+          label="Mark as spoiler"
+          size="md"
+        />
 
-          {/* Sidebar color */}
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-300">Sidebar Color</span>
-            <div className="flex items-center gap-2">
-              <input
-                type="color"
-                value={container.accentColor ?? "#5865F2"}
-                onChange={(e) =>
-                  onChange({ ...container, accentColor: e.target.value })
-                }
-                className="sr-only"
-                id={`color-${container.id}`}
-              />
-              <label
-                htmlFor={`color-${container.id}`}
-                className="cursor-pointer flex items-center gap-2 rounded border border-[#3f4147] bg-[#1e1f22] px-3 py-1.5 text-sm text-gray-300 hover:bg-[#3f4147]"
-              >
-                Click to Set
-                {container.accentColor && (
-                  <span
-                    className="h-4 w-4 rounded-sm border border-[#3f4147] inline-block flex-shrink-0"
-                    style={{ backgroundColor: container.accentColor }}
-                  />
-                )}
-              </label>
-            </div>
+        {/* Sidebar color */}
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-gray-300">Sidebar Color</span>
+          <div className="flex items-center gap-2">
+            <input
+              type="color"
+              value={container.accentColor ?? "#5865F2"}
+              onChange={(e) =>
+                onChange({ ...container, accentColor: e.target.value })
+              }
+              className="sr-only"
+              id={`color-${container.id}`}
+            />
+            <label
+              htmlFor={`color-${container.id}`}
+              className="cursor-pointer flex items-center gap-2 rounded border border-[#3f4147] bg-[#1e1f22] px-3 py-1.5 text-sm text-gray-300 hover:bg-[#3f4147]"
+            >
+              Click to Set
+              {container.accentColor && (
+                <span
+                  className="h-4 w-4 rounded-sm border border-[#3f4147] inline-block flex-shrink-0"
+                  style={{ backgroundColor: container.accentColor }}
+                />
+              )}
+            </label>
           </div>
+        </div>
+      </div>
 
-          {/* Children */}
-          <div className="space-y-2">
+      {/* Children — collapsible */}
+      <div className="border-t border-[#3f4147]/50">
+        <button
+          type="button"
+          onClick={toggleChildrenCollapse}
+          className="flex items-center gap-2 w-full px-3 py-2 text-xs text-gray-400 hover:text-white hover:bg-[#3f4147]/50 transition-colors"
+        >
+          <ChevronRight
+            className={cn("h-3 w-3 transition-transform", !container.collapsed && "rotate-90")}
+          />
+          Content
+          <span className="ml-auto text-[#5865F2]">
+            {container.children.length} item{container.children.length !== 1 ? "s" : ""}
+          </span>
+        </button>
+
+        {!container.collapsed && (
+          <div className="px-3 pb-3 space-y-2">
             {container.children.map((child, childIdx) => (
               <ChildItemEditor
                 key={child.id}
@@ -1392,14 +1522,14 @@ function ContainerEditor({
                 serverId={serverId}
               />
             ))}
-          </div>
 
-          <AddChildDropdown
-            onAdd={addChild}
-            sectionCount={container.children.filter((c) => c.type === "section").length}
-          />
-        </div>
-      )}
+            <AddChildDropdown
+              onAdd={addChild}
+              sectionCount={container.children.filter((c) => c.type === "section").length}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

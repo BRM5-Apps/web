@@ -68,18 +68,21 @@ export interface ScheduledSequence {
   name: string;
   description?: string;
   serverId: string;
-  cronExpression: string;
+  trigger_type: "TIME" | "EVENT";
+  event_type?: string;
+  cron_expression?: string;
   timezone: string;
-  actionSequenceId: string;
-  isActive: boolean;
-  lastRunAt?: string;
-  nextRunAt?: string;
-  runCount: number;
-  maxRuns?: number;
-  endDate?: string;
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
+  action_sequence_id: string;
+  is_active: boolean;
+  last_run_at?: string;
+  next_run_at?: string;
+  run_count: number;
+  fail_count?: number;
+  max_runs?: number;
+  end_date?: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface ScheduledSequenceExecution {
@@ -95,22 +98,26 @@ export interface ScheduledSequenceExecution {
 export interface CreateScheduledSequencePayload {
   name: string;
   description?: string;
-  cronExpression: string;
+  trigger_type?: "TIME" | "EVENT";
+  event_type?: string;
+  cron_expression?: string;
   timezone?: string;
-  actionSequenceId: string;
-  maxRuns?: number;
-  endDate?: string;
+  action_sequence_id: string;
+  max_runs?: number;
+  end_date?: string;
 }
 
 export interface UpdateScheduledSequencePayload {
   name?: string;
   description?: string;
-  cronExpression?: string;
+  trigger_type?: "TIME" | "EVENT";
+  event_type?: string;
+  cron_expression?: string;
   timezone?: string;
-  actionSequenceId?: string;
-  isActive?: boolean;
-  maxRuns?: number;
-  endDate?: string;
+  action_sequence_id?: string;
+  is_active?: boolean;
+  max_runs?: number;
+  end_date?: string;
 }
 
 export interface CronValidationResult {

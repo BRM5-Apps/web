@@ -111,9 +111,7 @@ export function ComponentV2BuilderV2({
               <h2 className="text-sm font-semibold text-foreground">Components</h2>
             </div>
             <div className="rounded-lg border border-border bg-card overflow-hidden">
-              <div className="max-h-[600px] overflow-auto">
-                <EditorPanel items={items} onChange={setItems} serverId={serverId} />
-              </div>
+              <EditorPanel items={items} onChange={setItems} serverId={serverId} />
             </div>
           </div>
 
@@ -143,15 +141,13 @@ export function ComponentV2BuilderV2({
               ) : null}
             </div>
             <div className="rounded-lg border border-border bg-card overflow-hidden">
-              <div className="max-h-[600px] overflow-auto">
-                {sideView === "elements" && sidebar ? (
-                  <div className="h-full [&>*]:!w-full [&>*]:!border-0 [&>*]:!bg-transparent [&>*]:!shadow-none">
-                    {sidebar}
-                  </div>
-                ) : (
-                  <PreviewPanel items={items} webhookUsername={webhookUsername} webhookAvatarUrl={webhookAvatarUrl} />
-                )}
-              </div>
+              {sideView === "elements" && sidebar ? (
+                <div className="h-full [&>*]:!w-full [&>*]:!border-0 [&>*]:!bg-transparent [&>*]:!shadow-none">
+                  {sidebar}
+                </div>
+              ) : (
+                <PreviewPanel items={items} webhookUsername={webhookUsername} webhookAvatarUrl={webhookAvatarUrl} />
+              )}
             </div>
           </div>
       </div>

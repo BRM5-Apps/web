@@ -89,10 +89,44 @@ export interface C2Section {
   accessory?: C2Accessory;
 }
 
+export interface C2MediaGalleryItem {
+  url?: string;                      // Static URL (existing)
+  statCard?: DynamicStatsCardConfig; // Stats card config (Advanced Mode)
+}
+
+export interface StatCardConfig {
+  element: string;      // Element key
+  label: string;        // Display label
+  format: "number" | "compact" | "percent";
+  color?: string;       // Optional override
+}
+
+export interface GraphConfig {
+  show: boolean;
+  type: "line" | "bar" | "area" | "donut";
+  timeRange: "7d" | "14d" | "30d";
+  color: string;
+}
+
+export interface CardStyleConfig {
+  layout: "compact" | "standard" | "detailed";
+  width: number;
+  height: number;
+  backgroundColor: string;
+  textColor: string;
+  accentColor: string;
+  borderRadius: number;
+  showTitle: boolean;
+  title: string;
+  titleSize: number;
+  showTimestamp: boolean;
+  footerText: string;
+}
+
 export interface C2MediaGallery {
   id: string;
   type: "media_gallery";
-  items: { url: string }[];
+  items: C2MediaGalleryItem[];
 }
 
 export interface C2File {
@@ -448,4 +482,54 @@ export interface ActionGraphDocument {
   entry_node_id?: string;
   nodes: ActionGraphNode[];
   edges: ActionGraphEdge[];
+}
+
+// ── Advanced Stats Card Types ────────────────────────────────────────────────
+
+// ValueSource for stats card bindings — typed reference to a runtime value
+export type StatsCardValueSource =
+  | { type: "server_stat"; key: string }
+  | { type: "element"; key: string }
+  | { type: "variable"; key: string }
+  | { type: "literal"; value: number | string };
+
+// Binding for a single stat's value and optional color
+export interface StatsCardStatBindingEntry {
+  value: StatsCardValueSource;
+  color?: StatsCardValueSource;
+}
+
+// Binding for the graph's data series
+export interface StatsCardGraphBinding {
+  data?: StatsCardValueSource;
+}
+
+// Full bindings map for Advanced Mode
+export interface StatsCardBindingConfig {
+  stats?: Record<string, StatsCardStatBindingEntry>;
+  graph?: StatsCardGraphBinding;
+}
+
+// Extended DynamicStatsCardConfig with computation layer
+export interface DynamicStatsCardConfig {
+  layout: "compact" | "standard" | "detailed";
+  width: number;
+  height: number;
+  backgroundColor: string;
+  textColor: string;
+  accentColor: string;
+  borderRadius: number;
+  showTitle: boolean;
+  title: string;
+  titleSize: number;
+  showTimestamp: boolean;
+  footerText: string;
+  stats: StatCardConfig[];
+  showGraph: boolean;
+  graphType: "line" | "bar" | "area" | "donut";
+  graphTimeRange: "7d" | "14d" | "30d";
+  graphColor: string;
+  // Computation layer (Advanced Mode) — undefined = Basic Mode
+  computation?: ActionGraphDocument;
+  bindings?: StatsCardBindingConfig;
 }

@@ -144,6 +144,7 @@ function PreviewItem({ item, theme, revealedSpoilers, onRevealSpoiler }: Preview
   if (item.type === "media_gallery") {
     const galleryItem = item as C2MediaGallery;
     const validItems = galleryItem.items.filter((it) => {
+      if (!it.url) return !!it.statCard;
       try {
         new URL(it.url);
         return true;

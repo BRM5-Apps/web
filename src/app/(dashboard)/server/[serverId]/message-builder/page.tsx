@@ -578,7 +578,7 @@ export default function MessageBuilderPage() {
 
   return (
     <ElementInsertionProvider>
-      <div className="mx-auto max-w-[1000px] space-y-6">
+      <div className="mx-auto max-w-[90vw] space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Message Builder</h1>
           <p className="text-muted-foreground">

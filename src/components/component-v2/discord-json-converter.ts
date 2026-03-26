@@ -291,7 +291,21 @@ function convertSelectOption(opt: SelectOption): object {
 function convertMediaGallery(mg: C2MediaGallery): object {
   return {
     type: 12,
-    items: mg.items.map((item) => ({ media: { url: item.url } })),
+    items: mg.items.map((item) => {
+      if (item.url) {
+        return { media: { url: item.url } };
+      }
+      if (item.statCard) {
+        // Stat cards are resolved server-side; embed config in token
+        const encoded = btoa(JSON.stringify(item.statCard));
+        return {
+          media: {
+            url: `{{stats_card:${encoded}}}`
+          }
+        };
+      }
+      return { media: { url: "" } };
+    }),
   };
 }
 
@@ -687,7 +701,20 @@ function parseMediaGallery(obj: Record<string, unknown>): C2MediaGallery {
     type: "media_gallery",
     items: rawItems.map((item) => {
       const media = item.media as Record<string, unknown> | undefined;
-      return { url: (media?.url as string) ?? "" };
+      const url = (media?.url as string) ?? "";
+
+      // Check for embedded stat card token: {{stats_card:<base64>}}
+      const statCardMatch = url.match(/^\{\{stats_card:(.+)\}\}$/);
+      if (statCardMatch) {
+        try {
+          const decoded = JSON.parse(atob(statCardMatch[1]));
+          return { statCard: decoded };
+        } catch {
+          return { url };
+        }
+      }
+
+      return { url };
     }),
   };
 }

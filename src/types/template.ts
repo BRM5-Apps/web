@@ -56,6 +56,7 @@ export interface ModalTemplate {
 export interface ScheduledMessage {
   id: string;
   serverId: string;
+  name: string;
   embedTemplateId?: string;
   textTemplateId?: string;
   containerTemplateId?: string;
@@ -65,6 +66,10 @@ export interface ScheduledMessage {
   isActive: boolean;
   lastSentAt?: string;
   createdAt: string;
+  // Edit mode
+  edit_mode?: "SEND_NEW" | "EDIT_PREVIOUS";
+  linked_message_schedule_id?: string;
+  discord_message_id?: string;
 }
 
 export interface MessageSend {

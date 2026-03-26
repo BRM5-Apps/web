@@ -17,6 +17,7 @@ export default function ModalBuilderPage() {
         </p>
       </div>
       <DiscordModalBuilder
+        guildId={serverId}
         onSave={(pages, settings) => {
           const name = pages[0]?.title?.trim() || `Modal ${new Date().toLocaleTimeString()}`;
           createModal.mutate({ name, template_data: { pages, settings } });
