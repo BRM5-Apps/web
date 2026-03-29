@@ -4,6 +4,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ComponentType } from "react";
 import { EmbedBuilder, type EmbedFormData } from "@/components/templates/embed-builder";
 import { ComponentV2BuilderV2 } from "@/components/component-v2";
+import { MessagePreview } from "@/components/discord-preview/message-preview";
 import type { C2TopLevelItem } from "@/components/component-v2";
 import { ElementInsertionProvider } from "@/components/elements/element-insertion-provider";
 import { ElementSidebar } from "@/components/elements/element-sidebar";
@@ -914,27 +915,11 @@ export default function MessageBuilderPage() {
               </div>
 
               {textSideView === "preview" ? (
-                <div className="rounded-lg border border-border bg-[#313338] p-4 text-sm text-[#f2f3f5]">
-                  <div className="mb-2 flex items-center gap-2">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#5865F2] text-sm font-bold text-white">
-                      {webhookUsername ? webhookUsername[0]?.toUpperCase() : "B"}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold">{webhookUsername || "BRM5 Bot"}</span>
-                        <span className="rounded bg-[#5865F2] px-1 text-[10px] font-semibold uppercase text-white">
-                          BOT
-                        </span>
-                      </div>
-                      <p className="text-xs text-[#949ba4]">
-                        Today at {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="min-h-[320px] whitespace-pre-wrap break-words rounded-md bg-black/10 p-3">
-                    {textContent || <span className="text-[#949ba4]">Nothing to preview yet.</span>}
-                  </div>
-                </div>
+                <MessagePreview
+                  botName={webhookUsername || "BRM5 Bot"}
+                  botAvatarUrl={webhookAvatarUrl}
+                  content={textContent || "Nothing to preview yet."}
+                />
               ) : (
                 <ElementSidebar serverId={serverId} className="w-full border-0 bg-transparent shadow-none" />
               )}
