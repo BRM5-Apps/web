@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Shield, CheckCircle, XCircle, Loader2, Save, Link, ExternalLink, Settings } from "lucide-react";
+import { Shield, CheckCircle, XCircle, Loader2, Save, Link as LinkIcon, ExternalLink, Settings } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -242,7 +242,7 @@ export default function VerificationSettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Link className="h-5 w-5 text-muted-foreground" />
+            <LinkIcon className="h-5 w-5 text-muted-foreground" />
             Roblox Group Verification
           </CardTitle>
           <CardDescription>
@@ -422,7 +422,7 @@ export default function VerificationSettingsPage() {
           {groupVerificationEnabled && (
             <div className="flex gap-3">
               <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center">
-                <Link className="h-4 w-4 text-purple-500" />
+                <LinkIcon className="h-4 w-4 text-purple-500" />
               </div>
               <div>
                 <h4 className="font-medium">Group Join (Optional)</h4>
