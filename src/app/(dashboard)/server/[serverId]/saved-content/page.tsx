@@ -38,6 +38,7 @@ import {
   GitBranch,
   FolderOpen,
   LayoutGrid,
+  Settings,
 } from "lucide-react";
 
 export default function SavedContentPage() {
@@ -115,6 +116,10 @@ export default function SavedContentPage() {
             <TabsTrigger value="automations">
               <GitBranch className="mr-1.5 h-4 w-4" />
               Automations
+            </TabsTrigger>
+            <TabsTrigger value="defaults">
+              <Settings className="mr-1.5 h-4 w-4" />
+              Defaults
             </TabsTrigger>
           </TabsList>
           <div className="flex items-center gap-2">
@@ -660,6 +665,26 @@ export default function SavedContentPage() {
               </PermissionGate>
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="defaults" className="space-y-4">
+          <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-12 text-center">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+              <Settings className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <h3 className="font-medium">Default Messages</h3>
+            <p className="mt-1 text-sm text-muted-foreground max-w-md">
+              Customize default messages used throughout your server, such as verification prompts, welcome messages, and error responses.
+            </p>
+            <PermissionGate permission={PERMISSION_KEYS.TEMPLATES_MANAGE}>
+              <Link href={`/server/${serverId}/saved-content/defaults`} className="mt-4">
+                <Button size="sm">
+                  <Settings className="mr-1.5 h-4 w-4" />
+                  Manage Default Messages
+                </Button>
+              </Link>
+            </PermissionGate>
+          </div>
         </TabsContent>
       </Tabs>
 
