@@ -9,7 +9,8 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { ContainerPreview, type DiscordContainerComponent } from "@/components/discord-preview/container-preview";
+import { MessagePreview } from "@/components/discord-preview/message-preview";
+import { type DiscordContainerComponent } from "@/components/discord-preview/container-preview";
 import { type DiscordButtonStyle } from "@/components/discord-preview/button-preview";
 import { type DiscordTheme } from "@/components/discord-preview/discord-theme";
 import { JsonImportDialog } from "@/components/templates/json-import";
@@ -34,9 +35,13 @@ export interface ContainerBuilderProps {
   isSaving?: boolean;
   /** Optional ref — parent can call submitRef.current?.() to trigger save */
   submitRef?: React.MutableRefObject<(() => void) | null>;
+  /** Bot name for the preview header */
+  webhookUsername?: string;
+  /** Bot avatar URL for the preview header */
+  webhookAvatarUrl?: string;
 }
 
-export function ContainerBuilder({ template, onSave, isSaving, submitRef }: ContainerBuilderProps) {
+export function ContainerBuilder({ template, onSave, isSaving, submitRef, webhookUsername, webhookAvatarUrl }: ContainerBuilderProps) {
   const form = useForm<{ name: string; accentColor?: string }>({
     resolver: zodResolver(containerSchema),
     defaultValues: { name: template?.name ?? "", accentColor: (template?.template_data as any)?.accentColor ?? "" },
@@ -231,7 +236,12 @@ export function ContainerBuilder({ template, onSave, isSaving, submitRef }: Cont
             )}
           </Button>
         </div>
-        <ContainerPreview components={components} accentColor={form.watch("accentColor") || undefined} discordTheme={discordTheme} />
+        <MessagePreview
+          botName={webhookUsername || "BRM5 Bot"}
+          botAvatarUrl={webhookAvatarUrl}
+          container={{ components }}
+          discordTheme={discordTheme}
+        />
       </Card>
 
       <JsonImportDialog

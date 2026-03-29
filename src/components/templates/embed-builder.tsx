@@ -19,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { EmbedPreview } from "@/components/discord-preview/embed-preview";
+import { MessagePreview } from "@/components/discord-preview/message-preview";
 import { type DiscordTheme } from "@/components/discord-preview/discord-theme";
 import { JsonImportDialog } from "@/components/templates/json-import";
 import { FieldEditor } from "@/components/templates/field-editor";
@@ -303,54 +304,23 @@ export function EmbedBuilder({ template, isSaving, onSave, onDataChange, submitR
             {sideView === "elements" && sidebar ? (
               <div>{sidebar}</div>
             ) : (
-            <div className="flex items-start gap-3">
-            {/* Bot avatar */}
-            {webhookAvatarUrl ? (
-              <img
-                src={webhookAvatarUrl}
-                alt=""
-                className="hidden h-10 w-10 shrink-0 rounded-full object-cover sm:block"
-                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+              <MessagePreview
+                botName={webhookUsername || "BRM5 Bot"}
+                botAvatarUrl={webhookAvatarUrl}
+                embed={{
+                  title: values.title,
+                  url: values.url || undefined,
+                  description: values.description,
+                  color: values.color,
+                  fields: values.fields,
+                  footer: { text: values.footerText, iconUrl: values.footerIconUrl || undefined },
+                  image: values.imageUrl ? { url: values.imageUrl } : undefined,
+                  thumbnail: values.thumbnailUrl ? { url: values.thumbnailUrl } : undefined,
+                  author: values.authorName ? { name: values.authorName, iconUrl: values.authorIconUrl || undefined, url: values.authorUrl || undefined } : undefined,
+                  timestamp: values.timestamp ? new Date() : undefined,
+                }}
+                discordTheme={discordTheme}
               />
-            ) : (
-              <div
-                className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white sm:flex"
-                style={{ backgroundColor: "#5865F2" }}
-              >
-                {webhookUsername ? webhookUsername[0].toUpperCase() : "B"}
-              </div>
-            )}
-              <div className="min-w-0 flex-1">
-              {/* Bot header row */}
-              <div className="mb-1.5 flex items-baseline gap-2">
-                <span className="text-sm font-semibold" style={{ color: discordTheme === "dark" ? "#f2f3f5" : "#060607" }}>
-                  {webhookUsername || "BRM5 Bot"}
-                </span>
-                <span
-                  className="inline-flex items-center rounded px-1 text-[10px] font-semibold uppercase tracking-wide"
-                  style={{ backgroundColor: "#5865F2", color: "#fff" }}
-                >
-                  BOT
-                </span>
-                <span className="text-xs" style={{ color: discordTheme === "dark" ? "#949ba4" : "#5c5e66" }}>
-                  Today at {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                </span>
-              </div>
-                <EmbedPreview
-                  title={values.title}
-                  url={values.url || undefined}
-                  description={values.description}
-                  color={values.color}
-                  fields={values.fields}
-                  footer={{ text: values.footerText, iconUrl: values.footerIconUrl || undefined }}
-                  image={values.imageUrl ? { url: values.imageUrl } : undefined}
-                  thumbnail={values.thumbnailUrl ? { url: values.thumbnailUrl } : undefined}
-                  author={values.authorName ? { name: values.authorName, iconUrl: values.authorIconUrl || undefined, url: values.authorUrl || undefined } : undefined}
-                  timestamp={values.timestamp ? new Date() : undefined}
-                  discordTheme={discordTheme}
-                />
-              </div>
-            </div>
             )}
           </div>
       </div>

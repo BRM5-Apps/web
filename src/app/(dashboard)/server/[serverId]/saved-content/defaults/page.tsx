@@ -46,6 +46,7 @@ import {
 import { formatDate } from "@/lib/utils";
 import { EmbedPreview } from "@/components/discord-preview/embed-preview";
 import { ContainerPreview } from "@/components/discord-preview/container-preview";
+import { MessagePreview } from "@/components/discord-preview/message-preview";
 
 const CATEGORY_ICONS: Record<MessageCategory, React.ElementType> = {
   ERROR: AlertCircle,
@@ -416,8 +417,9 @@ export default function DefaultMessagesPage() {
                       const container = containers.data.find((t) => t.id === editingMessage.container_template_id);
                       if (container) {
                         return (
-                          <ContainerPreview
-                            components={container.template_data?.components as any}
+                          <MessagePreview
+                            botName="BRM5 Bot"
+                            container={{ components: container.template_data?.components as any }}
                             className="max-h-64 overflow-auto"
                           />
                         );
@@ -453,37 +455,51 @@ export default function DefaultMessagesPage() {
 
           {previewMessage && (
             <div className="space-y-4">
-              <div className="rounded-lg border p-4 bg-[#36393f]">
-                {previewMessage.container_template_id && containers.data && (
-                  <ContainerPreview
-                    components={containers.data.find((t) => t.id === previewMessage.container_template_id)?.template_data?.components as any}
-                  />
-                )}
+              <div className="rounded-lg border p-4 bg-[#313338]">
+                {previewMessage.container_template_id && containers.data && (() => {
+                  const container = containers.data.find((t) => t.id === previewMessage.container_template_id);
+                  if (!container) return null;
+                  return (
+                    <MessagePreview
+                      botName="BRM5 Bot"
+                      container={{ components: container.template_data?.components as any }}
+                    />
+                  );
+                })()}
                 {previewMessage.embed_template_id && embeds.data && (() => {
                   const embed = embeds.data.find((t) => t.id === previewMessage.embed_template_id);
                   if (!embed) return null;
                   return (
-                    <EmbedPreview
-                      title={embed.title}
-                      description={embed.description}
-                      color={embed.color}
-                      fields={embed.fields}
-                      footer={embed.footer ? { text: embed.footer } : undefined}
-                      image={embed.imageUrl ? { url: embed.imageUrl } : undefined}
-                      thumbnail={embed.thumbnailUrl ? { url: embed.thumbnailUrl } : undefined}
-                      author={embed.authorName ? { name: embed.authorName, iconUrl: embed.authorIconUrl } : undefined}
+                    <MessagePreview
+                      botName="BRM5 Bot"
+                      embed={{
+                        title: embed.title,
+                        description: embed.description,
+                        color: embed.color,
+                        fields: embed.fields,
+                        footer: embed.footer ? { text: embed.footer } : undefined,
+                        image: embed.imageUrl ? { url: embed.imageUrl } : undefined,
+                        thumbnail: embed.thumbnailUrl ? { url: embed.thumbnailUrl } : undefined,
+                        author: embed.authorName ? { name: embed.authorName, iconUrl: embed.authorIconUrl } : undefined,
+                      }}
                     />
                   );
                 })()}
-                {previewMessage.text_template_id && texts.data && (
-                  <div className="whitespace-pre-wrap text-white">
-                    {texts.data.find((t) => t.id === previewMessage.text_template_id)?.content}
-                  </div>
-                )}
+                {previewMessage.text_template_id && texts.data && (() => {
+                  const text = texts.data.find((t) => t.id === previewMessage.text_template_id);
+                  if (!text) return null;
+                  return (
+                    <MessagePreview
+                      botName="BRM5 Bot"
+                      content={text.content}
+                    />
+                  );
+                })()}
                 {previewMessage.fallback_content && !previewMessage.text_template_id && !previewMessage.embed_template_id && !previewMessage.container_template_id && (
-                  <div className="whitespace-pre-wrap text-white">
-                    {previewMessage.fallback_content}
-                  </div>
+                  <MessagePreview
+                    botName="BRM5 Bot"
+                    content={previewMessage.fallback_content}
+                  />
                 )}
               </div>
             </div>
