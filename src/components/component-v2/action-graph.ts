@@ -3,6 +3,8 @@ import type {
   ActionGraphEdge,
   ActionGraphEdgeKind,
   ActionGraphNode,
+  ActionGraphTriggerNode,
+  EventFilter,
   FlowAction,
   FaCheck,
   ConditionNode,
@@ -21,6 +23,92 @@ export function hasActionGraph(value: unknown): value is ActionGraphDocument {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Record<string, unknown>;
   return candidate.version === 1 && Array.isArray(candidate.nodes) && Array.isArray(candidate.edges);
+}
+
+export function ensureTriggerNode(
+  graph: ActionGraphDocument,
+  triggerType: "TIME" | "EVENT" = "TIME",
+  eventType?: string,
+  cronExpression?: string,
+): ActionGraphDocument {
+  // If graph already has a trigger node, update it in place
+  const existingTrigger = graph.nodes.find((n) => n.kind === "trigger");
+  if (existingTrigger) {
+    return {
+      ...graph,
+      nodes: graph.nodes.map((n) =>
+        n.id === existingTrigger.id
+          ? {
+              ...n,
+              triggerType,
+              eventType,
+              cronExpression,
+            } as ActionGraphTriggerNode
+          : n,
+      ),
+    };
+  }
+
+  // Create a new trigger node
+  const triggerNode: ActionGraphTriggerNode = {
+    id: uid(),
+    kind: "trigger",
+    triggerType,
+    eventType,
+    cronExpression,
+    filters: [],
+  };
+
+  return {
+    ...graph,
+    entry_node_id: triggerNode.id,
+    nodes: [triggerNode, ...graph.nodes],
+  };
+}
+
+export function upsertTriggerNode(
+  graph: ActionGraphDocument,
+  triggerType: "TIME" | "EVENT",
+  eventType?: string,
+  cronExpression?: string,
+  timezone?: string,
+  filters?: EventFilter[],
+): ActionGraphDocument {
+  const existingTrigger = graph.nodes.find((n) => n.kind === "trigger");
+  if (existingTrigger) {
+    return {
+      ...graph,
+      nodes: graph.nodes.map((n) =>
+        n.id === existingTrigger.id
+          ? {
+              ...n,
+              kind: "trigger" as const,
+              triggerType,
+              eventType,
+              cronExpression,
+              timezone,
+              filters,
+            }
+          : n,
+      ),
+    };
+  }
+
+  const triggerNode: ActionGraphTriggerNode = {
+    id: uid(),
+    kind: "trigger",
+    triggerType,
+    eventType,
+    cronExpression,
+    timezone,
+    filters,
+  };
+
+  return {
+    ...graph,
+    entry_node_id: triggerNode.id,
+    nodes: [triggerNode, ...graph.nodes],
+  };
 }
 
 export function legacyFlowToGraph(actions: FlowAction[]): ActionGraphDocument {
@@ -91,11 +179,24 @@ export function legacyFlowToGraph(actions: FlowAction[]): ActionGraphDocument {
   };
 }
 
-export function ensureActionGraph(actions: FlowAction[], graph?: ActionGraphDocument): ActionGraphDocument {
+export function ensureActionGraph(
+  actions: FlowAction[],
+  graph?: ActionGraphDocument,
+  options?: {
+    triggerType?: "TIME" | "EVENT";
+    eventType?: string;
+    cronExpression?: string;
+    skipTrigger?: boolean; // If true, don't create a trigger node (for button workflows)
+  }
+): ActionGraphDocument {
   if (graph && hasActionGraph(graph)) {
     return graph;
   }
-  return legacyFlowToGraph(actions);
+  const newGraph = legacyFlowToGraph(actions);
+  if (options?.skipTrigger) {
+    return newGraph;
+  }
+  return ensureTriggerNode(newGraph, options?.triggerType ?? "TIME", options?.eventType, options?.cronExpression);
 }
 
 export function actionGraphToLegacyFlow(graph?: ActionGraphDocument): FlowAction[] | null {
@@ -109,6 +210,18 @@ export function actionGraphToLegacyFlow(graph?: ActionGraphDocument): FlowAction
     outgoing.set(edge.source, sourceEdges);
   }
 
+  // Skip the trigger node to find the first real action/condition node
+  function skipTrigger(nodeId: string): string | undefined {
+    const node = nodeMap.get(nodeId);
+    if (!node) return undefined;
+    if (node.kind !== "trigger") return nodeId;
+    // Follow "next" edge from trigger node
+    const edges: ActionGraphEdge[] = outgoing.get(nodeId) ?? [];
+    const nextEdge = edges.find((e) => e.kind === "next");
+    if (!nextEdge) return undefined;
+    return skipTrigger(nextEdge.target);
+  }
+
   const visiting = new Set<string>();
   const branchVisited = new Set<string>();
 
@@ -116,8 +229,11 @@ export function actionGraphToLegacyFlow(graph?: ActionGraphDocument): FlowAction
     if (!nodeId) return [];
     if (visiting.has(nodeId)) return null;
 
+    const skipped = skipTrigger(nodeId);
+    if (!skipped) return [];
+
     const sequence: FlowAction[] = [];
-    let currentId: string | undefined = nodeId;
+    let currentId: string | undefined = skipped;
 
     while (currentId) {
       if (branchVisited.has(currentId)) return null;
@@ -132,12 +248,33 @@ export function actionGraphToLegacyFlow(graph?: ActionGraphDocument): FlowAction
       const passEdges = edges.filter((edge) => edge.kind === "pass");
       const failEdges = edges.filter((edge) => edge.kind === "fail");
 
+      if (node.kind === "trigger") {
+        // Follow the "next" edge through the trigger
+        const nextEdge = nextEdges[0];
+        visiting.delete(currentId);
+        currentId = nextEdge ? skipTrigger(nextEdge.target) : undefined;
+        continue;
+      }
+
       if (node.kind === "action") {
         if (passEdges.length > 0 || failEdges.length > 0 || nextEdges.length > 1) return null;
         sequence.push(node.action);
         visiting.delete(currentId);
-        currentId = nextEdges[0]?.target;
+        currentId = nextEdges[0] ? skipTrigger(nextEdges[0].target) : undefined;
         continue;
+      }
+
+      if (node.kind === "modal_field") {
+        // Modal field nodes don't contribute to the legacy flow
+        visiting.delete(currentId);
+        currentId = nextEdges[0] ? skipTrigger(nextEdges[0].target) : undefined;
+        continue;
+      }
+
+      // Handle condition nodes
+      if (node.kind !== "condition") {
+        visiting.delete(currentId);
+        return null;
       }
 
       if (passEdges.length > 1 || failEdges.length > 1 || nextEdges.length > 1) return null;
@@ -156,7 +293,7 @@ export function actionGraphToLegacyFlow(graph?: ActionGraphDocument): FlowAction
 
       sequence.push(action);
       visiting.delete(currentId);
-      currentId = nextEdges[0]?.target;
+      currentId = nextEdges[0] ? skipTrigger(nextEdges[0].target) : undefined;
     }
 
     return sequence;
@@ -164,8 +301,10 @@ export function actionGraphToLegacyFlow(graph?: ActionGraphDocument): FlowAction
 
   function walkBranch(startId?: string): FlowAction[] | null {
     if (!startId) return [];
+    const skipped = skipTrigger(startId);
+    if (!skipped) return [];
     const branchContext = new Set(branchVisited);
-    const result = walkSequence(startId);
+    const result = walkSequence(skipped);
     branchVisited.clear();
     for (const id of branchContext) {
       branchVisited.add(id);

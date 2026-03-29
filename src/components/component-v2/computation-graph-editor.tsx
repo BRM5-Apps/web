@@ -44,6 +44,7 @@ interface ComputationGraphEditorProps {
   graph?: ActionGraphDocument;
   onChange: (graph: ActionGraphDocument) => void;
   stats?: StatCardConfig[];
+  serverId?: string;
 }
 
 // Only allowed action types in computation graphs
@@ -110,7 +111,7 @@ const CONDITION_NODE_BODY_HEIGHT = 108;
 const OUTPUT_PORT_Y_OFFSET_ACTION = ACTION_NODE_BODY_HEIGHT;
 const OUTPUT_PORT_Y_OFFSET_CONDITION = CONDITION_NODE_BODY_HEIGHT;
 
-export function ComputationGraphEditor({ graph, onChange, stats = [] }: ComputationGraphEditorProps) {
+export function ComputationGraphEditor({ graph, onChange, stats = [], serverId }: ComputationGraphEditorProps) {
   const initial: ActionGraphDocument = graph ?? {
     version: 1,
     entry_node_id: undefined,
@@ -876,6 +877,7 @@ export function ComputationGraphEditor({ graph, onChange, stats = [] }: Computat
                         condition: cond,
                       });
                     }}
+                    serverId={serverId}
                   />
                 </div>
               )}
@@ -887,6 +889,7 @@ export function ComputationGraphEditor({ graph, onChange, stats = [] }: Computat
                     onChange={(cond) => {
                       updateNodeCondition(selectedNode.id, cond);
                     }}
+                    serverId={serverId}
                   />
                 </div>
               )}

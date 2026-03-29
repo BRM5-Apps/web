@@ -374,6 +374,9 @@ function convertAction(action: FlowAction): object {
       break;
     case "send_output":
       base.output_kind = action.outputKind;
+      if (action.channelId) {
+        base.channel_id = action.channelId;
+      }
       if (action.templateId) {
         base.template_id = action.templateId;
       }
@@ -382,6 +385,18 @@ function convertAction(action: FlowAction): object {
       }
       if (action.hidden) {
         base.hidden = true;
+      }
+      if (action.reply) {
+        base.reply = true;
+      }
+      if (action.replyEphemeral) {
+        base.reply_ephemeral = true;
+      }
+      if (action.edit) {
+        base.edit = true;
+      }
+      if (action.editOriginal) {
+        base.edit_original = true;
       }
       break;
     case "create_thread":
@@ -848,6 +863,7 @@ function parseAction(raw: unknown): FlowAction | null {
         id,
         type: "send_output",
         outputKind: (obj.output_kind as "message" | "modal") ?? "message",
+        channelId: obj.channel_id as string | undefined,
         templateId: obj.template_id as string | undefined,
         templateType: obj.template_type as
           | "text"
@@ -856,6 +872,10 @@ function parseAction(raw: unknown): FlowAction | null {
           | "modal"
           | undefined,
         hidden: obj.hidden === true,
+        reply: obj.reply === true,
+        replyEphemeral: obj.reply_ephemeral === true,
+        edit: obj.edit === true,
+        editOriginal: obj.edit_original === true,
       };
 
     case "create_thread":

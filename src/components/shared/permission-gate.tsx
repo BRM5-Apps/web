@@ -8,6 +8,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface PermissionGateProps {
   permission: string | string[];
@@ -17,6 +18,8 @@ interface PermissionGateProps {
   tooltipOnDenied?: boolean;
   tooltipMessage?: string;
   serverId?: string;
+  /** Show skeleton while loading permissions. Default: true */
+  showSkeletonWhileLoading?: boolean;
 }
 
 export function PermissionGate({
@@ -26,8 +29,14 @@ export function PermissionGate({
   mode = "all",
   tooltipOnDenied = false,
   tooltipMessage,
+  showSkeletonWhileLoading = true,
 }: PermissionGateProps) {
-  const allowed = useHasPermissions(permission, mode);
+  const { allowed, isLoading } = useHasPermissions(permission, mode);
+
+  // Show skeleton while permissions are loading
+  if (isLoading && showSkeletonWhileLoading) {
+    return <Skeleton className="h-9 w-24" />;
+  }
 
   if (allowed) {
     return <>{children}</>;

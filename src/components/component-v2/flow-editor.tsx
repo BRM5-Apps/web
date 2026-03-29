@@ -43,7 +43,27 @@ import type {
   FaStop,
   SendOutputKind,
   SendOutputTemplateType,
+  FaRoleAction,
+  FaVoiceAction,
+  FaChannelAction,
+  FaMessageAction,
+  FaThreadAction,
+  FaModerationAction,
+  FaDataAction,
+  FaFlowControl,
+  FaWaitUntil,
 } from "./types";
+import {
+  RoleActionFields,
+  VoiceActionFields,
+  ChannelActionFields,
+  MessageActionFields,
+  ThreadActionFields,
+  ModerationActionFields,
+  DataActionFields,
+  FlowControlFields,
+  WaitUntilFields,
+} from "./consolidated-action-fields";
 
 // Re-export uid for nested action handling
 export { uid };
@@ -82,7 +102,34 @@ export function makeAction(type: FlowActionType): FlowAction {
         outputKind: "message",
         templateId: undefined,
         templateType: undefined,
+        channelId: undefined,
         hidden: false,
+      };
+    case "send_to_channel":
+      return {
+        id: uid(),
+        type: "send_to_channel",
+        channelId: "",
+        templateId: undefined,
+        templateType: undefined,
+      };
+    case "dm_user":
+      return {
+        id: uid(),
+        type: "dm_user",
+        templateId: undefined,
+        templateType: undefined,
+        fallbackOnError: false,
+        fallbackChannelId: undefined,
+      };
+    case "log_to_channel":
+      return {
+        id: uid(),
+        type: "log_to_channel",
+        channelId: "",
+        level: "info",
+        content: "",
+        includeContext: true,
       };
     case "create_thread":
       return {
@@ -103,6 +150,27 @@ export function makeAction(type: FlowActionType): FlowAction {
       };
     case "delete_message":
       return { id: uid(), type: "delete_message", messageId: undefined };
+    case "cooldown":
+      return {
+        id: uid(),
+        type: "cooldown",
+        key: "default",
+        duration: 5,
+        unit: "minutes",
+        bypassRoles: [],
+      };
+    case "webhook_call":
+      return {
+        id: uid(),
+        type: "webhook_call",
+        url: "",
+        method: "POST",
+        headers: {},
+        body: undefined,
+        timeout: 30000,
+        retryOnFailure: false,
+        retryCount: 3,
+      };
     case "stop":
       return {
         id: uid(),
@@ -111,6 +179,105 @@ export function makeAction(type: FlowActionType): FlowAction {
         hidden: false,
         silent: false,
         hideEmbeds: false,
+      };
+    // Consolidated actions
+    case "role_action":
+      return {
+        id: uid(),
+        type: "role_action",
+        operation: "add" as const,
+        roleIds: [],
+      };
+    case "nickname_action":
+      return {
+        id: uid(),
+        type: "nickname_action",
+        operation: "set_nickname" as const,
+        nickname: undefined,
+        targetUserId: undefined,
+      };
+    case "voice_action":
+      return {
+        id: uid(),
+        type: "voice_action",
+        operation: "move" as const,
+        targetChannelId: undefined,
+        targetUserId: undefined,
+        reason: undefined,
+      };
+    case "channel_action":
+      return {
+        id: uid(),
+        type: "channel_action",
+        operation: "create" as const,
+        channelName: "",
+        channelType: "text" as const,
+      };
+    case "message_action":
+      return {
+        id: uid(),
+        type: "message_action",
+        operation: "send_output" as const,
+        sendAs: "channel" as const,
+        templateId: undefined,
+        templateType: "text" as const,
+      };
+    case "moderation_action":
+      return {
+        id: uid(),
+        type: "moderation_action",
+        operation: "kick" as const,
+        targetUserId: undefined,
+        reason: undefined,
+      };
+    case "data_action":
+      return {
+        id: uid(),
+        type: "data_action",
+        operation: "set" as const,
+        varName: "",
+        value: undefined,
+      };
+    case "flow_control":
+      return {
+        id: uid(),
+        type: "flow_control",
+        operation: "loop" as const,
+        iterations: 1,
+        loopActions: [],
+      };
+    case "wait_until":
+      return {
+        id: uid(),
+        type: "wait_until",
+        timestamp: undefined,
+        condition: undefined,
+        maxWait: 300,
+        checkInterval: 10,
+      };
+    case "thread_action":
+      return {
+        id: uid(),
+        type: "thread_action",
+        operation: "create" as const,
+        channelId: undefined,
+        name: "",
+        threadType: "public" as const,
+        autoArchive: 60,
+      };
+    case "modal_action":
+      return {
+        id: uid(),
+        type: "modal_action",
+        operation: "show" as const,
+      };
+    case "roblox_verify":
+      return {
+        id: uid(),
+        type: "roblox_verify",
+        requireVerified: false,
+        assignRoleOnVerify: undefined,
+        skipIfVerified: true,
       };
   }
 }
@@ -131,14 +298,134 @@ export function actionLabel(action: FlowAction): string {
       return "Toggle Role";
     case "send_output":
       return action.outputKind === "modal" ? "Send Output (Modal)" : "Send Output (Message)";
+    case "send_to_channel":
+      return "Send to Channel";
+    case "dm_user":
+      return "DM User";
+    case "log_to_channel":
+      return `Log (${action.level})`;
     case "create_thread":
       return "Create Thread";
     case "set_variable":
       return "Set Variable";
     case "delete_message":
       return "Delete Message";
+    case "cooldown":
+      return `Cooldown ${action.duration}${action.unit === "seconds" ? "s" : action.unit === "minutes" ? "m" : "h"}`;
+    case "webhook_call":
+      return `Webhook ${action.method}`;
     case "stop":
       return "Stop";
+    // Consolidated actions
+    case "role_action": {
+      const opLabels: Record<string, string> = {
+        add: "Add Role",
+        remove: "Remove Role",
+        toggle: "Toggle Role",
+        add_temporary: "Temp Role",
+      };
+      return opLabels[action.operation] || "Role Action";
+    }
+    case "nickname_action": {
+      const opLabels: Record<string, string> = {
+        set_nickname: "Set Nickname",
+        reset_nickname: "Reset Nickname",
+      };
+      return opLabels[action.operation] || "Nickname Action";
+    }
+    case "voice_action": {
+      const opLabels: Record<string, string> = {
+        move: "Move to Voice",
+        disconnect: "Disconnect Voice",
+        mute: "Mute",
+        deafen: "Deafen",
+        unmute: "Unmute",
+        undeafen: "Undeafen",
+      };
+      return opLabels[action.operation] || "Voice Action";
+    }
+    case "channel_action": {
+      const opLabels: Record<string, string> = {
+        create: "Create Channel",
+        delete: "Delete Channel",
+        edit: "Edit Channel",
+        lock: "Lock Channel",
+        unlock: "Unlock Channel",
+        slow_mode: "Set Slow Mode",
+        clear_slow_mode: "Clear Slow Mode",
+        archive_thread: "Archive Thread",
+      };
+      return opLabels[action.operation] || "Channel Action";
+    }
+    case "message_action": {
+      const opLabels: Record<string, string> = {
+        send_output: "Send Output",
+        edit_message: "Edit Message",
+        delete: "Delete Message",
+        pin: "Pin Message",
+        unpin: "Unpin Message",
+        react: "Add Reaction",
+      };
+      return opLabels[action.operation] || "Message Action";
+    }
+    case "moderation_action": {
+      const opLabels: Record<string, string> = {
+        kick: "Kick User",
+        ban: "Ban User",
+        unban: "Unban User",
+        timeout: "Timeout User",
+        remove_timeout: "Remove Timeout",
+        warn: "Warn User",
+        clear_warnings: "Clear Warnings",
+        quarantine: "Quarantine User",
+      };
+      return opLabels[action.operation] || "Moderation";
+    }
+    case "data_action": {
+      const opLabels: Record<string, string> = {
+        increment: "Increment",
+        decrement: "Decrement",
+        append: "Append",
+        remove: "Remove",
+        set: "Set Variable",
+        random_number: "Random Number",
+        random_choice: "Random Choice",
+      };
+      return opLabels[action.operation] || "Data Action";
+    }
+    case "flow_control": {
+      const opLabels: Record<string, string> = {
+        loop: "Loop",
+        parallel: "Parallel",
+        try_catch: "Try/Catch",
+        subflow: "Call Subflow",
+        return: "Return",
+        break: "Break",
+        continue: "Continue",
+        retry: "Retry",
+      };
+      return opLabels[action.operation] || "Flow Control";
+    }
+    case "wait_until":
+      return "Wait Until";
+    case "thread_action": {
+      const opLabels: Record<string, string> = {
+        create: "Create Thread",
+        archive: "Archive Thread",
+        delete: "Delete Thread",
+      };
+      return opLabels[action.operation] || "Thread Action";
+    }
+    case "modal_action": {
+      const opLabels: Record<string, string> = {
+        show: "Show Modal",
+        update: "Update Modal",
+        close: "Close Modal",
+      };
+      return opLabels[action.operation] || "Modal Action";
+    }
+    default:
+      return "Unknown Action";
   }
 }
 
@@ -165,19 +452,12 @@ export function computeErrors(actions: FlowAction[]): string[] {
 
 // ── ACTION_TYPES ─────────────────────────────────────────────────────────────
 
-export const ACTION_TYPES: { type: FlowActionType; label: string }[] = [
-  { type: "do_nothing", label: "Do nothing" },
-  { type: "wait", label: "Wait for X seconds" },
-  { type: "check", label: "Check" },
-  { type: "add_role", label: "Add role" },
-  { type: "remove_role", label: "Remove role" },
-  { type: "toggle_role", label: "Toggle role" },
-  { type: "send_output", label: "Send output" },
-  { type: "create_thread", label: "Create thread" },
-  { type: "set_variable", label: "Set variable" },
-  { type: "delete_message", label: "Delete message" },
-  { type: "stop", label: "Stop" },
-];
+import { ALL_ACTIONS, type ActionDefinition } from "@/components/shared/action-definitions";
+
+// Actions available in button/modal flows
+export const ACTION_TYPES: { type: FlowActionType; label: string }[] = ALL_ACTIONS
+  .filter(a => a.availableInFlow)
+  .map(a => ({ type: a.type as FlowActionType, label: a.label }));
 
 // ── SendOutputFields ──────────────────────────────────────────────────────────
 
@@ -525,6 +805,88 @@ export function ActionFields({ action, onChange, serverId }: ActionFieldsProps) 
           />
         </div>
       </div>
+    );
+  }
+
+  // ── Consolidated Action Field Components ─────────────────────────────────────
+
+  // Role Action Fields
+  if (action.type === "role_action") {
+    return (
+      <RoleActionFields
+        action={action as FaRoleAction}
+        onChange={onChange}
+      />
+    );
+  }
+
+  // Voice Action Fields
+  if (action.type === "voice_action") {
+    return (
+      <VoiceActionFields
+        action={action as FaVoiceAction}
+        onChange={onChange}
+      />
+    );
+  }
+
+  // Channel Action Fields
+  if (action.type === "channel_action") {
+    return (
+      <ChannelActionFields
+        action={action as FaChannelAction}
+        onChange={onChange}
+      />
+    );
+  }
+
+  // Message Action Fields
+  if (action.type === "message_action") {
+    return (
+      <MessageActionFields
+        action={action as FaMessageAction}
+        onChange={onChange}
+      />
+    );
+  }
+
+  // Moderation Action Fields
+  if (action.type === "moderation_action") {
+    return (
+      <ModerationActionFields
+        action={action as FaModerationAction}
+        onChange={onChange}
+      />
+    );
+  }
+
+  // Data Action Fields
+  if (action.type === "data_action") {
+    return (
+      <DataActionFields
+        action={action as FaDataAction}
+        onChange={onChange}
+      />
+    );
+  }
+
+  // Flow Control Fields
+  if (action.type === "flow_control") {
+    return (
+      <FlowControlFields
+        action={action as FaFlowControl}
+        onChange={onChange}
+      />
+    );
+  }
+
+  // Wait Until Fields
+  if (action.type === "wait_until") {
+    return (
+      <WaitUntilFields
+        action={action as FaWaitUntil}
+        onChange={onChange}
+      />
     );
   }
 

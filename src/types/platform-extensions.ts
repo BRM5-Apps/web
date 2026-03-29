@@ -73,6 +73,8 @@ export interface ScheduledSequence {
   cron_expression?: string;
   timezone: string;
   action_sequence_id: string;
+  action_graph?: object;
+  event_filters?: object;
   is_active: boolean;
   last_run_at?: string;
   next_run_at?: string;
@@ -102,7 +104,9 @@ export interface CreateScheduledSequencePayload {
   event_type?: string;
   cron_expression?: string;
   timezone?: string;
-  action_sequence_id: string;
+  action_sequence_id?: string;
+  action_graph?: object;
+  event_filters?: object;
   max_runs?: number;
   end_date?: string;
 }

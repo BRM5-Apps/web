@@ -207,4 +207,22 @@ export const queryKeys = {
       ["servers", serverId, "marketplace", "import-history"] as const,
     myTemplates: () => ["marketplace", "my-templates"] as const,
   },
+
+  // ── Content Folders ──
+  contentFolders: {
+    list: (serverId: string, parentId?: string) =>
+      ["servers", serverId, "content-folders", "list", { parentId }] as const,
+    detail: (serverId: string, folderId: string) =>
+      ["servers", serverId, "content-folders", "detail", folderId] as const,
+    items: (serverId: string, folderId: string) =>
+      ["servers", serverId, "content-folders", folderId, "items"] as const,
+    public: (limit: number, offset: number) =>
+      ["content-folders", "public", { limit, offset }] as const,
+    featured: (limit: number) =>
+      ["content-folders", "featured", limit] as const,
+    ratings: (folderId: string) =>
+      ["content-folders", folderId, "ratings"] as const,
+    myRating: (folderId: string) =>
+      ["content-folders", folderId, "my-rating"] as const,
+  },
 } as const;

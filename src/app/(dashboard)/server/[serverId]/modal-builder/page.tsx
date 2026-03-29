@@ -1,29 +1,92 @@
 "use client";
 
-import { useParams } from "next/navigation";
-import { DiscordModalBuilder } from "@/components/modal-builder/discord-modal-builder";
+import { useState, useCallback } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+import { DiscordModalBuilder, type ModalPage, type ModalSettings, type ModalComponent } from "@/components/modal-builder/discord-modal-builder";
+import { ModalSettingsPanel } from "@/components/modal-builder/modal-settings-panel";
 import { useCreateModalTemplate } from "@/hooks/use-templates";
+import type { ActionGraphDocument } from "@/components/component-v2/types";
 
-export default function ModalBuilderPage() {
+interface ModalSettingsData {
+  roleRestrictions: { requiredRoles: string[]; restrictedRoles: string[] };
+  outputChannel: string;
+  mentions: string[];
+  roleOutput: { addRoles: string[]; removeRoles: string[] };
+}
+
+export default function NewModalBuilderPage() {
   const { serverId } = useParams<{ serverId: string }>();
+  const router = useRouter();
   const createModal = useCreateModalTemplate(serverId);
 
+  const [modalSettings, setModalSettings] = useState<ModalSettingsData>({
+    roleRestrictions: { requiredRoles: [], restrictedRoles: [] },
+    outputChannel: "",
+    mentions: [],
+    roleOutput: { addRoles: [], removeRoles: [] },
+  });
+
+  // Track current pages for workbench integration
+  const [currentPages, setCurrentPages] = useState<ModalPage[]>([]);
+  const [actionGraph, setActionGraph] = useState<ActionGraphDocument | undefined>();
+
+  // Extract fields from all pages for workbench
+  const allFields: ModalComponent[] = currentPages.flatMap((page) => page.components);
+
+  const handleSave = useCallback(async (pages: ModalPage[], settings: ModalSettings) => {
+    const modalTitle = pages[0]?.title ?? "Untitled";
+    const payload = {
+      name: modalTitle,
+      template_data: { pages },
+      settings: modalSettings as unknown as Record<string, unknown>,
+      action_graph: actionGraph as unknown as Record<string, unknown> | undefined,
+    };
+
+    try {
+      const created = await createModal.mutateAsync(payload);
+      router.push(`/server/${serverId}/modal-builder/${created.id}`);
+    } catch (err) {
+      console.error("Failed to save modal:", err);
+    }
+  }, [createModal, router, serverId, modalSettings, actionGraph]);
+
   return (
-    <div className="-mx-6 -my-6 min-h-screen p-8" style={{ background: "linear-gradient(135deg, #2F2F34 0%, #232327 60%, #342E26 100%)" }}>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-[#F1F1F2]">Modal Builder</h1>
-        <p className="mt-1 text-sm text-[#8F8E8E]">
-          Build Discord modals with a live preview. Hover over components to edit them.
-        </p>
+    <>
+      {/* Header */}
+      <div className="flex items-center gap-4 mb-6">
+        <Link
+          href={`/server/${serverId}/modals`}
+          className="flex items-center gap-1.5 text-sm text-[#b5bac1] hover:text-white transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Modals
+        </Link>
+        <span className="text-[#3f4147]">/</span>
+        <h1 className="text-xl font-semibold text-[#f1f1f2]">New Modal</h1>
       </div>
-      <DiscordModalBuilder
-        guildId={serverId}
-        onSave={(pages, settings) => {
-          const name = pages[0]?.title?.trim() || `Modal ${new Date().toLocaleTimeString()}`;
-          createModal.mutate({ name, template_data: { pages, settings } });
-        }}
-        isSaving={createModal.isPending}
-      />
-    </div>
+
+      {/* Builder */}
+      <div className="space-y-8">
+        <DiscordModalBuilder
+          guildId={serverId}
+          onSave={handleSave}
+          onPagesChange={setCurrentPages}
+          isSaving={createModal.isPending}
+        />
+
+        {/* Settings */}
+        <ModalSettingsPanel
+          serverId={serverId}
+          settings={modalSettings}
+          onChange={setModalSettings}
+          modalName={currentPages[0]?.title || "Untitled"}
+          fields={allFields}
+          actionGraph={actionGraph}
+          onActionGraphChange={setActionGraph}
+        />
+      </div>
+    </>
   );
 }

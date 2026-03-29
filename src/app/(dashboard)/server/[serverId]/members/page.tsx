@@ -84,9 +84,9 @@ export default function MembersPage() {
   const demoteMutation = useDemoteMember(serverId);
   const kickMutation = useKickMember(serverId);
 
-  const canPromote = useHasPermission("members.promote");
-  const canDemote = useHasPermission("members.demote");
-  const canKick = useHasPermission("members.kick");
+  const { allowed: canPromote } = useHasPermission("members.promote");
+  const { allowed: canDemote } = useHasPermission("members.demote");
+  const { allowed: canKick } = useHasPermission("members.kick");
 
   // Column definitions
   const columns = useMemo<ColumnDef<ServerMember, unknown>[]>(

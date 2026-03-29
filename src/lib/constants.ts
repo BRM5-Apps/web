@@ -179,6 +179,14 @@ export const API_ROUTES = {
       modal: (serverId: string, templateId: string) =>
         `/servers/${serverId}/modals/${templateId}`,
     },
+    modalElements: {
+      list: (serverId: string) => `/servers/${serverId}/modal-elements`,
+      listByModal: (serverId: string, modalTemplateId: string) =>
+        `/servers/${serverId}/modal-elements/by-modal/${modalTemplateId}`,
+      sync: (serverId: string) => `/servers/${serverId}/modal-elements/sync`,
+      deleteByModal: (serverId: string, modalTemplateId: string) =>
+        `/servers/${serverId}/modal-elements/by-modal/${modalTemplateId}`,
+    },
     elements: {
       list: (serverId: string) => `/servers/${serverId}/elements`,
       detail: (serverId: string, key: string) => `/servers/${serverId}/elements/${key}`,
@@ -239,6 +247,7 @@ export const API_ROUTES = {
     welcomeConfig: (serverId: string) =>
       `/servers/${serverId}/welcome-config`,
     messageSend: (serverId: string) => `/servers/${serverId}/messages/send`,
+    messageQuickSend: (serverId: string) => `/servers/${serverId}/messages/quick-send`,
     messageHistory: (serverId: string) => `/servers/${serverId}/messages/history`,
     schedule: {
       list: (serverId: string) => `/servers/${serverId}/scheduled-messages`,

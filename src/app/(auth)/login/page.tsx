@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
@@ -11,18 +11,24 @@ function LoginContent() {
   const [exchanging, setExchanging] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const exchangeStarted = useRef(false);
 
   const error = searchParams.get("error");
   const callbackUrl = searchParams.get("callbackUrl") ?? "/select-server";
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated - use ref to prevent double calls in Strict Mode
   useEffect(() => {
+    if (status !== "authenticated") return;
+    if (exchangeStarted.current) return; // Prevent duplicate calls
+
     async function runExchange() {
       try {
+        exchangeStarted.current = true;
         setExchanging(true);
         const res = await fetch("/api/auth/exchange", { method: "POST" });
         if (!res.ok) {
           // Stay on login; error UI below will show generic message
+          exchangeStarted.current = false; // Allow retry on failure
           return;
         }
         router.replace(callbackUrl);
@@ -30,9 +36,7 @@ function LoginContent() {
         setExchanging(false);
       }
     }
-    if (status === "authenticated") {
-      runExchange();
-    }
+    runExchange();
   }, [status, router, callbackUrl]);
 
   // Loading state while checking session

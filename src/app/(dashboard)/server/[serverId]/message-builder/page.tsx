@@ -1,7 +1,7 @@
 "use client";
 
-import { useParams } from "next/navigation";
-import { useMemo, useRef, useState, type ComponentType } from "react";
+import { useParams, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useRef, useState, type ComponentType } from "react";
 import { EmbedBuilder, type EmbedFormData } from "@/components/templates/embed-builder";
 import { ComponentV2BuilderV2 } from "@/components/component-v2";
 import type { C2TopLevelItem } from "@/components/component-v2";
@@ -46,7 +46,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useSendMessage, useMessageHistory } from "@/hooks/use-messages";
+import { useSendMessage, useQuickSend, useMessageHistory } from "@/hooks/use-messages";
 import type { EmbedTemplate, ContainerTemplate, TextTemplate } from "@/types/template";
 
 type MessageMode = "text" | "embed" | "component";
@@ -332,6 +332,7 @@ function MessagesSheet({
 
 export default function MessageBuilderPage() {
   const params = useParams<{ serverId: string }>();
+  const searchParams = useSearchParams();
   const serverId = params.serverId;
 
   const [mode, setMode] = useState<MessageMode>("text");
@@ -359,9 +360,15 @@ export default function MessageBuilderPage() {
   const pendingDestRef = useRef<{ channel_id?: string; webhook_urls?: string[]; webhook_username?: string; webhook_avatar_url?: string }>({});
 
   const sendMessage = useSendMessage(serverId);
+  const quickSend = useQuickSend(serverId);
   const messageHistory = useMessageHistory(serverId);
   const [hasSentThisSession, setHasSentThisSession] = useState(false);
   const lastSend = hasSentThisSession ? messageHistory.data?.[0] : null;
+
+  // Template fetching hooks for URL param loading
+  const texts = useTextTemplates(serverId);
+  const embeds = useEmbedTemplates(serverId);
+  const containers = useContainerTemplates(serverId);
 
   const createEmbed = useCreateEmbedTemplate(serverId);
   const createContainer = useCreateContainerTemplate(serverId);
@@ -388,6 +395,57 @@ export default function MessageBuilderPage() {
     currentTemplateType === currentModeTemplateType &&
     lastSavedSnapshot !== null;
   const isDirty = !hasMatchingSavedTemplate || currentSnapshot !== lastSavedSnapshot;
+
+  // Load template from URL params (?type=text|embed|container&id=xxx)
+  useEffect(() => {
+    const type = searchParams.get("type") as TemplateKind | null;
+    const id = searchParams.get("id");
+
+    if (!type || !id) return;
+
+    // Set the mode based on type
+    if (type === "text") {
+      setMode("text");
+    } else if (type === "embed") {
+      setMode("embed");
+    } else if (type === "container") {
+      setMode("component");
+    }
+
+    // Find and load the template
+    if (type === "text") {
+      const template = texts.data?.find((t) => t.id === id);
+      if (template) {
+        setCurrentTemplateId(template.id);
+        setCurrentTemplateType("text");
+        setTemplateName(template.name);
+        setTextContent(template.content);
+        setLastSavedSnapshot(snapshotText(template.content));
+      }
+    } else if (type === "embed") {
+      const template = embeds.data?.find((t) => t.id === id);
+      if (template) {
+        setCurrentTemplateId(template.id);
+        setCurrentTemplateType("embed");
+        setTemplateName(template.name);
+        const draft = toEmbedDraft(template);
+        setEmbedDraft(draft);
+        setLastSavedSnapshot(snapshotEmbed(draft));
+      }
+    } else if (type === "container") {
+      const template = containers.data?.find((t) => t.id === id);
+      if (template) {
+        setCurrentTemplateId(template.id);
+        setCurrentTemplateType("container");
+        setTemplateName(template.name);
+        const items = (template.template_data?.components as C2TopLevelItem[]) || [];
+        setComponentDraft(items);
+        setLoadedItems(items);
+        setLastSavedSnapshot(snapshotComponent(items));
+        setBuilderKey((k) => k + 1);
+      }
+    }
+  }, [searchParams, texts.data, embeds.data, containers.data]);
 
   function finalizeSave(id: string, type: TemplateKind, name: string, snapshot: string) {
     setCurrentTemplateId(id);
@@ -537,6 +595,46 @@ export default function MessageBuilderPage() {
     toast.success(`Loaded "${template.name}"`);
   }
 
+  // Quick send - sends message content directly without saving as template
+  function handleQuickSend() {
+    if (sendVia === "bot" && !channelId.trim()) {
+      toast.error("Enter a channel ID");
+      return;
+    }
+
+    const validWebhookUrls = webhookUrls.map((url) => url.trim()).filter(Boolean);
+    if (sendVia === "webhook" && validWebhookUrls.length === 0) {
+      toast.error("Enter at least one webhook URL");
+      return;
+    }
+
+    const destination = sendVia === "webhook"
+      ? {
+          webhook_urls: validWebhookUrls,
+          ...(webhookUsername.trim() ? { webhook_username: webhookUsername.trim() } : {}),
+          ...(webhookAvatarUrl.trim() ? { webhook_avatar_url: webhookAvatarUrl.trim() } : {}),
+        }
+      : { channel_id: channelId.trim() };
+
+    // Build content based on mode
+    let content: unknown;
+    if (mode === "text") {
+      content = { content: textContent };
+    } else if (mode === "embed") {
+      content = embedDraft ?? toEmbedDraft(loadedEmbed);
+    } else {
+      content = { components: componentDraft };
+    }
+
+    setHasSentThisSession(true);
+    quickSend.mutate({
+      ...destination,
+      message_type: mode === "component" ? "container" : mode,
+      content,
+    });
+  }
+
+  // Save & Send - saves as template first, then sends with template reference
   function handleSend() {
     if (sendVia === "bot" && !channelId.trim()) {
       toast.error("Enter a channel ID");
@@ -649,20 +747,18 @@ export default function MessageBuilderPage() {
                   {isSaving ? "Saving..." : currentTemplateId && currentTemplateType === currentModeTemplateType ? "Save" : "Save as new"}
                 </Button>
                 <Button
-                  variant="outline"
-                  onClick={handleSend}
+                  onClick={handleQuickSend}
                   disabled={
                     (sendVia === "bot" ? !channelId.trim() : !webhookUrls.some((url) => url.trim())) ||
-                    sendMessage.isPending ||
-                    isSaving
+                    quickSend.isPending
                   }
                 >
-                  {sendMessage.isPending || (pendingSendRef.current && isSaving) ? (
+                  {quickSend.isPending ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
                     <Send className="mr-2 h-4 w-4" />
                   )}
-                  {sendMessage.isPending ? "Sending..." : isSaving ? "Saving..." : "Send"}
+                  {quickSend.isPending ? "Sending..." : "Send"}
                 </Button>
                 {lastSend ? (
                   <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -767,7 +863,7 @@ export default function MessageBuilderPage() {
         </Card>
 
         {mode === "text" ? (
-          <div className="grid items-start gap-6 lg:grid-cols-2">
+          <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
             <Card className="space-y-3 p-4">
               <div className="space-y-1">
                 <Label htmlFor="textContent">Message Content</Label>

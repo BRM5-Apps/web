@@ -3,7 +3,6 @@
 import {
   QueryClient,
   QueryClientProvider,
-  QueryErrorResetBoundary,
 } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { useState, type ReactNode } from "react";
@@ -32,7 +31,7 @@ export function QueryProvider({ children }: { children: ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <QueryErrorResetBoundary>{() => children}</QueryErrorResetBoundary>
+      {children}
       {process.env.NODE_ENV === "development" && (
         <ReactQueryDevtools initialIsOpen={false} />
       )}

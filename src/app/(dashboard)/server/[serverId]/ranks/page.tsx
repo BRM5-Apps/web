@@ -25,7 +25,7 @@ export default function RanksPage() {
   const deleteMutation = useDeleteRank(serverId);
   const reorderMutation = useReorderRanks(serverId);
 
-  const canManage = useHasPermission(PERMISSION_KEYS.RANKS_MANAGE);
+  const { allowed: canManage } = useHasPermission(PERMISSION_KEYS.RANKS_MANAGE);
 
   // Dialog state
   const [formOpen, setFormOpen] = useState(false);

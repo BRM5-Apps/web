@@ -104,7 +104,7 @@ export function ComponentV2BuilderV2({
 
   return (
     <div className="space-y-4 flex flex-col min-h-0">
-      <div className="grid max-w-[1000px] items-start justify-items-stretch gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
           {/* Left: Editor */}
           <div className="flex flex-col self-start">
             <div className="mb-1.5 h-6 flex items-center shrink-0">

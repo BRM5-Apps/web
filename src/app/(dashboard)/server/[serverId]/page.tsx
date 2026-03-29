@@ -228,7 +228,9 @@ export default function ServerOverviewPage() {
 
   const { setActiveServer } = useServerStore();
   const { data: serverData, isLoading } = useServer(serverId);
-  const server = serverData?.server;
+  // API returns { server: { server: Server, member_count } }
+  const server = serverData?.server?.server;
+  const memberCount = serverData?.server?.member_count;
 
   useEffect(() => {
     if (server) {

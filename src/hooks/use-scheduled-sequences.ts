@@ -89,6 +89,20 @@ export function useDeleteScheduledSequence(serverId: string) {
   });
 }
 
+export function useDuplicateScheduledSequence(serverId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (sequenceId: string) =>
+      api.scheduledSequences.duplicate(serverId, sequenceId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.scheduledSequences.all(serverId),
+      });
+    },
+  });
+}
+
 export function useExecuteScheduledSequence(serverId: string, sequenceId: string) {
   const queryClient = useQueryClient();
 

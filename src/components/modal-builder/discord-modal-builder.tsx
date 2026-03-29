@@ -101,7 +101,10 @@ export interface ModalSettings {
 export interface DiscordModalBuilderProps {
   guildId: string;
   onSave?: (pages: ModalPage[], settings: ModalSettings) => void;
+  onPagesChange?: (pages: ModalPage[]) => void;
   isSaving?: boolean;
+  initialPages?: ModalPage[];
+  initialSettings?: ModalSettings;
 }
 
 // ---------------------------------------------------------------------------
@@ -262,7 +265,7 @@ const DEFAULT_LABELS: Record<ComponentType, string> = {
   "user-role-select": "Select a user or role",
 };
 
-function makeComponent(type: ComponentType): ModalComponent {
+export function makeComponent(type: ComponentType): ModalComponent {
   return {
     id: uid(),
     type,
@@ -277,15 +280,15 @@ function makeComponent(type: ComponentType): ModalComponent {
   };
 }
 
-function makeOption(): DropdownOption {
+export function makeOption(): DropdownOption {
   return { id: uid(), label: "Option", description: "", emoji: "" };
 }
 
-function makePage(): ModalPage {
+export function makePage(): ModalPage {
   return { id: uid(), title: "Modal Title", components: [] };
 }
 
-function makeLocation(): OutputLocation {
+export function makeLocation(): OutputLocation {
   return { id: uid(), channelId: "", mentions: [] };
 }
 
@@ -326,7 +329,7 @@ interface AddComponentDialogProps {
   onSelect: (type: ComponentType) => void;
 }
 
-function AddComponentDialog({ open, onOpenChange, onSelect }: AddComponentDialogProps) {
+export function AddComponentDialog({ open, onOpenChange, onSelect }: AddComponentDialogProps) {
   const [search, setSearch] = useState("");
   const [highlighted, setHighlighted] = useState<ComponentType | null>(null);
 
@@ -422,7 +425,7 @@ interface EditBoundsDialogProps {
   onSave: (min: number | undefined, max: number | undefined) => void;
 }
 
-function EditBoundsDialog({ open, onOpenChange, minLength, maxLength, onSave }: EditBoundsDialogProps) {
+export function EditBoundsDialog({ open, onOpenChange, minLength, maxLength, onSave }: EditBoundsDialogProps) {
   const [min, setMin] = useState<string>("");
   const [max, setMax] = useState<string>("");
 
@@ -506,7 +509,7 @@ interface EditPlaceholderDialogProps {
   onSave: (placeholder: string) => void;
 }
 
-function EditPlaceholderDialog({ open, onOpenChange, placeholder, onSave }: EditPlaceholderDialogProps) {
+export function EditPlaceholderDialog({ open, onOpenChange, placeholder, onSave }: EditPlaceholderDialogProps) {
   const [value, setValue] = useState("");
 
   useEffect(() => {
@@ -691,7 +694,7 @@ interface EditOptionsDialogProps {
   onSave: (options: DropdownOption[]) => void;
 }
 
-function EditOptionsDialog({ open, onOpenChange, options: initialOptions, onSave }: EditOptionsDialogProps) {
+export function EditOptionsDialog({ open, onOpenChange, options: initialOptions, onSave }: EditOptionsDialogProps) {
   const [options, setOptions] = useState<DropdownOption[]>([]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
@@ -891,7 +894,7 @@ function ComponentPreview({ component, onChange, onOptionsOpen }: ComponentPrevi
         <input
           readOnly
           placeholder={component.placeholder || "Enter text..."}
-          className="w-full rounded-[3px] border border-[#1e1f22] bg-[#1e1f22] px-2 py-2 text-[14px] text-[#F1F1F2] outline-none placeholder:text-[#8F8E8E]"
+          className="w-full rounded-[3px] border border-[#3f4147] bg-[#1e1f22] px-3 py-2 text-[14px] text-[#F1F1F2] outline-none placeholder:text-[#8F8E8E]"
         />
       </div>
     );
@@ -903,11 +906,11 @@ function ComponentPreview({ component, onChange, onOptionsOpen }: ComponentPrevi
       <div>
         {labelEl}
         {descriptionEl}
-        <div className="flex h-[120px] flex-col items-center justify-center rounded-[3px] border border-dashed border-[#3f4147] bg-[#1e1f22]">
-          <Upload className="mb-1 h-6 w-6 text-[#8F8E8E]" />
-          <p className="text-[13px] text-[#C7C6CB]">Drop file here or browse</p>
-          <p className="text-[11px] text-[#8F8E8E]">Upload a file under 10MB</p>
-        </div>
+        <textarea
+          readOnly
+          placeholder={component.placeholder || "Enter longer text..."}
+          className="w-full min-h-[100px] rounded-[3px] border border-[#3f4147] bg-[#1e1f22] px-3 py-2 text-[14px] text-[#F1F1F2] outline-none placeholder:text-[#8F8E8E] resize-none"
+        />
       </div>
     );
   }
@@ -1036,7 +1039,7 @@ function ComponentPreview({ component, onChange, onOptionsOpen }: ComponentPrevi
         <button
           type="button"
           onClick={component.type === "dropdown" ? onOptionsOpen : undefined}
-          className="flex w-full items-center justify-between rounded-[3px] border border-[#1e1f22] bg-[#1e1f22] px-3 py-2 text-sm text-[#8F8E8E]"
+          className="flex w-full items-center justify-between rounded-[3px] border border-[#3f4147] bg-[#1e1f22] px-3 py-2 text-sm text-[#8F8E8E]"
         >
           <span>{component.placeholder || placeholderMap[component.type] || "Make a selection"}</span>
           <ChevronDown className="h-4 w-4" />
@@ -1340,7 +1343,7 @@ function ModalPageCard({ page, pageIndex, totalPages, onChange, onDuplicate, onD
 
         {/* Component list */}
         {page.components.length > 0 && (
-          <div className="max-h-[440px] overflow-y-auto border-t border-b border-[#3f4147] px-4 py-3">
+          <div className="border-t border-b border-[#3f4147] px-4 py-3">
             <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
               <SortableContext
                 items={page.components.map((c) => c.id)}
@@ -1672,80 +1675,6 @@ function OutputLocationCard({ location, onChange, guildId }: OutputLocationCardP
 }
 
 // ---------------------------------------------------------------------------
-// ModalSettingsPanel
-// ---------------------------------------------------------------------------
-
-interface ModalSettingsPanelProps {
-  settings: ModalSettings;
-  onChange: (settings: ModalSettings) => void;
-  onRoleRestrictOpen: () => void;
-  onRoleOutputOpen: () => void;
-  guildId: string;
-}
-
-function ModalSettingsPanel({
-  settings,
-  onChange,
-  onRoleRestrictOpen,
-  onRoleOutputOpen,
-  guildId,
-}: ModalSettingsPanelProps) {
-  return (
-    <div className="space-y-4 rounded-lg border border-[#3f4147] bg-[#2F2F34] p-6">
-      <h2 className="text-base font-semibold text-[#F1F1F2]">Settings</h2>
-
-      {/* Role Restrictions */}
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-[#F1F1F2]">Role Restrictions</p>
-          <p className="text-xs text-[#C7C6CB]">Restrict which roles can trigger this modal</p>
-        </div>
-        <button
-          type="button"
-          onClick={onRoleRestrictOpen}
-          className="rounded-[3px] bg-[#5865F1] px-3 py-1.5 text-xs font-medium text-[#F1F1F2] transition-colors hover:bg-[#4752c4]"
-        >
-          Configure
-        </button>
-      </div>
-
-      <div className="h-px bg-[#3f4147]" />
-
-      {/* Update User Roles on Output */}
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-[#F1F1F2]">Update User Roles on Output</p>
-          <p className="text-xs text-[#C7C6CB]">
-            Grant or remove roles when a user submits this modal
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={onRoleOutputOpen}
-          className="rounded-[3px] bg-[#5865F1] px-3 py-1.5 text-xs font-medium text-[#F1F1F2] transition-colors hover:bg-[#4752c4]"
-        >
-          Configure
-        </button>
-      </div>
-
-      <div className="h-px bg-[#3f4147]" />
-
-      {/* Output Channel */}
-      <div>
-        <p className="mb-3 text-sm font-medium text-[#F1F1F2]">Output Channel</p>
-        <OutputLocationCard
-          guildId={guildId}
-          location={settings.outputLocations[0]}
-          onChange={(updated) =>
-            onChange({ ...settings, outputLocations: [updated] })
-          }
-        />
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // SaveBar
 // ---------------------------------------------------------------------------
 
@@ -1807,12 +1736,29 @@ const INITIAL_SETTINGS: ModalSettings = {
   outputLocations: [makeLocation()],
 };
 
-export function DiscordModalBuilder({ guildId, onSave, isSaving }: DiscordModalBuilderProps) {
-  const [pages, setPages] = useState<ModalPage[]>(INITIAL_PAGES);
-  const [settings, setSettings] = useState<ModalSettings>(INITIAL_SETTINGS);
-  const [savedSnapshot, setSavedSnapshot] = useState(() => JSON.stringify(INITIAL_PAGES));
-  const [roleRestrictDialogOpen, setRoleRestrictDialogOpen] = useState(false);
-  const [roleOutputDialogOpen, setRoleOutputDialogOpen] = useState(false);
+export function DiscordModalBuilder({ guildId, onSave, onPagesChange, isSaving, initialPages, initialSettings }: DiscordModalBuilderProps) {
+  const [pages, setPages] = useState<ModalPage[]>(() => initialPages && initialPages.length > 0 ? initialPages : INITIAL_PAGES);
+  const [settings, setSettings] = useState<ModalSettings>(() => initialSettings ?? INITIAL_SETTINGS);
+  const [savedSnapshot, setSavedSnapshot] = useState(() => JSON.stringify(initialPages && initialPages.length > 0 ? initialPages : INITIAL_PAGES));
+
+  // Sync when initial data changes (e.g., after loading template)
+  useEffect(() => {
+    if (initialPages && initialPages.length > 0) {
+      setPages(initialPages);
+      setSavedSnapshot(JSON.stringify(initialPages));
+    }
+  }, [initialPages]);
+
+  useEffect(() => {
+    if (initialSettings) {
+      setSettings(initialSettings);
+    }
+  }, [initialSettings]);
+
+  // Notify parent when pages change
+  useEffect(() => {
+    onPagesChange?.(pages);
+  }, [pages, onPagesChange]);
 
   const isDirty = JSON.stringify(pages) !== savedSnapshot;
   const modalTitle = pages[0]?.title ?? "";
@@ -1899,15 +1845,6 @@ export function DiscordModalBuilder({ guildId, onSave, isSaving }: DiscordModalB
         </div>
       )}
 
-      {/* Settings */}
-      <ModalSettingsPanel
-        guildId={guildId}
-        settings={settings}
-        onChange={setSettings}
-        onRoleRestrictOpen={() => setRoleRestrictDialogOpen(true)}
-        onRoleOutputOpen={() => setRoleOutputDialogOpen(true)}
-      />
-
       {/* Floating save bar */}
       <SaveBar
         title={modalTitle}
@@ -1915,40 +1852,6 @@ export function DiscordModalBuilder({ guildId, onSave, isSaving }: DiscordModalB
         onSave={handleSave}
         onReset={handleReset}
       />
-
-      {/* Role Restrictions Dialog */}
-      <Dialog open={roleRestrictDialogOpen} onOpenChange={setRoleRestrictDialogOpen}>
-        <DialogContent className="border-[#3f4147] bg-[#232327] text-[#F1F1F2]">
-          <DialogHeader>
-            <DialogTitle>Role Restrictions</DialogTitle>
-            <DialogDescription className="text-[#C7C6CB]">
-              Only members with these roles can trigger this modal.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <p className="text-sm text-[#C7C6CB]">
-              Role restriction configuration coming soon.
-            </p>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Role Output Dialog */}
-      <Dialog open={roleOutputDialogOpen} onOpenChange={setRoleOutputDialogOpen}>
-        <DialogContent className="border-[#3f4147] bg-[#232327] text-[#F1F1F2]">
-          <DialogHeader>
-            <DialogTitle>Update User Roles on Output</DialogTitle>
-            <DialogDescription className="text-[#C7C6CB]">
-              Grant or remove roles from the user upon modal submission.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <p className="text-sm text-[#C7C6CB]">
-              Role assignment configuration coming soon.
-            </p>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

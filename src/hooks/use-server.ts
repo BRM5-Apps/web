@@ -5,17 +5,22 @@ import { invalidateRelated } from "@/lib/query-utils";
 import type { Server, PaginatedMembers } from "@/types/server";
 
 // API returns { server: { server: Server, member_count: number } }
+// The backend wraps the response in an extra 'server' key
 interface ServerWithMeta {
-  server: Server;
-  member_count: number;
+  server: {
+    server: Server;
+    member_count: number;
+  };
 }
 
 export function useServer(serverId: string) {
   return useQuery<ServerWithMeta>({
     queryKey: queryKeys.servers.detail(serverId),
     queryFn: async ({ signal }) => {
-      const meta: ServerWithMeta = await api.servers.get(serverId, { signal });
-      return meta;
+      // API client type says { server: Server; member_count: number }
+      // But actual response is { server: { server: Server; member_count: number } }
+      const response = await api.servers.get(serverId, { signal }) as unknown as ServerWithMeta;
+      return response;
     },
     enabled: !!serverId,
     retry: false,

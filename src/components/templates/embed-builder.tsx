@@ -23,7 +23,7 @@ import { type DiscordTheme } from "@/components/discord-preview/discord-theme";
 import { JsonImportDialog } from "@/components/templates/json-import";
 import { FieldEditor } from "@/components/templates/field-editor";
 import { cn } from "@/lib/utils";
-import { Plus, Variable, Upload, Download, Save, Sun, Moon } from "lucide-react";
+import { Plus, Variable, Upload, Download, Save, Sun, Moon, ChevronRight } from "lucide-react";
 import type { EmbedTemplate } from "@/types/template";
 
 // ── Variables ──
@@ -141,7 +141,7 @@ export function EmbedBuilder({ template, isSaving, onSave, onDataChange, submitR
 
   return (
     <FormProvider {...form}>
-      <div className={sidebar ? "grid max-w-[1000px] items-start gap-6 lg:grid-cols-[400px_minmax(0,1fr)] xl:grid-cols-[420px_minmax(0,1fr)]" : "grid items-start gap-6 lg:grid-cols-[400px_1fr] xl:grid-cols-[420px_1fr]"}>
+      <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
           {/* Left: Form */}
           <Card className="p-4">
             <div className="space-y-5">
@@ -169,7 +169,7 @@ export function EmbedBuilder({ template, isSaving, onSave, onDataChange, submitR
             <Separator />
 
             <Section title="Author">
-              <TextField name="authorName" label="Name" placeholder="Server Bot" withVariables />
+              <TextField name="authorName" label="Name" placeholder="Server Bot" />
               <TextField name="authorIconUrl" label="Icon URL" placeholder="https://..." />
               <TextField name="authorUrl" label="URL" placeholder="https://..." />
             </Section>
@@ -177,14 +177,14 @@ export function EmbedBuilder({ template, isSaving, onSave, onDataChange, submitR
             <Separator />
 
             <Section title="Title">
-              <TextField name="title" label="Text" placeholder="Operation Briefing" withVariables />
+              <TextField name="title" label="Text" placeholder="Operation Briefing" />
               <TextField name="url" label="URL" placeholder="https://..." />
             </Section>
 
             <Separator />
 
             <Section title="Description">
-              <TextAreaField name="description" label="Content" placeholder="Write description..." rows={5} withVariables />
+              <TextAreaField name="description" label="Content" placeholder="Write description..." rows={5} />
               <TextField name="color" label="Color" placeholder="#5865F2" />
             </Section>
 
@@ -209,7 +209,7 @@ export function EmbedBuilder({ template, isSaving, onSave, onDataChange, submitR
             <Separator />
 
             <Section title="Footer">
-              <TextField name="footerText" label="Text" placeholder="© Server" withVariables />
+              <TextField name="footerText" label="Text" placeholder="© Server" />
               <TextField name="footerIconUrl" label="Icon URL" placeholder="https://..." />
               <div className="flex items-center justify-between pt-1">
                 <Label htmlFor="timestamp" className="text-sm text-muted-foreground">Include timestamp</Label>
@@ -548,10 +548,23 @@ function Section({ title, children }: {
   title: string;
   children: React.ReactNode;
 }) {
+  const [collapsed, setCollapsed] = useState(false);
+
   return (
-    <div className="space-y-3">
-      <div className="text-sm font-semibold text-muted-foreground">{title}</div>
-      {children}
+    <div>
+      <button
+        type="button"
+        className="flex w-full items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
+        onClick={() => setCollapsed((c) => !c)}
+      >
+        <ChevronRight
+          width={14}
+          height={14}
+          style={{ transform: collapsed ? "rotate(0deg)" : "rotate(90deg)", transition: "transform 0.15s ease" }}
+        />
+        {title}
+      </button>
+      {!collapsed && children}
     </div>
   );
 }

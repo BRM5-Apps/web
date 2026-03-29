@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api } from "@/lib/api-client";
-import type { ScheduledMessage } from "@/types/template";
+import type { ScheduledMessage, CreateScheduledMessageRequest } from "@/types/template";
 
 const qk = {
   list: (serverId: string) => ["servers", serverId, "schedule"] as const,
@@ -21,7 +21,7 @@ export function useScheduledMessages(serverId: string) {
 export function useCreateSchedule(serverId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: Partial<ScheduledMessage>) => api.schedule.create(serverId, data),
+    mutationFn: (data: CreateScheduledMessageRequest) => api.schedule.create(serverId, data),
     onSuccess: () => {
       toast.success("Scheduled message created");
       qc.invalidateQueries({ queryKey: qk.list(serverId) });
@@ -31,6 +31,25 @@ export function useCreateSchedule(serverId: string) {
         typeof err === "object" && err && "message" in err
           ? (err as { message: string }).message
           : "Failed to create scheduled message"
+      );
+    },
+  });
+}
+
+export function useUpdateSchedule(serverId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<CreateScheduledMessageRequest> }) =>
+      api.schedule.update(serverId, id, data),
+    onSuccess: () => {
+      toast.success("Scheduled message updated");
+      qc.invalidateQueries({ queryKey: qk.list(serverId) });
+    },
+    onError: (err: unknown) => {
+      toast.error(
+        typeof err === "object" && err && "message" in err
+          ? (err as { message: string }).message
+          : "Failed to update scheduled message"
       );
     },
   });
