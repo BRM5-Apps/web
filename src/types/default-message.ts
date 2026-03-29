@@ -80,6 +80,6 @@ export const DEFAULT_MESSAGE_KEYS: Record<MessageCategory, string[]> = {
 	PUNISHMENT: ['warn', 'mute', 'kick', 'ban', 'unban', 'unmute'],
 	PROMOTION: ['rank_up', 'promotion_announcement', 'new_rank'],
 	DEMOTION: ['rank_down', 'demotion_notice'],
-	VERIFICATION: ['verify_instructions', 'verify_success', 'verify_pending'],
+	VERIFICATION: ['verify_instructions', 'verify_success', 'verify_pending', 'verify_group_join', 'verify_already_verified', 'verify_error'],
 	TICKET: ['ticket_created', 'ticket_closed', 'ticket_transcript'],
 };
