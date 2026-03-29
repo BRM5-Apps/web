@@ -459,11 +459,22 @@ export default function DefaultMessagesPage() {
                     components={containers.data.find((t) => t.id === previewMessage.container_template_id)?.template_data?.components as any}
                   />
                 )}
-                {previewMessage.embed_template_id && embeds.data && (
-                  <EmbedPreview
-                    {...embeds.data.find((t) => t.id === previewMessage.embed_template_id)!}
-                  />
-                )}
+                {previewMessage.embed_template_id && embeds.data && (() => {
+                  const embed = embeds.data.find((t) => t.id === previewMessage.embed_template_id);
+                  if (!embed) return null;
+                  return (
+                    <EmbedPreview
+                      title={embed.title}
+                      description={embed.description}
+                      color={embed.color}
+                      fields={embed.fields}
+                      footer={embed.footer ? { text: embed.footer } : undefined}
+                      image={embed.imageUrl ? { url: embed.imageUrl } : undefined}
+                      thumbnail={embed.thumbnailUrl ? { url: embed.thumbnailUrl } : undefined}
+                      author={embed.authorName ? { name: embed.authorName, icon_url: embed.authorIconUrl } : undefined}
+                    />
+                  );
+                })()}
                 {previewMessage.text_template_id && texts.data && (
                   <div className="whitespace-pre-wrap text-white">
                     {texts.data.find((t) => t.id === previewMessage.text_template_id)?.content}
