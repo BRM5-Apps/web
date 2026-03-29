@@ -32,7 +32,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Loader2, Lock, Globe } from "lucide-react";
+import { Loader2, Lock, Globe, FolderOpen, Folder } from "lucide-react";
 import { FOLDER_ICONS, getFolderIcon } from "@/lib/folder-icons";
 import {
   useContentFolders,
