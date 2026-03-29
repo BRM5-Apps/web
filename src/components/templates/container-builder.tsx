@@ -240,6 +240,7 @@ export function ContainerBuilder({ template, onSave, isSaving, submitRef, webhoo
           botName={webhookUsername || "BRM5 Bot"}
           botAvatarUrl={webhookAvatarUrl}
           container={{ components }}
+          accentColor={form.watch("accentColor") || undefined}
           discordTheme={discordTheme}
         />
       </Card>

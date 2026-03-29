@@ -5,13 +5,15 @@ import { EmbedPreview, type EmbedData } from "@/components/discord-preview/embed
 import { discordThemes, type DiscordTheme } from "@/components/discord-preview/discord-theme";
 import { cn } from "@/lib/utils";
 
-interface MessagePreviewProps {
+export interface MessagePreviewProps {
   botName: string;
   botAvatarUrl?: string;
   timestamp?: string | number | Date;
   content?: string;
   embed?: EmbedData;
   container?: ContainerData;
+  /** Accent color for container (left border) */
+  accentColor?: string;
   discordTheme?: DiscordTheme;
   className?: string;
 }
@@ -37,6 +39,7 @@ export function MessagePreview({
   content,
   embed,
   container,
+  accentColor,
   discordTheme = "dark",
   className,
 }: MessagePreviewProps) {
@@ -72,7 +75,7 @@ export function MessagePreview({
 
             {content ? <DiscordMarkdown content={content} className="mb-[8px]" /> : null}
             {embed ? <EmbedPreview {...embed} discordTheme={discordTheme} className="mb-[8px]" /> : null}
-            {container ? <ContainerPreview container={container} discordTheme={discordTheme} /> : null}
+            {container ? <ContainerPreview container={container} accentColor={accentColor} discordTheme={discordTheme} /> : null}
           </div>
         </div>
       </div>
