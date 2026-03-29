@@ -24,7 +24,7 @@ interface VerificationConfig {
   verification_channel_id?: string;
   welcome_message?: string;
   group_verification_enabled: boolean;
-  roblox_group_id?: string;
+  roblox_group_id?: number;
   roblox_group_name?: string;
   require_group_membership: boolean;
 }
@@ -100,7 +100,7 @@ export default function VerificationSettingsPage() {
       verification_channel_id: verificationChannelId || undefined,
       welcome_message: welcomeMessage || undefined,
       group_verification_enabled: groupVerificationEnabled,
-      roblox_group_id: robloxGroupId ? parseInt(robloxGroupId) : undefined,
+      roblox_group_id: robloxGroupId ? Number(robloxGroupId) : undefined,
       roblox_group_name: robloxGroupName || undefined,
       require_group_membership: requireGroupMembership,
     });
