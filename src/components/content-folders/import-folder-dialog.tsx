@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Download, FileText, LayoutPanelTop, Zap, Loader2 } from 'lucide-react';
+import { Download, FileText, LayoutPanelTop, Zap, Loader2, Folder } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
