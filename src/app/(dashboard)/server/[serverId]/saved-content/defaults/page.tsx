@@ -471,7 +471,7 @@ export default function DefaultMessagesPage() {
                       footer={embed.footer ? { text: embed.footer } : undefined}
                       image={embed.imageUrl ? { url: embed.imageUrl } : undefined}
                       thumbnail={embed.thumbnailUrl ? { url: embed.thumbnailUrl } : undefined}
-                      author={embed.authorName ? { name: embed.authorName, icon_url: embed.authorIconUrl } : undefined}
+                      author={embed.authorName ? { name: embed.authorName, iconUrl: embed.authorIconUrl } : undefined}
                     />
                   );
                 })()}
