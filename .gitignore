@@ -28,3 +28,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+.vercel
+
+# env files - all env files should be local
+.env
+.env.*
+!.env.example
+!.env.local.example
