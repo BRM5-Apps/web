@@ -18,7 +18,7 @@ export default function DashboardLayout({
 }) {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
-  const { data: servers, isLoading: serversLoading } = useServers();
+  const { data: servers, isLoading: serversLoading } = useServers({ enabled: isAuthenticated });
   const { activeServerId, setServerData, setUserPermissions } = useServerStore();
 
   // Load permissions when server changes

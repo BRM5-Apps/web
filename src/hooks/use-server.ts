@@ -27,10 +27,12 @@ export function useServer(serverId: string) {
   });
 }
 
-export function useServers() {
+export function useServers(options?: { enabled?: boolean }) {
   return useQuery<Server[]>({
     queryKey: queryKeys.servers.lists(),
     queryFn: ({ signal }) => api.servers.list({ signal }),
+    enabled: options?.enabled ?? true,
+    retry: false,
   });
 }
 
