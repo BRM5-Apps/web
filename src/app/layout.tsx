@@ -6,7 +6,7 @@ import { Providers } from "@/providers/providers";
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
-  title: "ServerHub Dashboard",
+  title: "Hafnium Dashboard",
   description: "Manage your Discord servers, events, ranks, and more.",
   icons: { icon: "/favicon.ico" },
 };

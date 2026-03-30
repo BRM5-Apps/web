@@ -106,6 +106,44 @@ export const queryKeys = {
     all: (serverId: string) => ["servers", serverId, "units"] as const,
     detail: (serverId: string, unitId: string) =>
       [...queryKeys.units.all(serverId), unitId] as const,
+    tree: (serverId: string) => [...queryKeys.units.all(serverId), "tree"] as const,
+  },
+
+  // ── Positions ──
+  positions: {
+    all: (serverId: string) => ["servers", serverId, "positions"] as const,
+    detail: (serverId: string, positionId: string) =>
+      [...queryKeys.positions.all(serverId), positionId] as const,
+    holders: (serverId: string, positionId: string) =>
+      [...queryKeys.positions.detail(serverId, positionId), "holders"] as const,
+    memberPositions: (serverId: string, serverUserId: string) =>
+      ["servers", serverId, "members", serverUserId, "positions"] as const,
+  },
+
+  // ── Branches (RankBranch) ──
+  branches: {
+    all: (serverId: string) => ["servers", serverId, "branches"] as const,
+    detail: (serverId: string, branchId: string) =>
+      [...queryKeys.branches.all(serverId), branchId] as const,
+    memberProgress: (serverId: string, serverUserId: string) =>
+      ["servers", serverId, "members", serverUserId, "branch-progress"] as const,
+  },
+
+  // ── Notifications ──
+  notifications: {
+    all: (serverId: string) => ["servers", serverId, "notifications"] as const,
+    list: (serverId: string, filters?: Record<string, unknown>) =>
+      [...queryKeys.notifications.all(serverId), "list", filters] as const,
+  },
+
+  // ── Member Profile ──
+  memberProfile: {
+    detail: (serverId: string, serverUserId: string) =>
+      ["servers", serverId, "members", serverUserId, "profile"] as const,
+    rankHistory: (serverId: string, serverUserId: string) =>
+      ["servers", serverId, "members", serverUserId, "rank-history"] as const,
+    unitHistory: (serverId: string, serverUserId: string) =>
+      ["servers", serverId, "members", serverUserId, "unit-history"] as const,
   },
 
   // ── Discord Guilds (admin guilds + server status) ──

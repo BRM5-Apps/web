@@ -4,7 +4,8 @@ export type MessageKitContentType =
 	| 'EMBED_TEMPLATE'
 	| 'CONTAINER_TEMPLATE'
 	| 'BUTTON_TEMPLATE'
-	| 'SELECT_MENU_TEMPLATE';
+	| 'SELECT_MENU_TEMPLATE'
+	| 'CONTENT_FOLDER';
 
 // Message Kit - shareable template collection
 export interface MessageKit {

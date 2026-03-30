@@ -33,9 +33,10 @@ import {
 import { PermissionGate } from "@/components/shared/permission-gate";
 import { PERMISSION_KEYS } from "@/lib/constants";
 import { useEmbedTemplates, useContainerTemplates, useTextTemplates } from "@/hooks/use-templates";
+import { useContentFolders } from "@/hooks/use-content-folders";
 import { useCreateMessageKit, useAddContent, useDeleteContent, useKitContents } from "@/hooks/use-message-kits";
 import type { MessageKitContentType } from "@/types/message-kit";
-import { ArrowLeft, Plus, Trash2, Package, FileCode, FileText, Box, Save } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Package, FileCode, FileText, Box, Save, FolderOpen } from "lucide-react";
 import Link from "next/link";
 
 interface ContentItem {
@@ -43,12 +44,15 @@ interface ContentItem {
 	content_type: MessageKitContentType;
 	name: string;
 	template_id: string;
+	folder_id?: string;
+	item_count?: number;
 }
 
 const CONTENT_TYPE_OPTIONS: { value: MessageKitContentType; label: string; icon: React.ReactNode }[] = [
 	{ value: 'EMBED_TEMPLATE', label: 'Embed', icon: <FileCode className="h-4 w-4" /> },
 	{ value: 'CONTAINER_TEMPLATE', label: 'Container', icon: <Box className="h-4 w-4" /> },
 	{ value: 'TEXT_TEMPLATE', label: 'Text', icon: <FileText className="h-4 w-4" /> },
+	{ value: 'CONTENT_FOLDER', label: 'Folder', icon: <FolderOpen className="h-4 w-4" /> },
 ];
 
 export default function NewMessageKitPage() {
@@ -75,6 +79,7 @@ export default function NewMessageKitPage() {
 	const embeds = useEmbedTemplates(serverId);
 	const containers = useContainerTemplates(serverId);
 	const texts = useTextTemplates(serverId);
+	const folders = useContentFolders(serverId);
 
 	// Mutations
 	const createMutation = useMutation({
@@ -90,10 +95,17 @@ export default function NewMessageKitPage() {
 
 			// Add content items
 			for (const content of contents) {
-				await api.messageKits.addContent(serverId, kit.id, {
-					content_type: content.content_type,
-					content_data: { template_id: content.template_id },
-				});
+				if (content.content_type === 'CONTENT_FOLDER') {
+					await api.messageKits.addContent(serverId, kit.id, {
+						content_type: content.content_type,
+						content_data: { folder_id: content.folder_id, folder_name: content.name },
+					});
+				} else {
+					await api.messageKits.addContent(serverId, kit.id, {
+						content_type: content.content_type,
+						content_data: { template_id: content.template_id },
+					});
+				}
 			}
 
 			return kit;
@@ -115,12 +127,37 @@ export default function NewMessageKitPage() {
 				return containers.data ?? [];
 			case 'TEXT_TEMPLATE':
 				return texts.data ?? [];
+			case 'CONTENT_FOLDER':
+				return folders.data ?? [];
 			default:
 				return [];
 		}
 	};
 
 	const addContent = () => {
+		if (selectedType === 'CONTENT_FOLDER') {
+			if (!selectedTemplateId) {
+				toast.error("Please select a folder");
+				return;
+			}
+			const folder = folders.data?.find((f) => f.id === selectedTemplateId);
+			if (!folder) return;
+
+			setContents([
+				...contents,
+				{
+					id: crypto.randomUUID(),
+					content_type: selectedType,
+					name: folder.name,
+					template_id: "",
+					folder_id: folder.id,
+					item_count: folder.items?.length ?? 0,
+				},
+			]);
+			setSelectedTemplateId("");
+			return;
+		}
+
 		if (!selectedTemplateId) {
 			toast.error("Please select a template");
 			return;
@@ -175,6 +212,10 @@ export default function NewMessageKitPage() {
 
 	const getContentTypeLabel = (type: MessageKitContentType) => {
 		return CONTENT_TYPE_OPTIONS.find((o) => o.value === type)?.label ?? type;
+	};
+
+	const getContentTypeIcon = (type: MessageKitContentType) => {
+		return CONTENT_TYPE_OPTIONS.find((o) => o.value === type)?.icon;
 	};
 
 	return (
@@ -315,16 +356,19 @@ export default function NewMessageKitPage() {
 										</Select>
 									</div>
 									<div className="space-y-2 md:col-span-2">
-										<Label>Template</Label>
+										<Label>{selectedType === 'CONTENT_FOLDER' ? 'Folder' : 'Template'}</Label>
 										<div className="flex gap-2">
 											<Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
 												<SelectTrigger className="flex-1">
-													<SelectValue placeholder="Select a template..." />
+													<SelectValue placeholder={selectedType === 'CONTENT_FOLDER' ? "Select a folder..." : "Select a template..."} />
 												</SelectTrigger>
 												<SelectContent>
 													{getTemplatesForType().map((template: any) => (
 														<SelectItem key={template.id} value={template.id}>
 															{template.name}
+															{selectedType === 'CONTENT_FOLDER' && template.items && (
+																<span className="text-muted-foreground"> ({template.items.length} items)</span>
+															)}
 														</SelectItem>
 													))}
 												</SelectContent>
@@ -336,12 +380,17 @@ export default function NewMessageKitPage() {
 										</div>
 										{(selectedType === 'EMBED_TEMPLATE' && embeds.isLoading) ||
 											(selectedType === 'CONTAINER_TEMPLATE' && containers.isLoading) ||
-											(selectedType === 'TEXT_TEMPLATE' && texts.isLoading) ? (
-											<p className="text-xs text-muted-foreground">Loading templates...</p>
+											(selectedType === 'TEXT_TEMPLATE' && texts.isLoading) ||
+											(selectedType === 'CONTENT_FOLDER' && folders.isLoading) ? (
+											<p className="text-xs text-muted-foreground">Loading...</p>
 										) : getTemplatesForType().length === 0 ? (
 											<p className="text-xs text-muted-foreground">
-												No {CONTENT_TYPE_OPTIONS.find(o => o.value === selectedType)?.label.toLowerCase()} templates.
-												Create some in Saved Content first.
+												{selectedType === 'CONTENT_FOLDER' ? (
+													<>No folders found. Create folders in Saved Content first.</>
+												) : (
+													<>No {CONTENT_TYPE_OPTIONS.find(o => o.value === selectedType)?.label.toLowerCase()}s found.
+														{' '}Create some in Saved Content first.</>
+												)}
 											</p>
 										) : null}
 									</div>
@@ -362,11 +411,14 @@ export default function NewMessageKitPage() {
 													<span className="text-sm text-muted-foreground w-6">
 														#{index + 1}
 													</span>
-													{CONTENT_TYPE_OPTIONS.find(o => o.value === content.content_type)?.icon}
+													{getContentTypeIcon(content.content_type)}
 													<div>
 														<p className="font-medium">{content.name}</p>
 														<p className="text-sm text-muted-foreground">
 															{getContentTypeLabel(content.content_type)}
+															{content.content_type === 'CONTENT_FOLDER' && content.item_count !== undefined && (
+																<span> • {content.item_count} items</span>
+															)}
 														</p>
 													</div>
 												</div>
@@ -386,7 +438,7 @@ export default function NewMessageKitPage() {
 								<div className="text-center py-8 text-muted-foreground">
 									<Package className="h-12 w-12 mx-auto mb-3 opacity-50" />
 									<p>No content added yet.</p>
-									<p className="text-sm">Select templates above to add them to your kit.</p>
+									<p className="text-sm">Select templates or folders above to add them to your kit.</p>
 								</div>
 							)}
 						</CardContent>

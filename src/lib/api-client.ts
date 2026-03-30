@@ -40,7 +40,10 @@ import type {
   UserPoints,
   PromotionFlag,
 } from "@/types/points";
-import type { Unit, UnitMember } from "@/types/unit";
+import type { Unit, UnitMember, UnitTreeNode, UnitCapPayload, MoveUnitPayload } from "@/types/unit";
+import type { Position, PositionWithHolders, PositionAssignment, PositionPayload, AssignPositionPayload } from "@/types/position";
+import type { RankBranch, MemberBranchProgress, BranchPayload, PathOrderPayload } from "@/types/branch";
+import type { Notification, NotificationListResponse } from "@/types/notification";
 import type { Subscription, CheckoutSession } from "@/types/billing";
 import type { User, UserProfile } from "@/types/user";
 import type {
@@ -940,6 +943,258 @@ export const api = {
     ) =>
       apiClient.delete<void>(
         API_ROUTES.servers.units.removeMember(serverId, unitId, serverUserId),
+        opts
+      ),
+    getTree: (serverId: string, opts?: RequestOptions) =>
+      apiClient.get<UnitTreeNode[]>(
+        API_ROUTES.servers.units.tree(serverId),
+        undefined,
+        opts
+      ),
+    setCap: (
+      serverId: string,
+      unitId: string,
+      data: UnitCapPayload,
+      opts?: RequestOptions
+    ) =>
+      apiClient.patch<Unit>(
+        API_ROUTES.servers.units.setCap(serverId, unitId),
+        data,
+        opts
+      ),
+    move: (
+      serverId: string,
+      unitId: string,
+      data: MoveUnitPayload,
+      opts?: RequestOptions
+    ) =>
+      apiClient.patch<Unit>(
+        API_ROUTES.servers.units.move(serverId, unitId),
+        data,
+        opts
+      ),
+  },
+
+  // ── Positions ──
+  positions: {
+    list: (serverId: string, opts?: RequestOptions) =>
+      apiClient.get<PositionWithHolders[]>(
+        API_ROUTES.servers.positions.list(serverId),
+        undefined,
+        opts
+      ),
+    get: (serverId: string, positionId: string, opts?: RequestOptions) =>
+      apiClient.get<PositionWithHolders>(
+        API_ROUTES.servers.positions.get(serverId, positionId),
+        undefined,
+        opts
+      ),
+    create: (serverId: string, data: PositionPayload, opts?: RequestOptions) =>
+      apiClient.post<Position>(
+        API_ROUTES.servers.positions.create(serverId),
+        data,
+        opts
+      ),
+    update: (
+      serverId: string,
+      positionId: string,
+      data: PositionPayload,
+      opts?: RequestOptions
+    ) =>
+      apiClient.patch<Position>(
+        API_ROUTES.servers.positions.update(serverId, positionId),
+        data,
+        opts
+      ),
+    delete: (serverId: string, positionId: string, opts?: RequestOptions) =>
+      apiClient.delete<void>(
+        API_ROUTES.servers.positions.delete(serverId, positionId),
+        opts
+      ),
+    assign: (
+      serverId: string,
+      positionId: string,
+      data: AssignPositionPayload,
+      opts?: RequestOptions
+    ) =>
+      apiClient.post<PositionAssignment>(
+        API_ROUTES.servers.positions.assign(serverId, positionId),
+        data,
+        opts
+      ),
+    unassign: (serverId: string, assignmentId: string, opts?: RequestOptions) =>
+      apiClient.delete<void>(
+        API_ROUTES.servers.positions.unassign(serverId, assignmentId),
+        opts
+      ),
+    getHolders: (
+      serverId: string,
+      positionId: string,
+      opts?: RequestOptions
+    ) =>
+      apiClient.get<PositionAssignment[]>(
+        API_ROUTES.servers.positions.holders(serverId, positionId),
+        undefined,
+        opts
+      ),
+    getMemberPositions: (
+      serverId: string,
+      serverUserId: string,
+      opts?: RequestOptions
+    ) =>
+      apiClient.get<PositionAssignment[]>(
+        API_ROUTES.servers.positions.memberPositions(serverId, serverUserId),
+        undefined,
+        opts
+      ),
+  },
+
+  // ── Branches (RankBranch) ──
+  branches: {
+    list: (serverId: string, opts?: RequestOptions) =>
+      apiClient.get<RankBranch[]>(
+        API_ROUTES.servers.branches.list(serverId),
+        undefined,
+        opts
+      ),
+    get: (serverId: string, branchId: string, opts?: RequestOptions) =>
+      apiClient.get<RankBranch>(
+        API_ROUTES.servers.branches.get(serverId, branchId),
+        undefined,
+        opts
+      ),
+    create: (serverId: string, data: BranchPayload, opts?: RequestOptions) =>
+      apiClient.post<RankBranch>(
+        API_ROUTES.servers.branches.create(serverId),
+        data,
+        opts
+      ),
+    update: (
+      serverId: string,
+      branchId: string,
+      data: BranchPayload,
+      opts?: RequestOptions
+    ) =>
+      apiClient.patch<RankBranch>(
+        API_ROUTES.servers.branches.update(serverId, branchId),
+        data,
+        opts
+      ),
+    delete: (serverId: string, branchId: string, opts?: RequestOptions) =>
+      apiClient.delete<void>(
+        API_ROUTES.servers.branches.delete(serverId, branchId),
+        opts
+      ),
+    updatePathOrder: (
+      serverId: string,
+      branchId: string,
+      data: PathOrderPayload,
+      opts?: RequestOptions
+    ) =>
+      apiClient.patch<RankBranch>(
+        API_ROUTES.servers.branches.updatePathOrder(serverId, branchId),
+        data,
+        opts
+      ),
+    getMemberProgress: (
+      serverId: string,
+      serverUserId: string,
+      opts?: RequestOptions
+    ) =>
+      apiClient.get<MemberBranchProgress[]>(
+        API_ROUTES.servers.branches.memberProgress(serverId, serverUserId),
+        undefined,
+        opts
+      ),
+  },
+
+  // ── Notifications ──
+  notifications: {
+    list: (
+      serverId: string,
+      params?: { page?: number; limit?: number; unreadOnly?: boolean },
+      opts?: RequestOptions
+    ) =>
+      apiClient.get<NotificationListResponse>(
+        API_ROUTES.servers.notifications.list(serverId),
+        params,
+        opts
+      ),
+    markRead: (serverId: string, notificationId: string, opts?: RequestOptions) =>
+      apiClient.patch<Notification>(
+        API_ROUTES.servers.notifications.markRead(serverId, notificationId),
+        undefined,
+        opts
+      ),
+    markAllRead: (serverId: string, opts?: RequestOptions) =>
+      apiClient.post<void>(
+        API_ROUTES.servers.notifications.markAllRead(serverId),
+        undefined,
+        opts
+      ),
+  },
+
+  // ── Member Profile ──
+  memberProfile: {
+    get: (serverId: string, serverUserId: string, opts?: RequestOptions) =>
+      apiClient.get<{
+        member: ServerMember;
+        profile: {
+          joinedAt: string;
+          lastActiveAt?: string;
+          totalPoints: number;
+          currentRankId?: string;
+          currentRank?: { id: string; name: string };
+          primaryUnitId?: string;
+          primaryUnit?: { id: string; name: string };
+        };
+      }>(
+        API_ROUTES.servers.memberProfile.get(serverId, serverUserId),
+        undefined,
+        opts
+      ),
+    getRankHistory: (
+      serverId: string,
+      serverUserId: string,
+      opts?: RequestOptions
+    ) =>
+      apiClient.get<
+        Array<{
+          id: string;
+          fromRankId?: string;
+          toRankId: string;
+          fromRank?: { id: string; name: string };
+          toRank: { id: string; name: string };
+          reason?: string;
+          changedBy: string;
+          changedByUser?: { id: string; username: string };
+          createdAt: string;
+        }>
+      >(
+        API_ROUTES.servers.memberProfile.rankHistory(serverId, serverUserId),
+        undefined,
+        opts
+      ),
+    getUnitHistory: (
+      serverId: string,
+      serverUserId: string,
+      opts?: RequestOptions
+    ) =>
+      apiClient.get<
+        Array<{
+          id: string;
+          fromUnitId?: string;
+          toUnitId: string;
+          fromUnit?: { id: string; name: string };
+          toUnit: { id: string; name: string };
+          reason?: string;
+          changedBy: string;
+          changedByUser?: { id: string; username: string };
+          createdAt: string;
+        }>
+      >(
+        API_ROUTES.servers.memberProfile.unitHistory(serverId, serverUserId),
+        undefined,
         opts
       ),
   },

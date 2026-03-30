@@ -12,10 +12,12 @@ import {
 } from "@tanstack/react-table";
 import { useServerMembers } from "@/hooks/use-server";
 import { useRanks } from "@/hooks/use-ranks";
+import { useUnits } from "@/hooks/use-units";
 import { usePromoteMember, useDemoteMember, useKickMember } from "@/hooks/use-members";
 import { useHasPermission } from "@/hooks/use-permissions";
 import { DataTable } from "@/components/shared/data-table";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { MemberProfileDialog } from "@/components/members/member-profile-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -43,7 +45,7 @@ import {
   ChevronUp,
   ChevronDown,
   UserX,
-  Shield,
+  User,
 } from "lucide-react";
 import type { ServerMember } from "@/types/server";
 
@@ -60,6 +62,10 @@ export default function MembersPage() {
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [search, setSearch] = useState("");
   const [rankFilter, setRankFilter] = useState<string>("all");
+  const [unitFilter, setUnitFilter] = useState<string>("all");
+
+  // Profile dialog state
+  const [profileMember, setProfileMember] = useState<ServerMember | null>(null);
 
   // Confirmation dialog state
   const [confirmAction, setConfirmAction] = useState<{
@@ -78,6 +84,7 @@ export default function MembersPage() {
     sortOrder: sortCol?.desc ? "desc" : "asc",
   });
   const { data: ranks } = useRanks(serverId);
+  const { data: units } = useUnits(serverId);
 
   // Mutations
   const promoteMutation = usePromoteMember(serverId);
@@ -129,7 +136,10 @@ export default function MembersPage() {
         cell: ({ row }) => {
           const member = row.original;
           return (
-            <div className="flex items-center gap-3">
+            <button
+              className="flex items-center gap-3 hover:opacity-80 transition-opacity text-left w-full"
+              onClick={() => setProfileMember(member)}
+            >
               <Avatar className="h-8 w-8">
                 {member.avatarUrl && <AvatarImage src={member.avatarUrl} alt={member.username} />}
                 <AvatarFallback className="text-xs">
@@ -137,7 +147,7 @@ export default function MembersPage() {
                 </AvatarFallback>
               </Avatar>
               <span className="font-medium">{member.username}</span>
-            </div>
+            </button>
           );
         },
       },
@@ -153,6 +163,19 @@ export default function MembersPage() {
               style={member.rankColor ? { borderColor: member.rankColor, color: member.rankColor } : undefined}
             >
               {member.rankName}
+            </Badge>
+          );
+        },
+      },
+      {
+        accessorKey: "unitName",
+        header: "Unit",
+        cell: ({ row }) => {
+          const member = row.original;
+          if (!member.unitName) return <span className="text-muted-foreground">Unassigned</span>;
+          return (
+            <Badge variant="secondary">
+              {member.unitName}
             </Badge>
           );
         },
@@ -216,6 +239,11 @@ export default function MembersPage() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setProfileMember(member)}>
+                  <User className="mr-2 h-4 w-4" />
+                  View Profile
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 {canPromote && (
                   <DropdownMenuItem
@@ -368,9 +396,37 @@ export default function MembersPage() {
             ))}
           </SelectContent>
         </Select>
+        <Select
+          value={unitFilter}
+          onValueChange={(value) => {
+            setUnitFilter(value);
+            setPagination((p) => ({ ...p, pageIndex: 0 }));
+          }}
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filter by unit" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Units</SelectItem>
+            <SelectItem value="unassigned">Unassigned</SelectItem>
+            {units?.map((unit) => (
+              <SelectItem key={unit.id} value={unit.id}>
+                {unit.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <DataTable table={table} columns={columns} isLoading={isLoading} emptyMessage="No members found." />
+
+      {/* Member Profile Dialog */}
+      <MemberProfileDialog
+        serverId={serverId}
+        member={profileMember}
+        open={!!profileMember}
+        onOpenChange={(open) => !open && setProfileMember(null)}
+      />
 
       {/* Confirm dialog for single-row actions */}
       <ConfirmDialog

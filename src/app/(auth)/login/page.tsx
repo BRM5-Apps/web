@@ -54,12 +54,12 @@ function LoginContent() {
       <div className="flex flex-col items-center gap-3">
         <Image
           src="/images/logo.svg"
-          alt="ServerHub"
+          alt="Hafnium"
           width={64}
           height={64}
           priority
         />
-        <h1 className="text-3xl font-bold tracking-tight">ServerHub</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Hafnium</h1>
         <p className="text-muted-foreground">
           Manage your servers, events, and community
         </p>
