@@ -98,7 +98,11 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   (error: AxiosError<ApiResponse<unknown>>) => {
     if (error.response?.status === 401 && typeof window !== "undefined") {
-      window.location.href = "/login";
+      // Clear the stale backendToken cookie to prevent auth loop
+      document.cookie = "backendToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      // Preserve current URL as callback for post-login redirect
+      const callbackUrl = encodeURIComponent(window.location.pathname + window.location.search);
+      window.location.href = `/login?callbackUrl=${callbackUrl}`;
     }
 
     const apiError: ApiError = error.response?.data?.error ?? {
