@@ -15,6 +15,7 @@ for (const envVar of requiredEnvVars) {
 }
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   images: {
     remotePatterns: [
       {
@@ -22,6 +23,11 @@ const nextConfig: NextConfig = {
         hostname: "cdn.discordapp.com",
       },
     ],
+  },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "2mb",
+    },
   },
 };
 

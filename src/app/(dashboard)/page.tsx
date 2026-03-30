@@ -1,25 +1,13 @@
-"use client";
+import { redirect } from "next/navigation";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useServerStore } from "@/stores/server-store";
-import { Loading } from "@/components/shared/loading";
+export default async function DashboardPage() {
+  const session = await getServerSession(authOptions);
 
-export default function DashboardPage() {
-  const router = useRouter();
-  const { activeServerId } = useServerStore();
+  if (!session) {
+    redirect("/login");
+  }
 
-  useEffect(() => {
-    if (activeServerId) {
-      router.replace(`/server/${activeServerId}`);
-    } else {
-      router.replace("/select-server");
-    }
-  }, [activeServerId, router]);
-
-  return (
-    <div className="flex items-center justify-center py-20">
-      <Loading />
-    </div>
-  );
+  redirect("/select-server");
 }
