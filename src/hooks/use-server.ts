@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/providers/auth-provider";
 import { api } from "@/lib/api-client";
 import { queryKeys } from "@/lib/query-keys";
 import { invalidateRelated } from "@/lib/query-utils";
@@ -14,6 +15,7 @@ interface ServerWithMeta {
 }
 
 export function useServer(serverId: string) {
+  const { isAuthenticated } = useAuth();
   return useQuery<ServerWithMeta>({
     queryKey: queryKeys.servers.detail(serverId),
     queryFn: async ({ signal }) => {
@@ -22,7 +24,7 @@ export function useServer(serverId: string) {
       const response = await api.servers.get(serverId, { signal }) as unknown as ServerWithMeta;
       return response;
     },
-    enabled: !!serverId,
+    enabled: !!serverId && isAuthenticated,
     retry: false,
   });
 }
@@ -46,6 +48,7 @@ export interface MemberQueryParams {
 }
 
 export function useServerMembers(serverId: string, params: MemberQueryParams = {}) {
+  const { isAuthenticated } = useAuth();
   return useQuery<PaginatedMembers>({
     queryKey: queryKeys.members.list(serverId, params as Record<string, unknown>),
     queryFn: ({ signal }) =>
@@ -61,7 +64,8 @@ export function useServerMembers(serverId: string, params: MemberQueryParams = {
         },
         { signal }
       ),
-    enabled: !!serverId,
+    enabled: !!serverId && isAuthenticated,
+    retry: false,
   });
 }
 

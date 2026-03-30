@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/providers/auth-provider";
 import { api } from "@/lib/api-client";
 import { queryKeys } from "@/lib/query-keys";
 import { useServerStore } from "@/stores/server-store";
@@ -16,10 +17,11 @@ function normalizePermissionKey(key: string): string {
 }
 
 export function usePermissions(serverId: string) {
+  const { isAuthenticated } = useAuth();
   const { data, isLoading } = useQuery<PermissionData>({
     queryKey: queryKeys.permissions.user(serverId),
     queryFn: ({ signal }) => api.permissions.get(serverId, { signal }),
-    enabled: !!serverId,
+    enabled: !!serverId && isAuthenticated,
     retry: false,
   });
 

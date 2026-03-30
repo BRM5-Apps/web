@@ -100,8 +100,9 @@ axiosInstance.interceptors.response.use(
     if (error.response?.status === 401 && typeof window !== "undefined") {
       // Clear the stale backendToken cookie to prevent auth loop
       // Must match all attributes used when setting: path=/, sameSite=lax, and secure in production
+      // Use both maxAge=0 and expires for broader browser compatibility
       const secure = window.location.protocol === "https:" ? "; secure" : "";
-      document.cookie = `backendToken=; path=/; sameSite=lax${secure}; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+      document.cookie = `backendToken=; path=/; sameSite=lax${secure}; maxAge=0; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
       // Preserve current URL as callback for post-login redirect
       const callbackUrl = encodeURIComponent(window.location.pathname + window.location.search);
       window.location.href = `/login?callbackUrl=${callbackUrl}`;
