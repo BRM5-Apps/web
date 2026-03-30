@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useDiscordGuildInventory } from "@/hooks/use-discord-guild-inventory";
 import {
   DndContext,
   PointerSensor,
@@ -39,9 +40,8 @@ import {
   ChevronDown,
   AlertTriangle,
   Smile,
-  Mail,
-  User,
-  Ticket,
+  Pencil,
+  Check,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -88,25 +88,23 @@ export interface ModalPage {
   components: ModalComponent[];
 }
 
-export type OutputLocationType = "default" | "application" | "ticket";
-
 export interface OutputLocation {
   id: string;
-  type: OutputLocationType;
   channelId: string;
   mentions: string[];
-  anonymise: boolean;
 }
 
 export interface ModalSettings {
-  outputLimitEnabled: boolean;
-  outputLimit: number;
   outputLocations: OutputLocation[];
 }
 
 export interface DiscordModalBuilderProps {
+  guildId: string;
   onSave?: (pages: ModalPage[], settings: ModalSettings) => void;
+  onPagesChange?: (pages: ModalPage[]) => void;
   isSaving?: boolean;
+  initialPages?: ModalPage[];
+  initialSettings?: ModalSettings;
 }
 
 // ---------------------------------------------------------------------------
@@ -267,7 +265,7 @@ const DEFAULT_LABELS: Record<ComponentType, string> = {
   "user-role-select": "Select a user or role",
 };
 
-function makeComponent(type: ComponentType): ModalComponent {
+export function makeComponent(type: ComponentType): ModalComponent {
   return {
     id: uid(),
     type,
@@ -282,50 +280,16 @@ function makeComponent(type: ComponentType): ModalComponent {
   };
 }
 
-function makeOption(): DropdownOption {
+export function makeOption(): DropdownOption {
   return { id: uid(), label: "Option", description: "", emoji: "" };
 }
 
-function makePage(): ModalPage {
+export function makePage(): ModalPage {
   return { id: uid(), title: "Modal Title", components: [] };
 }
 
-function makeLocation(): OutputLocation {
-  return { id: uid(), type: "default", channelId: "", mentions: [], anonymise: false };
-}
-
-// ---------------------------------------------------------------------------
-// DiscordToggle — replaces shadcn Switch with a fully Discord-styled toggle
-// ---------------------------------------------------------------------------
-
-interface DiscordToggleProps {
-  checked: boolean;
-  onCheckedChange: (checked: boolean) => void;
-  disabled?: boolean;
-}
-
-function DiscordToggle({ checked, onCheckedChange, disabled = false }: DiscordToggleProps) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      disabled={disabled}
-      onClick={() => !disabled && onCheckedChange(!checked)}
-      className={cn(
-        "relative h-5 w-9 flex-shrink-0 rounded-full transition-colors duration-200 focus:outline-none",
-        checked ? "bg-[#5865F1]" : "bg-[#3f4147]",
-        disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer"
-      )}
-    >
-      <span
-        className={cn(
-          "absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform duration-200",
-          checked ? "translate-x-4" : "translate-x-0.5"
-        )}
-      />
-    </button>
-  );
+export function makeLocation(): OutputLocation {
+  return { id: uid(), channelId: "", mentions: [] };
 }
 
 // ---------------------------------------------------------------------------
@@ -365,7 +329,7 @@ interface AddComponentDialogProps {
   onSelect: (type: ComponentType) => void;
 }
 
-function AddComponentDialog({ open, onOpenChange, onSelect }: AddComponentDialogProps) {
+export function AddComponentDialog({ open, onOpenChange, onSelect }: AddComponentDialogProps) {
   const [search, setSearch] = useState("");
   const [highlighted, setHighlighted] = useState<ComponentType | null>(null);
 
@@ -461,7 +425,7 @@ interface EditBoundsDialogProps {
   onSave: (min: number | undefined, max: number | undefined) => void;
 }
 
-function EditBoundsDialog({ open, onOpenChange, minLength, maxLength, onSave }: EditBoundsDialogProps) {
+export function EditBoundsDialog({ open, onOpenChange, minLength, maxLength, onSave }: EditBoundsDialogProps) {
   const [min, setMin] = useState<string>("");
   const [max, setMax] = useState<string>("");
 
@@ -545,7 +509,7 @@ interface EditPlaceholderDialogProps {
   onSave: (placeholder: string) => void;
 }
 
-function EditPlaceholderDialog({ open, onOpenChange, placeholder, onSave }: EditPlaceholderDialogProps) {
+export function EditPlaceholderDialog({ open, onOpenChange, placeholder, onSave }: EditPlaceholderDialogProps) {
   const [value, setValue] = useState("");
 
   useEffect(() => {
@@ -730,7 +694,7 @@ interface EditOptionsDialogProps {
   onSave: (options: DropdownOption[]) => void;
 }
 
-function EditOptionsDialog({ open, onOpenChange, options: initialOptions, onSave }: EditOptionsDialogProps) {
+export function EditOptionsDialog({ open, onOpenChange, options: initialOptions, onSave }: EditOptionsDialogProps) {
   const [options, setOptions] = useState<DropdownOption[]>([]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
@@ -877,7 +841,7 @@ function ComponentPreview({ component, onChange, onOptionsOpen }: ComponentPrevi
             value={component.description}
             onChange={(e) => onChange({ ...component, description: e.target.value })}
             placeholder="Enter description..."
-            className="block w-full bg-transparent text-[12px] text-[#C7C6CB] outline-none placeholder:text-[#8F8E8E]/60"
+            className="block w-full rounded border border-transparent bg-[#2F2F34]/60 px-1.5 py-0.5 text-[12px] text-[#C7C6CB] outline-none transition-colors placeholder:text-[#8F8E8E]/60 focus:border-[#5865F1] focus:bg-[#2F2F34]"
           />
         ) : null}
         <div className="flex items-center gap-2">
@@ -885,8 +849,8 @@ function ComponentPreview({ component, onChange, onOptionsOpen }: ComponentPrevi
           <input
             value={component.label}
             onChange={(e) => onChange({ ...component, label: e.target.value })}
-            placeholder="Checkbox label"
-            className="cursor-text bg-transparent text-sm text-[#F1F1F2] outline-none placeholder:text-[#8F8E8E]"
+            placeholder="Checkbox label..."
+            className="flex-1 rounded border border-transparent bg-[#2F2F34]/60 px-1.5 py-0.5 text-sm text-[#F1F1F2] outline-none transition-colors placeholder:text-[#8F8E8E] focus:border-[#5865F1] focus:bg-[#2F2F34]"
           />
         </div>
       </div>
@@ -895,13 +859,19 @@ function ComponentPreview({ component, onChange, onOptionsOpen }: ComponentPrevi
 
   // Label element shared by most types
   const labelEl = (
-    <div className="mb-0.5 flex items-center">
-      <input
-        value={component.label}
-        onChange={(e) => onChange({ ...component, label: e.target.value })}
-        className="bg-transparent text-[17px] font-bold text-[#F1F1F2] outline-none"
-        size={Math.max(component.label.length, 1)}
-      />
+    <div className="mb-0.5 flex items-center gap-1.5 group/label">
+      <div className="relative flex-1">
+        <input
+          value={component.label}
+          onChange={(e) => onChange({ ...component, label: e.target.value })}
+          className="w-full rounded border border-transparent bg-[#2F2F34]/60 px-1.5 py-0.5 text-[17px] font-bold text-[#F1F1F2] outline-none transition-colors placeholder:text-[#8F8E8E] focus:border-[#5865F1] focus:bg-[#2F2F34]"
+          size={Math.max(component.label.length, 1)}
+          placeholder="Question or label..."
+        />
+        <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center opacity-0 transition-opacity group-hover/label:opacity-100 group-focus-within/label:opacity-0">
+          <Pencil className="h-3 w-3 text-[#8F8E8E]" />
+        </span>
+      </div>
       {component.required && <span className="text-[17px] leading-none text-[#f23f42]">*</span>}
     </div>
   );
@@ -910,8 +880,8 @@ function ComponentPreview({ component, onChange, onOptionsOpen }: ComponentPrevi
     <input
       value={component.description}
       onChange={(e) => onChange({ ...component, description: e.target.value })}
-      placeholder="Enter description..."
-      className="mb-1 block w-full bg-transparent text-[12px] text-[#C7C6CB] outline-none placeholder:text-[#8F8E8E]/60"
+      placeholder="Add a description..."
+      className="mb-1 block w-full rounded border border-transparent bg-[#2F2F34]/60 px-1.5 py-0.5 text-[12px] text-[#C7C6CB] outline-none transition-colors placeholder:text-[#8F8E8E]/60 focus:border-[#5865F1] focus:bg-[#2F2F34]"
     />
   ) : null;
 
@@ -924,7 +894,7 @@ function ComponentPreview({ component, onChange, onOptionsOpen }: ComponentPrevi
         <input
           readOnly
           placeholder={component.placeholder || "Enter text..."}
-          className="w-full rounded-[3px] border border-[#1e1f22] bg-[#1e1f22] px-2 py-2 text-[14px] text-[#F1F1F2] outline-none placeholder:text-[#8F8E8E]"
+          className="w-full rounded-[3px] border border-[#3f4147] bg-[#1e1f22] px-3 py-2 text-[14px] text-[#F1F1F2] outline-none placeholder:text-[#8F8E8E]"
         />
       </div>
     );
@@ -936,11 +906,11 @@ function ComponentPreview({ component, onChange, onOptionsOpen }: ComponentPrevi
       <div>
         {labelEl}
         {descriptionEl}
-        <div className="flex h-[120px] flex-col items-center justify-center rounded-[3px] border border-dashed border-[#3f4147] bg-[#1e1f22]">
-          <Upload className="mb-1 h-6 w-6 text-[#8F8E8E]" />
-          <p className="text-[13px] text-[#C7C6CB]">Drop file here or browse</p>
-          <p className="text-[11px] text-[#8F8E8E]">Upload a file under 10MB</p>
-        </div>
+        <textarea
+          readOnly
+          placeholder={component.placeholder || "Enter longer text..."}
+          className="w-full min-h-[100px] rounded-[3px] border border-[#3f4147] bg-[#1e1f22] px-3 py-2 text-[14px] text-[#F1F1F2] outline-none placeholder:text-[#8F8E8E] resize-none"
+        />
       </div>
     );
   }
@@ -1069,7 +1039,7 @@ function ComponentPreview({ component, onChange, onOptionsOpen }: ComponentPrevi
         <button
           type="button"
           onClick={component.type === "dropdown" ? onOptionsOpen : undefined}
-          className="flex w-full items-center justify-between rounded-[3px] border border-[#1e1f22] bg-[#1e1f22] px-3 py-2 text-sm text-[#8F8E8E]"
+          className="flex w-full items-center justify-between rounded-[3px] border border-[#3f4147] bg-[#1e1f22] px-3 py-2 text-sm text-[#8F8E8E]"
         >
           <span>{component.placeholder || placeholderMap[component.type] || "Make a selection"}</span>
           <ChevronDown className="h-4 w-4" />
@@ -1373,7 +1343,7 @@ function ModalPageCard({ page, pageIndex, totalPages, onChange, onDuplicate, onD
 
         {/* Component list */}
         {page.components.length > 0 && (
-          <div className="max-h-[440px] overflow-y-auto border-t border-b border-[#3f4147] px-4 py-3">
+          <div className="border-t border-b border-[#3f4147] px-4 py-3">
             <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
               <SortableContext
                 items={page.components.map((c) => c.id)}
@@ -1433,112 +1403,71 @@ function ModalPageCard({ page, pageIndex, totalPages, onChange, onDuplicate, onD
 }
 
 // ---------------------------------------------------------------------------
-// MentionsInput
-// ---------------------------------------------------------------------------
-
-interface MentionsInputProps {
-  value: string[];
-  onChange: (mentions: string[]) => void;
-  max: number;
-}
-
-function MentionsInput({ value, onChange, max }: MentionsInputProps) {
-  const [draft, setDraft] = useState("");
-
-  return (
-    <div className="flex min-h-[36px] flex-wrap gap-1 rounded border border-[#3f4147] bg-[#2F2F34] px-2 py-1.5">
-      {value.map((m, i) => (
-        <span
-          key={i}
-          className="flex items-center gap-1 rounded border border-[#5865F1]/40 bg-[#5865F1]/20 px-1.5 py-0.5 text-xs text-[#5865F1]"
-        >
-          {m}
-          <button
-            type="button"
-            onClick={() => onChange(value.filter((_, j) => j !== i))}
-            className="hover:text-[#F1F1F2]"
-          >
-            <X className="h-2.5 w-2.5" />
-          </button>
-        </span>
-      ))}
-      {value.length < max && (
-        <input
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if ((e.key === "Enter" || e.key === ",") && draft.trim()) {
-              e.preventDefault();
-              onChange([...value, draft.trim()]);
-              setDraft("");
-            }
-          }}
-          placeholder={value.length === 0 ? "Select roles or users" : ""}
-          className="min-w-[120px] flex-1 bg-transparent text-xs text-[#F1F1F2] placeholder:text-[#8F8E8E] outline-none"
-        />
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // OutputLocationCard
 // ---------------------------------------------------------------------------
 
 interface OutputLocationCardProps {
   location: OutputLocation;
   onChange: (loc: OutputLocation) => void;
-  onDelete: () => void;
+  guildId: string;
 }
 
-function OutputLocationCard({ location, onChange, onDelete }: OutputLocationCardProps) {
+function OutputLocationCard({ location, onChange, guildId }: OutputLocationCardProps) {
+  const [channelSearch, setChannelSearch] = useState("");
+  const [showChannelDropdown, setShowChannelDropdown] = useState(false);
+  const [mentionSearch, setMentionSearch] = useState("");
+  const [showMentionDropdown, setShowMentionDropdown] = useState(false);
+  const { data: inventory, isLoading: inventoryLoading } = useDiscordGuildInventory(guildId);
+
+  const channelRef = useRef<HTMLDivElement>(null);
+  const mentionRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (channelRef.current && !channelRef.current.contains(e.target as Node)) {
+        setShowChannelDropdown(false);
+      }
+      if (mentionRef.current && !mentionRef.current.contains(e.target as Node)) {
+        setShowMentionDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const filteredChannels = (inventory?.channels ?? []).filter((ch) =>
+    ch.name.toLowerCase().includes(channelSearch.toLowerCase())
+  );
+
+  const filteredUsers = (inventory?.users ?? []).filter((u) =>
+    (u.global_name ?? u.username ?? "").toLowerCase().includes(mentionSearch.toLowerCase())
+  );
+
+  const filteredRoles = (inventory?.roles ?? []).filter((r) =>
+    r.name.toLowerCase().includes(mentionSearch.toLowerCase())
+  );
+
+  const selectedChannel = (inventory?.channels ?? []).find(
+    (ch) => ch.id === location.channelId || ch.name === location.channelId
+  );
+
+  const hasChannelResults = filteredChannels.length > 0 || channelSearch.length === 0;
+  const showChannelEmpty = filteredChannels.length === 0 && channelSearch.length > 0;
+  const hasMentionResults = filteredUsers.length > 0 || filteredRoles.length > 0;
+
   return (
     <div className="rounded-lg border border-[#3f4147] bg-[#1e1f22] p-4">
       {/* Header */}
-      <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#5865F1]">
-            <span className="text-[11px] font-bold text-[#F1F1F2]">D</span>
-          </div>
-          <span className="text-sm font-medium text-[#F1F1F2]">Discord</span>
+      <div className="mb-3 flex items-center gap-2">
+        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#5865F1]">
+          <Hash className="h-4 w-4 text-white" />
         </div>
-        <button
-          type="button"
-          onClick={onDelete}
-          className="text-[#8F8E8E] hover:text-[#f23f42] transition-colors duration-150"
-          aria-label="Delete output location"
-        >
-          <X className="h-4 w-4" />
-        </button>
+        <span className="text-sm font-medium text-[#F1F1F2]">Output Channel</span>
       </div>
 
-      {/* Type selector */}
-      <div className="mb-3">
-        <p className="mb-1.5 text-xs text-[#C7C6CB]">Type</p>
-        <div className="flex gap-1 rounded bg-[#2F2F34] p-1">
-          {(["default", "application", "ticket"] as OutputLocationType[]).map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => onChange({ ...location, type: t })}
-              className={cn(
-                "flex flex-1 items-center justify-center gap-1.5 rounded px-2 py-1.5 text-xs font-medium transition-colors duration-150",
-                location.type === t
-                  ? "bg-[#5865F1] text-[#F1F1F2]"
-                  : "text-[#C7C6CB] hover:bg-[#3f4147] hover:text-[#F1F1F2]"
-              )}
-            >
-              {t === "default" && <Mail className="h-3.5 w-3.5" />}
-              {t === "application" && <User className="h-3.5 w-3.5" />}
-              {t === "ticket" && <Ticket className="h-3.5 w-3.5" />}
-              {t.charAt(0).toUpperCase() + t.slice(1)}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Channel */}
-      <div className="mb-3">
+      {/* Channel ID/Name */}
+      <div className="mb-4 relative" ref={channelRef}>
         <p className="mb-1 text-xs text-[#C7C6CB]">
           Channel <span className="text-[#f23f42]">*</span>
         </p>
@@ -1546,154 +1475,199 @@ function OutputLocationCard({ location, onChange, onDelete }: OutputLocationCard
           <span className="text-sm text-[#C7C6CB]">#</span>
           <input
             value={location.channelId}
-            onChange={(e) => onChange({ ...location, channelId: e.target.value })}
+            onChange={(e) => {
+              onChange({ ...location, channelId: e.target.value });
+              setChannelSearch(e.target.value);
+              setShowChannelDropdown(true);
+            }}
+            onFocus={() => setShowChannelDropdown(true)}
             placeholder="channel-name or ID"
             className="flex-1 bg-transparent text-sm text-[#F1F1F2] placeholder:text-[#8F8E8E] outline-none"
           />
-        </div>
-      </div>
-
-      {/* Mentions */}
-      <div className="mb-3">
-        <p className="mb-1 text-xs text-[#C7C6CB]">
-          Mentions ({location.mentions.length}/5)
-        </p>
-        <MentionsInput
-          value={location.mentions}
-          onChange={(m) => onChange({ ...location, mentions: m })}
-          max={5}
-        />
-      </div>
-
-      {/* Anonymise */}
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-[#F1F1F2]">Anonymise User</span>
-        <DiscordToggle
-          checked={location.anonymise}
-          onCheckedChange={(v) => onChange({ ...location, anonymise: v })}
-        />
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// ModalSettingsPanel
-// ---------------------------------------------------------------------------
-
-interface ModalSettingsPanelProps {
-  settings: ModalSettings;
-  onChange: (settings: ModalSettings) => void;
-  onAddLocation: () => void;
-  onUpdateLocation: (idx: number, loc: OutputLocation) => void;
-  onDeleteLocation: (idx: number) => void;
-  onRoleRestrictOpen: () => void;
-  onRoleOutputOpen: () => void;
-}
-
-function ModalSettingsPanel({
-  settings,
-  onChange,
-  onAddLocation,
-  onUpdateLocation,
-  onDeleteLocation,
-  onRoleRestrictOpen,
-  onRoleOutputOpen,
-}: ModalSettingsPanelProps) {
-  return (
-    <div className="space-y-4 rounded-lg border border-[#3f4147] bg-[#2F2F34] p-6">
-      <h2 className="text-base font-semibold text-[#F1F1F2]">Settings</h2>
-
-      {/* Role Restrictions */}
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-[#F1F1F2]">Role Restrictions</p>
-          <p className="text-xs text-[#C7C6CB]">Restrict which roles can trigger this modal</p>
-        </div>
-        <button
-          type="button"
-          onClick={onRoleRestrictOpen}
-          className="rounded-[3px] bg-[#5865F1] px-3 py-1.5 text-xs font-medium text-[#F1F1F2] transition-colors hover:bg-[#4752c4]"
-        >
-          Configure
-        </button>
-      </div>
-
-      <div className="h-px bg-[#3f4147]" />
-
-      {/* Update User Roles on Output */}
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-[#F1F1F2]">Update User Roles on Output</p>
-          <p className="text-xs text-[#C7C6CB]">
-            Grant or remove roles when a user submits this modal
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={onRoleOutputOpen}
-          className="rounded-[3px] bg-[#5865F1] px-3 py-1.5 text-xs font-medium text-[#F1F1F2] transition-colors hover:bg-[#4752c4]"
-        >
-          Configure
-        </button>
-      </div>
-
-      <div className="h-px bg-[#3f4147]" />
-
-      {/* Output Limit */}
-      <div className="flex items-center gap-4">
-        <DiscordToggle
-          checked={settings.outputLimitEnabled}
-          onCheckedChange={(v) => onChange({ ...settings, outputLimitEnabled: v })}
-        />
-        <span className="text-sm text-[#F1F1F2]">Limit to</span>
-        <input
-          type="number"
-          min={1}
-          max={999}
-          value={settings.outputLimit}
-          disabled={!settings.outputLimitEnabled}
-          onChange={(e) =>
-            onChange({
-              ...settings,
-              outputLimit: Math.min(999, Math.max(1, Number(e.target.value) || 1)),
-            })
-          }
-          className="w-16 rounded-[3px] border border-[#3f4147] bg-[#1e1f22] px-2 py-1 text-center text-sm text-[#F1F1F2] outline-none disabled:opacity-40"
-        />
-        <span className="text-sm text-[#F1F1F2]">output per user</span>
-      </div>
-
-      <div className="h-px bg-[#3f4147]" />
-
-      {/* Output Locations */}
-      <div>
-        <div className="mb-3 flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-[#F1F1F2]">Output Locations</p>
-            <p className="text-xs text-[#C7C6CB]">
-              {settings.outputLocations.length}/2 locations configured
-            </p>
-          </div>
-          {settings.outputLocations.length < 2 && (
-            <button
-              type="button"
-              onClick={onAddLocation}
-              className="rounded-[3px] border border-[#3f4147] bg-transparent px-3 py-1.5 text-xs text-[#C7C6CB] transition-colors hover:bg-[#3f4147] hover:text-[#F1F1F2]"
-            >
-              + Add Location
-            </button>
+          {selectedChannel && (
+            <span className="flex items-center gap-1 text-xs text-[#23A55A]">
+              <Check className="h-3 w-3" />
+              <span className="truncate max-w-[100px]">{selectedChannel.name}</span>
+            </span>
           )}
         </div>
-        <div className="space-y-3">
-          {settings.outputLocations.map((loc, idx) => (
-            <OutputLocationCard
-              key={loc.id}
-              location={loc}
-              onChange={(updated) => onUpdateLocation(idx, updated)}
-              onDelete={() => onDeleteLocation(idx)}
-            />
-          ))}
+
+        {/* Channel autocomplete dropdown */}
+        {showChannelDropdown && (
+          <div className="absolute z-50 mt-1 w-full rounded border border-[#3f4147] bg-[#2F2F34] shadow-lg max-h-52 overflow-y-auto">
+            {inventoryLoading ? (
+              <div className="p-3 text-center text-xs text-[#8F8E8E]">
+                Loading channels...
+              </div>
+            ) : showChannelEmpty ? (
+              <div className="p-3">
+                <div className="mb-1.5 text-xs text-[#8F8E8E]">
+                  No channels found matching "{channelSearch}"
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onChange({ ...location, channelId: channelSearch });
+                    setChannelSearch("");
+                    setShowChannelDropdown(false);
+                  }}
+                  className="w-full rounded border border-[#5865F1]/40 bg-[#5865F1]/10 px-3 py-2 text-sm text-[#5865F1] hover:bg-[#5865F1]/20 text-left"
+                >
+                  Use "{channelSearch}" as channel name
+                </button>
+              </div>
+            ) : (
+              <>
+                {channelSearch.length === 0 && !inventoryLoading && (
+                  <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-[#8F8E8E]">
+                    All Channels ({filteredChannels.length})
+                  </div>
+                )}
+                {filteredChannels.map((ch) => (
+                  <button
+                    key={ch.id}
+                    type="button"
+                    onClick={() => {
+                      onChange({ ...location, channelId: ch.name });
+                      setChannelSearch("");
+                      setShowChannelDropdown(false);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#F1F1F2] hover:bg-[#3f4147] text-left"
+                  >
+                    <Hash className="h-3 w-3 text-[#8F8E8E]" />
+                    <span className="truncate">{ch.name}</span>
+                    <span className="ml-auto text-xs text-[#8F8E8E]">#{ch.position}</span>
+                  </button>
+                ))}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Ping / Mentions */}
+      <div>
+        <p className="mb-1 text-xs text-[#C7C6CB]">
+          Ping People or Roles ({location.mentions.length})
+        </p>
+
+        {/* Selected mentions */}
+        {location.mentions.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-1">
+            {location.mentions.map((m, i) => (
+              <span
+                key={i}
+                className="flex items-center gap-1 rounded border border-[#5865F1]/40 bg-[#5865F1]/20 px-1.5 py-0.5 text-xs text-[#5865F1]"
+              >
+                {m}
+                <button
+                  type="button"
+                  onClick={() =>
+                    onChange({ ...location, mentions: location.mentions.filter((_, j) => j !== i) })
+                  }
+                  className="hover:text-[#F1F1F2]"
+                >
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Mention input */}
+        <div className="relative" ref={mentionRef}>
+          <input
+            value={mentionSearch}
+            onChange={(e) => {
+              setMentionSearch(e.target.value);
+              setShowMentionDropdown(true);
+            }}
+            onFocus={() => setShowMentionDropdown(true)}
+            placeholder="Search users or roles to ping..."
+            className="w-full rounded border border-[#3f4147] bg-[#2F2F34] px-2 py-1.5 text-sm text-[#F1F1F2] placeholder:text-[#8F8E8E] outline-none"
+          />
+
+          {showMentionDropdown && mentionSearch.length > 0 && (
+            <div className="absolute z-50 mt-1 w-full rounded border border-[#3f4147] bg-[#2F2F34] shadow-lg max-h-48 overflow-y-auto">
+              {!hasMentionResults ? (
+                <div className="p-3 text-center">
+                  <div className="mb-1 text-xs text-[#8F8E8E]">
+                    No users or roles match "{mentionSearch}"
+                  </div>
+                  <div className="text-[11px] text-[#8F8E8E]/60">
+                    Try a different search or ensure members have joined the server
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {filteredUsers.length > 0 && (
+                    <>
+                      <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-[#8F8E8E]">
+                        Users
+                      </div>
+                      {filteredUsers.map((u) => (
+                        <button
+                          key={u.id}
+                          type="button"
+                          onClick={() => {
+                            if (!location.mentions.includes(`<@${u.id}>`)) {
+                              onChange({ ...location, mentions: [...location.mentions, `<@${u.id}>`] });
+                            }
+                            setMentionSearch("");
+                            setShowMentionDropdown(false);
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[#F1F1F2] hover:bg-[#3f4147] text-left"
+                        >
+                          {u.avatar ? (
+                            <img
+                              src={`https://cdn.discordapp.com/avatars/${u.id}/${u.avatar}.png?size=32`}
+                              alt=""
+                              className="h-6 w-6 rounded-full"
+                            />
+                          ) : (
+                            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#5865F1] text-[10px] font-bold text-white">
+                              {(u.global_name ?? u.username)?.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <span className="truncate">{u.global_name ?? u.username}</span>
+                          {u.global_name && (
+                            <span className="truncate text-xs text-[#8F8E8E]">@{u.username}</span>
+                          )}
+                        </button>
+                      ))}
+                    </>
+                  )}
+                  {filteredRoles.length > 0 && (
+                    <>
+                      <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-[#8F8E8E]">
+                        Roles
+                      </div>
+                      {filteredRoles.map((r) => (
+                        <button
+                          key={r.id}
+                          type="button"
+                          onClick={() => {
+                            if (!location.mentions.includes(`<@&${r.id}>`)) {
+                              onChange({ ...location, mentions: [...location.mentions, `<@&${r.id}>`] });
+                            }
+                            setMentionSearch("");
+                            setShowMentionDropdown(false);
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[#F1F1F2] hover:bg-[#3f4147] text-left"
+                        >
+                          <div
+                            className="h-6 w-6 rounded-full"
+                            style={{ backgroundColor: `#${r.color.toString(16).padStart(6, "0")}` }}
+                          />
+                          <span className="truncate">{r.name}</span>
+                        </button>
+                      ))}
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -1759,17 +1733,32 @@ function SaveBar({ title, isDirty, onSave, onReset }: SaveBarProps) {
 
 const INITIAL_PAGES = [makePage()];
 const INITIAL_SETTINGS: ModalSettings = {
-  outputLimitEnabled: false,
-  outputLimit: 1,
   outputLocations: [makeLocation()],
 };
 
-export function DiscordModalBuilder({ onSave, isSaving }: DiscordModalBuilderProps) {
-  const [pages, setPages] = useState<ModalPage[]>(INITIAL_PAGES);
-  const [settings, setSettings] = useState<ModalSettings>(INITIAL_SETTINGS);
-  const [savedSnapshot, setSavedSnapshot] = useState(() => JSON.stringify(INITIAL_PAGES));
-  const [roleRestrictDialogOpen, setRoleRestrictDialogOpen] = useState(false);
-  const [roleOutputDialogOpen, setRoleOutputDialogOpen] = useState(false);
+export function DiscordModalBuilder({ guildId, onSave, onPagesChange, isSaving, initialPages, initialSettings }: DiscordModalBuilderProps) {
+  const [pages, setPages] = useState<ModalPage[]>(() => initialPages && initialPages.length > 0 ? initialPages : INITIAL_PAGES);
+  const [settings, setSettings] = useState<ModalSettings>(() => initialSettings ?? INITIAL_SETTINGS);
+  const [savedSnapshot, setSavedSnapshot] = useState(() => JSON.stringify(initialPages && initialPages.length > 0 ? initialPages : INITIAL_PAGES));
+
+  // Sync when initial data changes (e.g., after loading template)
+  useEffect(() => {
+    if (initialPages && initialPages.length > 0) {
+      setPages(initialPages);
+      setSavedSnapshot(JSON.stringify(initialPages));
+    }
+  }, [initialPages]);
+
+  useEffect(() => {
+    if (initialSettings) {
+      setSettings(initialSettings);
+    }
+  }, [initialSettings]);
+
+  // Notify parent when pages change
+  useEffect(() => {
+    onPagesChange?.(pages);
+  }, [pages, onPagesChange]);
 
   const isDirty = JSON.stringify(pages) !== savedSnapshot;
   const modalTitle = pages[0]?.title ?? "";
@@ -1808,30 +1797,6 @@ export function DiscordModalBuilder({ onSave, isSaving }: DiscordModalBuilderPro
   function deletePage(idx: number) {
     if (pages.length === 1) return;
     setPages((prev) => prev.filter((_, i) => i !== idx));
-  }
-
-  // ---- Location mutations ----
-
-  function addLocation() {
-    if (settings.outputLocations.length >= 2) return;
-    setSettings((prev) => ({
-      ...prev,
-      outputLocations: [...prev.outputLocations, makeLocation()],
-    }));
-  }
-
-  function updateLocation(idx: number, loc: OutputLocation) {
-    setSettings((prev) => ({
-      ...prev,
-      outputLocations: prev.outputLocations.map((l, i) => (i === idx ? loc : l)),
-    }));
-  }
-
-  function deleteLocation(idx: number) {
-    setSettings((prev) => ({
-      ...prev,
-      outputLocations: prev.outputLocations.filter((_, i) => i !== idx),
-    }));
   }
 
   // ---- Save / Reset ----
@@ -1880,17 +1845,6 @@ export function DiscordModalBuilder({ onSave, isSaving }: DiscordModalBuilderPro
         </div>
       )}
 
-      {/* Settings */}
-      <ModalSettingsPanel
-        settings={settings}
-        onChange={setSettings}
-        onAddLocation={addLocation}
-        onUpdateLocation={updateLocation}
-        onDeleteLocation={deleteLocation}
-        onRoleRestrictOpen={() => setRoleRestrictDialogOpen(true)}
-        onRoleOutputOpen={() => setRoleOutputDialogOpen(true)}
-      />
-
       {/* Floating save bar */}
       <SaveBar
         title={modalTitle}
@@ -1898,40 +1852,6 @@ export function DiscordModalBuilder({ onSave, isSaving }: DiscordModalBuilderPro
         onSave={handleSave}
         onReset={handleReset}
       />
-
-      {/* Role Restrictions Dialog */}
-      <Dialog open={roleRestrictDialogOpen} onOpenChange={setRoleRestrictDialogOpen}>
-        <DialogContent className="border-[#3f4147] bg-[#232327] text-[#F1F1F2]">
-          <DialogHeader>
-            <DialogTitle>Role Restrictions</DialogTitle>
-            <DialogDescription className="text-[#C7C6CB]">
-              Only members with these roles can trigger this modal.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <p className="text-sm text-[#C7C6CB]">
-              Role restriction configuration coming soon.
-            </p>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Role Output Dialog */}
-      <Dialog open={roleOutputDialogOpen} onOpenChange={setRoleOutputDialogOpen}>
-        <DialogContent className="border-[#3f4147] bg-[#232327] text-[#F1F1F2]">
-          <DialogHeader>
-            <DialogTitle>Update User Roles on Output</DialogTitle>
-            <DialogDescription className="text-[#C7C6CB]">
-              Grant or remove roles from the user upon modal submission.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <p className="text-sm text-[#C7C6CB]">
-              Role assignment configuration coming soon.
-            </p>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

@@ -2,17 +2,22 @@
 
 import { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { DiscordMarkdown } from "@/components/discord-preview/discord-markdown";
-import { useTextTemplates, useCreateTextTemplate, useUpdateTextTemplate } from "@/hooks/use-templates";
+import {
+  useTextTemplates,
+  useCreateTextTemplate,
+  useUpdateTextTemplate,
+  useDeleteTextTemplate,
+} from "@/hooks/use-templates";
 import { formatDate, truncateText } from "@/lib/utils";
 import { PERMISSION_KEYS } from "@/lib/constants";
 import { PermissionGate } from "@/components/shared/permission-gate";
-import { Plus } from "lucide-react";
+import { Plus, Trash2, ArrowLeft } from "lucide-react";
 
 const VARIABLES = [
   { key: "{{username}}", description: "The user's Discord username" },
@@ -24,7 +29,7 @@ const VARIABLES = [
   { key: "{{server_name}}", description: "Name of the server" },
 ];
 
-export default function TextTemplatesPage() {
+export default function SavedTextPage() {
   const params = useParams<{ serverId: string }>();
   const serverId = params.serverId;
 
@@ -37,6 +42,7 @@ export default function TextTemplatesPage() {
 
   const createMutation = useCreateTextTemplate(serverId);
   const updateMutation = useUpdateTextTemplate(serverId, selectedId ?? "");
+  const deleteMutation = useDeleteTextTemplate(serverId);
 
   function selectTemplate(id?: string) {
     setSelectedId(id);
@@ -71,12 +77,28 @@ export default function TextTemplatesPage() {
     }
   }
 
+  function handleDelete(id: string) {
+    if (!confirm("Delete this template?")) return;
+    deleteMutation.mutate(id);
+    if (selectedId === id) selectTemplate(undefined);
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Text Templates</h1>
-          <p className="text-muted-foreground">Design plain message templates with variables and live preview.</p>
+        <div className="flex items-center gap-4">
+          <Link
+            href={`/server/${serverId}/saved-content`}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Saved Text Messages</h1>
+            <p className="text-muted-foreground">
+              Design plain message templates with variables and live preview.
+            </p>
+          </div>
         </div>
         <PermissionGate permission={PERMISSION_KEYS.TEMPLATES_CREATE}>
           <Button onClick={() => selectTemplate(undefined)} size="sm">
@@ -100,16 +122,38 @@ export default function TextTemplatesPage() {
           ) : (
             <div className="space-y-2">
               {data?.map((tpl) => (
-                <button
+                <div
                   key={tpl.id}
-                  type="button"
+                  className={`w-full rounded-md p-2 cursor-pointer hover:bg-accent ${
+                    selectedId === tpl.id ? "bg-accent" : ""
+                  }`}
                   onClick={() => selectTemplate(tpl.id)}
-                  className="w-full rounded-md p-2 text-left hover:bg-accent"
                 >
-                  <div className="truncate font-medium">{tpl.name}</div>
-                  <div className="truncate text-xs text-muted-foreground">{truncateText(tpl.content, 96)}</div>
-                  <div className="truncate text-[11px] text-muted-foreground">Created {formatDate(tpl.createdAt)}</div>
-                </button>
+                  <div className="flex items-center justify-between">
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-medium">{tpl.name}</div>
+                      <div className="truncate text-xs text-muted-foreground">
+                        {truncateText(tpl.content, 64)}
+                      </div>
+                      <div className="truncate text-[11px] text-muted-foreground">
+                        Created {formatDate(tpl.createdAt)}
+                      </div>
+                    </div>
+                    <PermissionGate permission={PERMISSION_KEYS.TEMPLATES_MANAGE}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Delete template"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(tpl.id);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </PermissionGate>
+                  </div>
+                </div>
               ))}
             </div>
           )}
@@ -135,7 +179,14 @@ export default function TextTemplatesPage() {
                 />
                 <div className="flex w-[48px] shrink-0 flex-col gap-2">
                   {VARIABLES.map((v) => (
-                    <Button key={v.key} variant="outline" size="icon" type="button" title={v.key} onClick={() => handleInsertVariable(v.key)}>
+                    <Button
+                      key={v.key}
+                      variant="outline"
+                      size="icon"
+                      type="button"
+                      title={v.key}
+                      onClick={() => handleInsertVariable(v.key)}
+                    >
                       {v.key.replace(/[{}/]/g, "").slice(0, 2).toUpperCase()}
                     </Button>
                   ))}

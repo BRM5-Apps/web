@@ -2,18 +2,24 @@
 
 import { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ContainerPreview } from "@/components/discord-preview/container-preview";
 import { ContainerBuilder } from "@/components/templates/container-builder";
-import { useContainerTemplates, useCreateContainerTemplate, useUpdateContainerTemplate } from "@/hooks/use-templates";
+import {
+  useContainerTemplates,
+  useCreateContainerTemplate,
+  useUpdateContainerTemplate,
+  useDeleteContainerTemplate,
+} from "@/hooks/use-templates";
 import { formatDate } from "@/lib/utils";
 import { PERMISSION_KEYS } from "@/lib/constants";
 import { PermissionGate } from "@/components/shared/permission-gate";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Trash2, ArrowLeft } from "lucide-react";
 
-export default function ContainerTemplatesPage() {
+export default function SavedContainersPage() {
   const params = useParams<{ serverId: string }>();
   const serverId = params.serverId;
 
@@ -24,6 +30,7 @@ export default function ContainerTemplatesPage() {
 
   const createMutation = useCreateContainerTemplate(serverId);
   const updateMutation = useUpdateContainerTemplate(serverId, selectedId ?? "");
+  const deleteMutation = useDeleteContainerTemplate(serverId);
 
   function handleSave(payload: { name: string; accentColor?: string; components: any[] }) {
     const template_data = { components: payload.components, accentColor: payload.accentColor };
@@ -36,12 +43,28 @@ export default function ContainerTemplatesPage() {
     }
   }
 
+  function handleDelete(id: string) {
+    if (!confirm("Delete this template?")) return;
+    deleteMutation.mutate(id);
+    if (selectedId === id) setSelectedId(undefined);
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Container Templates</h1>
-          <p className="text-muted-foreground">Build interactive component layouts with action rows, buttons and more.</p>
+        <div className="flex items-center gap-4">
+          <Link
+            href={`/server/${serverId}/saved-content`}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Saved Containers</h1>
+            <p className="text-muted-foreground">
+              Build interactive component layouts with action rows, buttons and more.
+            </p>
+          </div>
         </div>
         <PermissionGate permission={PERMISSION_KEYS.TEMPLATES_CREATE}>
           <Button onClick={() => setSelectedId(undefined)} size="sm">
@@ -68,21 +91,36 @@ export default function ContainerTemplatesPage() {
           ) : (
             <div className="space-y-2">
               {data?.map((tpl) => (
-                <button
+                <div
                   key={tpl.id}
-                  type="button"
+                  className={`flex w-full items-center gap-3 rounded-md p-2 text-left hover:bg-accent cursor-pointer ${
+                    selectedId === tpl.id ? "bg-accent" : ""
+                  }`}
                   onClick={() => setSelectedId(tpl.id)}
-                  className="flex w-full items-center gap-3 rounded-md p-2 text-left hover:bg-accent"
                 >
                   <div className="h-12 w-12 overflow-hidden rounded-md border p-1">
                     <ContainerPreview components={tpl.template_data?.components as any} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="truncate font-medium">{tpl.name}</div>
-                    <div className="truncate text-xs text-muted-foreground">Created {formatDate(tpl.createdAt)}</div>
+                    <div className="truncate text-xs text-muted-foreground">
+                      Created {formatDate(tpl.createdAt)}
+                    </div>
                   </div>
-                  <Pencil className="h-4 w-4 text-muted-foreground" />
-                </button>
+                  <PermissionGate permission={PERMISSION_KEYS.TEMPLATES_MANAGE}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Delete template"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(tpl.id);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </PermissionGate>
+                </div>
               ))}
             </div>
           )}
@@ -90,7 +128,11 @@ export default function ContainerTemplatesPage() {
 
         {/* Builder */}
         <div>
-          <ContainerBuilder template={selected ?? undefined} onSave={handleSave} isSaving={createMutation.isPending || updateMutation.isPending} />
+          <ContainerBuilder
+            template={selected ?? undefined}
+            onSave={handleSave}
+            isSaving={createMutation.isPending || updateMutation.isPending}
+          />
         </div>
       </div>
     </div>

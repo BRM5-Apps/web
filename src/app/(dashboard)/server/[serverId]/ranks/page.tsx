@@ -10,6 +10,7 @@ import { RankCard } from "@/components/ranks/rank-card";
 import { RankForm } from "@/components/ranks/rank-form";
 import { RankTree } from "@/components/ranks/rank-tree";
 import { PromotionPathEditor } from "@/components/ranks/promotion-path-editor";
+import { BranchEditor } from "@/components/ranks/branch-editor";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -25,7 +26,7 @@ export default function RanksPage() {
   const deleteMutation = useDeleteRank(serverId);
   const reorderMutation = useReorderRanks(serverId);
 
-  const canManage = useHasPermission(PERMISSION_KEYS.RANKS_MANAGE);
+  const { allowed: canManage } = useHasPermission(PERMISSION_KEYS.RANKS_MANAGE);
 
   // Dialog state
   const [formOpen, setFormOpen] = useState(false);
@@ -100,6 +101,7 @@ export default function RanksPage() {
           <TabsList>
             <TabsTrigger value="hierarchy">Hierarchy</TabsTrigger>
             <TabsTrigger value="paths">Promotion Paths</TabsTrigger>
+            <TabsTrigger value="branches">Branches</TabsTrigger>
           </TabsList>
 
           <TabsContent value="hierarchy" className="mt-4">
@@ -152,6 +154,10 @@ export default function RanksPage() {
               ranks={sortedRanks}
               canManage={canManage}
             />
+          </TabsContent>
+
+          <TabsContent value="branches" className="mt-4">
+            <BranchEditor serverId={serverId} />
           </TabsContent>
         </Tabs>
 

@@ -12,12 +12,19 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { EmbedPreview } from "@/components/discord-preview/embed-preview";
+import { MessagePreview } from "@/components/discord-preview/message-preview";
 import { type DiscordTheme } from "@/components/discord-preview/discord-theme";
 import { JsonImportDialog } from "@/components/templates/json-import";
 import { FieldEditor } from "@/components/templates/field-editor";
 import { cn } from "@/lib/utils";
-import { Plus, Variable, Upload, Download, Save, Sun, Moon } from "lucide-react";
+import { Plus, Variable, Upload, Download, Save, Sun, Moon, ChevronRight } from "lucide-react";
 import type { EmbedTemplate } from "@/types/template";
 
 // ── Variables ──
@@ -105,13 +112,37 @@ export function EmbedBuilder({ template, isSaving, onSave, onDataChange, submitR
     return () => { submitRef.current = null; };
   }, [submitRef, form]);
 
+  // Use a ref to track the previous values object so we only call onDataChange
+  // when content actually changes — not just when form.watch() returns a new reference.
+  const prevValuesRef = useRef(values);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    onDataChange?.(values);
-  }, [values, onDataChange]);
+    const prev = prevValuesRef.current;
+    const next = values;
+    // Shallow compare all primitive fields; deep compare fields array
+    const hasChanged =
+      next.name !== prev.name ||
+      next.title !== prev.title ||
+      next.description !== prev.description ||
+      next.color !== prev.color ||
+      next.timestamp !== prev.timestamp ||
+      next.isDefault !== prev.isDefault ||
+      next.imageUrl !== prev.imageUrl ||
+      next.thumbnailUrl !== prev.thumbnailUrl ||
+      next.footerText !== prev.footerText ||
+      next.authorName !== prev.authorName ||
+      next.authorIconUrl !== prev.authorIconUrl ||
+      next.authorUrl !== prev.authorUrl ||
+      JSON.stringify(next.fields) !== JSON.stringify(prev.fields);
+    if (hasChanged) {
+      prevValuesRef.current = next;
+      onDataChange?.(next);
+    }
+  });
 
   return (
     <FormProvider {...form}>
-      <div className={sidebar ? "grid max-w-[1000px] items-start gap-6 lg:grid-cols-[400px_minmax(0,1fr)] xl:grid-cols-[420px_minmax(0,1fr)]" : "grid items-start gap-6 lg:grid-cols-[400px_1fr] xl:grid-cols-[420px_1fr]"}>
+      <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
           {/* Left: Form */}
           <Card className="p-4">
             <div className="space-y-5">
@@ -139,7 +170,7 @@ export function EmbedBuilder({ template, isSaving, onSave, onDataChange, submitR
             <Separator />
 
             <Section title="Author">
-              <TextField name="authorName" label="Name" placeholder="Server Bot" withVariables />
+              <TextField name="authorName" label="Name" placeholder="Server Bot" />
               <TextField name="authorIconUrl" label="Icon URL" placeholder="https://..." />
               <TextField name="authorUrl" label="URL" placeholder="https://..." />
             </Section>
@@ -147,14 +178,14 @@ export function EmbedBuilder({ template, isSaving, onSave, onDataChange, submitR
             <Separator />
 
             <Section title="Title">
-              <TextField name="title" label="Text" placeholder="Operation Briefing" withVariables />
+              <TextField name="title" label="Text" placeholder="Operation Briefing" />
               <TextField name="url" label="URL" placeholder="https://..." />
             </Section>
 
             <Separator />
 
             <Section title="Description">
-              <TextAreaField name="description" label="Content" placeholder="Write description..." rows={5} withVariables />
+              <TextAreaField name="description" label="Content" placeholder="Write description..." rows={5} />
               <TextField name="color" label="Color" placeholder="#5865F2" />
             </Section>
 
@@ -171,15 +202,15 @@ export function EmbedBuilder({ template, isSaving, onSave, onDataChange, submitR
 
             <Separator />
 
-            <Section title="Media">
-              <TextField name="imageUrl" label="Image URL" placeholder="https://..." />
+            <Section title="Images">
+              <TextField name="imageUrl" label="Large Image URL" placeholder="https://..." />
               <TextField name="thumbnailUrl" label="Thumbnail URL" placeholder="https://..." />
             </Section>
 
             <Separator />
 
             <Section title="Footer">
-              <TextField name="footerText" label="Text" placeholder="© Server" withVariables />
+              <TextField name="footerText" label="Text" placeholder="© Server" />
               <TextField name="footerIconUrl" label="Icon URL" placeholder="https://..." />
               <div className="flex items-center justify-between pt-1">
                 <Label htmlFor="timestamp" className="text-sm text-muted-foreground">Include timestamp</Label>
@@ -187,7 +218,32 @@ export function EmbedBuilder({ template, isSaving, onSave, onDataChange, submitR
               </div>
             </Section>
 
-              <div className="flex gap-2 pt-2">
+            <Separator />
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button type="button" variant="outline" size="sm" className="gap-1.5">
+                  <Plus className="h-4 w-4" />
+                  Add
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="bg-[#2b2d31] border-[#3f4147] text-white">
+                <DropdownMenuItem
+                  onClick={() => {}}
+                  className="cursor-pointer text-sm"
+                >
+                  Add Embed
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {}}
+                  className="cursor-pointer text-sm"
+                >
+                  Add Row
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <div className="flex gap-2 pt-2">
                 <Button type="button" variant="outline" size="sm" onClick={() => setJsonOpen(true)}>
                   <Upload className="mr-2 h-4 w-4" /> Import JSON
                 </Button>
@@ -248,54 +304,23 @@ export function EmbedBuilder({ template, isSaving, onSave, onDataChange, submitR
             {sideView === "elements" && sidebar ? (
               <div>{sidebar}</div>
             ) : (
-            <div className="flex items-start gap-3">
-            {/* Bot avatar */}
-            {webhookAvatarUrl ? (
-              <img
-                src={webhookAvatarUrl}
-                alt=""
-                className="hidden h-10 w-10 shrink-0 rounded-full object-cover sm:block"
-                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+              <MessagePreview
+                botName={webhookUsername || "BRM5 Bot"}
+                botAvatarUrl={webhookAvatarUrl}
+                embed={{
+                  title: values.title,
+                  url: values.url || undefined,
+                  description: values.description,
+                  color: values.color,
+                  fields: values.fields,
+                  footer: { text: values.footerText, iconUrl: values.footerIconUrl || undefined },
+                  image: values.imageUrl ? { url: values.imageUrl } : undefined,
+                  thumbnail: values.thumbnailUrl ? { url: values.thumbnailUrl } : undefined,
+                  author: values.authorName ? { name: values.authorName, iconUrl: values.authorIconUrl || undefined, url: values.authorUrl || undefined } : undefined,
+                  timestamp: values.timestamp ? new Date() : undefined,
+                }}
+                discordTheme={discordTheme}
               />
-            ) : (
-              <div
-                className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white sm:flex"
-                style={{ backgroundColor: "#5865F2" }}
-              >
-                {webhookUsername ? webhookUsername[0].toUpperCase() : "B"}
-              </div>
-            )}
-              <div className="min-w-0 flex-1">
-              {/* Bot header row */}
-              <div className="mb-1.5 flex items-baseline gap-2">
-                <span className="text-sm font-semibold" style={{ color: discordTheme === "dark" ? "#f2f3f5" : "#060607" }}>
-                  {webhookUsername || "BRM5 Bot"}
-                </span>
-                <span
-                  className="inline-flex items-center rounded px-1 text-[10px] font-semibold uppercase tracking-wide"
-                  style={{ backgroundColor: "#5865F2", color: "#fff" }}
-                >
-                  BOT
-                </span>
-                <span className="text-xs" style={{ color: discordTheme === "dark" ? "#949ba4" : "#5c5e66" }}>
-                  Today at {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                </span>
-              </div>
-                <EmbedPreview
-                  title={values.title}
-                  url={values.url || undefined}
-                  description={values.description}
-                  color={values.color}
-                  fields={values.fields}
-                  footer={{ text: values.footerText, iconUrl: values.footerIconUrl || undefined }}
-                  image={values.imageUrl ? { url: values.imageUrl } : undefined}
-                  thumbnail={values.thumbnailUrl ? { url: values.thumbnailUrl } : undefined}
-                  author={values.authorName ? { name: values.authorName, iconUrl: values.authorIconUrl || undefined, url: values.authorUrl || undefined } : undefined}
-                  timestamp={values.timestamp ? new Date() : undefined}
-                  discordTheme={discordTheme}
-                />
-              </div>
-            </div>
             )}
           </div>
       </div>
@@ -489,11 +514,27 @@ function TextAreaField({ name, label, placeholder, withVariables, rows = 4 }: Ba
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children }: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  const [collapsed, setCollapsed] = useState(false);
+
   return (
     <div>
-      <div className="mb-2 text-sm font-medium text-muted-foreground">{title}</div>
-      <div className="space-y-3">{children}</div>
+      <button
+        type="button"
+        className="flex w-full items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
+        onClick={() => setCollapsed((c) => !c)}
+      >
+        <ChevronRight
+          width={14}
+          height={14}
+          style={{ transform: collapsed ? "rotate(0deg)" : "rotate(90deg)", transition: "transform 0.15s ease" }}
+        />
+        {title}
+      </button>
+      {!collapsed && children}
     </div>
   );
 }

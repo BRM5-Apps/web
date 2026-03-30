@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DiscordCheckbox } from "@/components/shared/discord-checkbox";
 import type { C2LinkButton } from "./types";
 
 interface LinkButtonEditDialogProps {
@@ -58,15 +59,12 @@ export function LinkButtonEditDialog({
             />
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={btn.disabled}
-              onChange={(e) => onChange({ ...btn, disabled: e.target.checked })}
-              className="accent-[#5865F2]"
-            />
-            Disabled
-          </label>
+          <DiscordCheckbox
+            checked={btn.disabled}
+            onChange={(v) => onChange({ ...btn, disabled: v })}
+            label="Disabled"
+            size="md"
+          />
         </div>
 
         <div className="flex justify-center pt-2">

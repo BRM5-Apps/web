@@ -10,6 +10,7 @@ export interface DiscordModalProps {
   subtitle?: React.ReactNode;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  footerClassName?: string;
   size?: "sm" | "md" | "lg" | "xl";
   className?: string;
 }
@@ -21,6 +22,7 @@ export function DiscordModal({
   subtitle,
   children,
   footer,
+  footerClassName,
   size = "md",
   className,
 }: DiscordModalProps) {
@@ -62,7 +64,7 @@ export function DiscordModal({
           </div>
 
           {footer && (
-            <div className="bg-[#2B2D31] p-4 flex-shrink-0 flex items-center justify-end gap-3 rounded-b-[4px]">
+            <div className={cn("bg-[#2B2D31] p-4 flex-shrink-0 flex items-center gap-3 rounded-b-[4px]", footerClassName ?? "justify-end")}>
               {footer}
             </div>
           )}

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Check } from "lucide-react";
 import { DiscordModal, DiscordField, DiscordInput, DiscordButton } from "@/components/shared/discord-modal";
+import { EnhancedEmojiPicker } from "@/components/shared/enhanced-emoji-picker";
+import { DiscordCheckbox } from "@/components/shared/discord-checkbox";
 import { cn } from "@/lib/utils";
 import { ActionEditorWorkbench } from "./action-editor-workbench";
 import type { ButtonStyle, C2Button } from "./types";
@@ -67,13 +69,11 @@ export function ButtonEditDialog({
         <div className="space-y-6 py-2">
           <DiscordField label="Button Label" required>
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[3px] bg-[#1E1F22] text-xl transition-colors hover:bg-[#2B2D31]"
-                title="Set emoji"
-              >
-                {draft.emoji ?? "😀"}
-              </button>
+              <EnhancedEmojiPicker
+                value={draft.emoji}
+                onChange={(v) => setDraft({ ...draft, emoji: v })}
+                serverId={serverId}
+              />
               <div className="relative flex-1">
                 <DiscordInput
                   value={draft.label}
@@ -111,23 +111,13 @@ export function ButtonEditDialog({
           </DiscordField>
 
           <DiscordField label="State">
-            <label className="group flex cursor-pointer items-center gap-3">
-              <div className="relative flex items-center justify-center">
-                <input
-                  type="checkbox"
-                  checked={draft.disabled}
-                  onChange={(e) => setDraft({ ...draft, disabled: e.target.checked })}
-                  className="peer h-6 w-6 appearance-none rounded-[4px] border-2 border-[#80848E] bg-transparent transition-all checked:border-[#5865F2] checked:bg-[#5865F2]"
-                />
-                <Check className="pointer-events-none absolute h-4 w-4 text-white opacity-0 transition-opacity peer-checked:opacity-100" strokeWidth={3} />
-              </div>
-              <span className="text-[15px] font-medium text-[#DBDEE1] transition-colors group-hover:text-white">
-                Disable button
-              </span>
-            </label>
-            <p className="ml-9 mt-1.5 text-sm text-[#B5BAC1]">
-              Users will not be able to click this button.
-            </p>
+            <DiscordCheckbox
+              checked={draft.disabled}
+              onChange={(v) => setDraft({ ...draft, disabled: v })}
+              label="Disable button"
+              description="Users will not be able to click this button."
+              size="md"
+            />
           </DiscordField>
 
           <DiscordField label="Action Flow">

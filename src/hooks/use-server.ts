@@ -4,11 +4,26 @@ import { queryKeys } from "@/lib/query-keys";
 import { invalidateRelated } from "@/lib/query-utils";
 import type { Server, PaginatedMembers } from "@/types/server";
 
+// API returns { server: { server: Server, member_count: number } }
+// The backend wraps the response in an extra 'server' key
+interface ServerWithMeta {
+  server: {
+    server: Server;
+    member_count: number;
+  };
+}
+
 export function useServer(serverId: string) {
-  return useQuery<Server>({
+  return useQuery<ServerWithMeta>({
     queryKey: queryKeys.servers.detail(serverId),
-    queryFn: ({ signal }) => api.servers.get(serverId, { signal }),
+    queryFn: async ({ signal }) => {
+      // API client type says { server: Server; member_count: number }
+      // But actual response is { server: { server: Server; member_count: number } }
+      const response = await api.servers.get(serverId, { signal }) as unknown as ServerWithMeta;
+      return response;
+    },
     enabled: !!serverId,
+    retry: false,
   });
 }
 
@@ -49,24 +64,22 @@ export function useServerMembers(serverId: string, params: MemberQueryParams = {
 }
 
 export function useUpdateServer(serverId: string) {
-  const queryClient = useQueryClient();
-
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: Partial<Pick<Server, "name" | "description" | "iconUrl">>) =>
       api.servers.update(serverId, data),
     onSuccess: () => {
-      invalidateRelated(queryClient, "server", serverId);
+      invalidateRelated(qc, "server", serverId);
     },
   });
 }
 
 export function useDeleteServer(serverId: string) {
-  const queryClient = useQueryClient();
-
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: () => api.servers.delete(serverId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.servers.all });
+      qc.invalidateQueries({ queryKey: queryKeys.servers.all });
     },
   });
 }

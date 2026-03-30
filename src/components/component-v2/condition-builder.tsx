@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +18,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import {
   Plus,
@@ -27,6 +33,8 @@ import {
   GripVertical,
   X,
   WrapText,
+  Search,
+  ChevronLeft,
 } from "lucide-react";
 import type {
   ConditionNode,
@@ -44,6 +52,13 @@ import type {
   IsEmptyCondition,
   IsNotEmptyCondition,
 } from "./types";
+import { useElements } from "@/hooks/use-elements";
+import { useModalElements } from "@/hooks/use-modal-elements";
+import { useCustomVariables } from "@/hooks/use-custom-variables";
+import { useServer } from "@/hooks/use-server";
+import { useDiscordGuildInventory } from "@/hooks/use-discord-guild-inventory";
+import type { ElementCatalogItem } from "@/types/element";
+import type { ModalElementRegistration } from "@/types/template";
 
 // ── Condition Categories ────────────────────────────────────────────────────
 
@@ -126,7 +141,7 @@ export function createCondition(operator: ConditionOperator): ConditionNode {
   }
 }
 
-function createDefaultCondition(): ConditionNode {
+export function createDefaultCondition(): ConditionNode {
   return {
     id: uid(),
     operator: "equal",
@@ -403,6 +418,7 @@ function ConditionContent({ condition, onChange, serverId, depth }: ConditionCon
           right={c.right}
           operator={condition.operator}
           onChange={(left, right) => onChange({ ...c, left, right })}
+          serverId={serverId}
         />
       );
     }
@@ -414,6 +430,7 @@ function ConditionContent({ condition, onChange, serverId, depth }: ConditionCon
           element={c.element}
           array={c.array}
           onChange={(element, array) => onChange({ ...c, element, array })}
+          serverId={serverId}
         />
       );
     }
@@ -447,6 +464,7 @@ function ConditionContent({ condition, onChange, serverId, depth }: ConditionCon
           value={c.value}
           onChange={(value) => onChange({ ...c, value })}
           placeholder="Value to check"
+          serverId={serverId}
         />
       );
     }
@@ -568,6 +586,7 @@ interface ComparisonConditionBuilderProps {
   right: ValueSource;
   operator: "equal" | "greater_than" | "less_than";
   onChange: (left: ValueSource, right: ValueSource) => void;
+  serverId?: string;
 }
 
 function ComparisonConditionBuilder({
@@ -575,6 +594,7 @@ function ComparisonConditionBuilder({
   right,
   operator,
   onChange,
+  serverId,
 }: ComparisonConditionBuilderProps) {
   const operatorLabel =
     operator === "equal" ? "equals" : operator === "greater_than" ? ">" : "<";
@@ -587,6 +607,7 @@ function ComparisonConditionBuilder({
           value={left}
           onChange={(v) => onChange(v, right)}
           placeholder="Left value"
+          serverId={serverId}
         />
       </div>
       <div className="flex items-center justify-center">
@@ -598,6 +619,7 @@ function ComparisonConditionBuilder({
           value={right}
           onChange={(v) => onChange(left, v)}
           placeholder="Right value"
+          serverId={serverId}
         />
       </div>
     </div>
@@ -610,9 +632,10 @@ interface InConditionBuilderProps {
   element: ValueSource;
   array: ValueSource;
   onChange: (element: ValueSource, array: ValueSource) => void;
+  serverId?: string;
 }
 
-function InConditionBuilder({ element, array, onChange }: InConditionBuilderProps) {
+function InConditionBuilder({ element, array, onChange, serverId }: InConditionBuilderProps) {
   return (
     <div className="space-y-2">
       <div>
@@ -621,6 +644,7 @@ function InConditionBuilder({ element, array, onChange }: InConditionBuilderProp
           value={element}
           onChange={(v) => onChange(v, array)}
           placeholder="Element to find"
+          serverId={serverId}
         />
       </div>
       <div>
@@ -718,15 +742,216 @@ function PermissionConditionBuilder({ permission, onChange }: PermissionConditio
   );
 }
 
+// ── Element Picker ───────────────────────────────────────────────────────────
+
+interface ElementPickerProps {
+  serverId?: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}
+
+function ElementPicker({ serverId, value, onChange, placeholder }: ElementPickerProps) {
+  const [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
+
+  // Fetch elements
+  const { data: elements, isLoading: elementsLoading } = useElements(serverId ?? "");
+  const { data: modalElements, isLoading: modalLoading } = useModalElements(serverId ?? "");
+  const customVars = useCustomVariables(serverId ?? "");
+
+  // Build element list similar to ElementSidebar
+  const allElements = useMemo(() => {
+    const items: ElementCatalogItem[] = [];
+
+    // Server elements
+    if (elements) {
+      items.push(...elements);
+    }
+
+    // Modal field elements
+    if (modalElements) {
+      for (const reg of modalElements as ModalElementRegistration[]) {
+        items.push({
+          id: reg.id,
+          name: reg.field_label,
+          variable_key: reg.element_key,
+          element_type: "MODULE_FIELD",
+          description: `${reg.field_type.replace(/-/g, " ")} from ${reg.modal_name}`,
+          category: "module_fields",
+          source: "modal",
+          insertions: [`{{element:${reg.element_key}}}`],
+          config: {
+            modal_template_id: reg.modal_template_id,
+            modal_name: reg.modal_name,
+            field_id: reg.field_id,
+            field_type: reg.field_type,
+          },
+        } as ElementCatalogItem);
+      }
+    }
+
+    // Custom variables
+    for (const v of customVars.variables) {
+      const key = v.name.toLowerCase().replace(/[^a-z0-9_]+/g, "_").replace(/_+/g, "_").replace(/^_|_$/g, "");
+      items.push({
+        id: v.id,
+        name: v.name,
+        variable_key: key,
+        element_type: "CUSTOM_VARIABLE",
+        description: v.description || "Custom variable",
+        category: "custom_variables",
+        source: "custom",
+        insertions: [`{{var:${key}}}`],
+      } as ElementCatalogItem);
+    }
+
+    return items;
+  }, [elements, modalElements, customVars.variables]);
+
+  // Filter elements
+  const filteredElements = useMemo(() => {
+    if (!search.trim()) return allElements;
+    const query = search.toLowerCase();
+    return allElements.filter(
+      (el) =>
+        el.name.toLowerCase().includes(query) ||
+        el.variable_key.toLowerCase().includes(query) ||
+        (el.description && el.description.toLowerCase().includes(query))
+    );
+  }, [allElements, search]);
+
+  // Group by category
+  const groupedElements = useMemo(() => {
+    const groups: Record<string, ElementCatalogItem[]> = {};
+    for (const el of filteredElements) {
+      const cat = el.category || "other";
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(el);
+    }
+    return groups;
+  }, [filteredElements]);
+
+  const categoryLabels: Record<string, string> = {
+    event: "Event",
+    system: "System",
+    user: "User Data",
+    server: "Server Stats",
+    rank: "Rank",
+    module_fields: "Modal Fields",
+    custom_counters: "Custom Counters",
+    custom: "Custom",
+    custom_variables: "Custom Variables",
+  };
+
+  // Find selected element
+  const selectedElement = useMemo(() => {
+    const match = value.match(/\{\{element:([^}]+)\}\}/);
+    if (match) {
+      return allElements.find((el) => el.variable_key === match[1]);
+    }
+    return null;
+  }, [value, allElements]);
+
+  if (!serverId) {
+    // Fallback to text input if no server context
+    return (
+      <Input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="flex-1 bg-[#1e1f22] border-[#3f4147] text-white text-sm h-8"
+      />
+    );
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          className={cn(
+            "flex-1 flex items-center gap-1 px-2 py-1.5 rounded bg-[#1e1f22] border border-[#3f4147] text-white text-sm h-8 text-left overflow-hidden",
+            "hover:border-[#5865F2]/50 focus:border-[#5865F2] focus:outline-none",
+            !value && "text-[#b5bac1]"
+          )}
+        >
+          {selectedElement ? (
+            <>
+              <span className="truncate">{selectedElement.name}</span>
+              <span className="text-[10px] text-[#5865F2] shrink-0">{categoryLabels[selectedElement.category || ""] || selectedElement.category}</span>
+            </>
+          ) : value ? (
+            <span className="truncate">{value}</span>
+          ) : (
+            <span className="text-[#b5bac1]">{placeholder || "Select element..."}</span>
+          )}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-72 p-0 bg-[#2b2d31] border-[#3f4147]" align="start">
+        <div className="p-2 border-b border-[#3f4147]">
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[#b5bac1]" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search elements..."
+              className="pl-8 h-8 bg-[#1e1f22] border-[#3f4147] text-white text-sm"
+            />
+          </div>
+        </div>
+        <ScrollArea className="max-h-64">
+          {elementsLoading || modalLoading ? (
+            <div className="p-4 text-center text-sm text-[#b5bac1]">Loading...</div>
+          ) : filteredElements.length === 0 ? (
+            <div className="p-4 text-center text-sm text-[#b5bac1]">No elements found</div>
+          ) : (
+            <div className="py-1">
+              {Object.entries(groupedElements).map(([category, items]) => (
+                <div key={category}>
+                  <div className="px-2 py-1 text-[10px] font-semibold text-[#b5bac1] uppercase">
+                    {categoryLabels[category] || category}
+                  </div>
+                  {items.map((el) => (
+                    <button
+                      key={el.id}
+                      onClick={() => {
+                        onChange(`{{element:${el.variable_key}}}`);
+                        setOpen(false);
+                      }}
+                      className={cn(
+                        "w-full px-2 py-1.5 text-left text-sm hover:bg-[#5865F2]/20",
+                        value === `{{element:${el.variable_key}}}` && "bg-[#5865F2]/30"
+                      )}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="truncate">{el.name}</span>
+                        <span className="text-[10px] text-[#b5bac1] shrink-0">{el.variable_key}</span>
+                      </div>
+                      {el.description && (
+                        <div className="text-[10px] text-[#b5bac1] truncate">{el.description}</div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+        </ScrollArea>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 // ── Value Source Input ───────────────────────────────────────────────────────
 
 interface ValueSourceInputProps {
   value: ValueSource;
   onChange: (value: ValueSource) => void;
   placeholder?: string;
+  serverId?: string;
 }
 
-function ValueSourceInput({ value, onChange, placeholder }: ValueSourceInputProps) {
+function ValueSourceInput({ value, onChange, placeholder, serverId }: ValueSourceInputProps) {
   return (
     <div className="flex items-center gap-1 flex-1 min-w-0">
       <Select
@@ -747,12 +972,21 @@ function ValueSourceInput({ value, onChange, placeholder }: ValueSourceInputProp
           <SelectItem value="message" className="text-xs">Message</SelectItem>
         </SelectContent>
       </Select>
-      <Input
-        value={value.value}
-        onChange={(e) => onChange({ ...value, value: e.target.value })}
-        placeholder={placeholder}
-        className="flex-1 bg-[#1e1f22] border-[#3f4147] text-white text-sm h-8"
-      />
+      {value.type === "element" && serverId ? (
+        <ElementPicker
+          serverId={serverId}
+          value={value.value}
+          onChange={(v) => onChange({ ...value, value: v })}
+          placeholder={placeholder}
+        />
+      ) : (
+        <Input
+          value={value.value}
+          onChange={(e) => onChange({ ...value, value: e.target.value })}
+          placeholder={placeholder}
+          className="flex-1 bg-[#1e1f22] border-[#3f4147] text-white text-sm h-8"
+        />
+      )}
     </div>
   );
 }
@@ -763,11 +997,12 @@ interface ValueSourceBuilderProps {
   value: ValueSource;
   onChange: (value: ValueSource) => void;
   placeholder?: string;
+  serverId?: string;
 }
 
-function ValueSourceBuilder({ value, onChange, placeholder }: ValueSourceBuilderProps) {
+function ValueSourceBuilder({ value, onChange, placeholder, serverId }: ValueSourceBuilderProps) {
   return (
-    <ValueSourceInput value={value} onChange={onChange} placeholder={placeholder} />
+    <ValueSourceInput value={value} onChange={onChange} placeholder={placeholder} serverId={serverId} />
   );
 }
 

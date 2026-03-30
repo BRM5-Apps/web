@@ -20,11 +20,16 @@ import {
   Keyboard,
   ExternalLink,
   X,
+  BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { DiscordCheckbox } from "@/components/shared/discord-checkbox";
+import { EnhancedEmojiPicker } from "@/components/shared/enhanced-emoji-picker";
+import { FileUploadZone } from "./file-upload-zone";
 import { ButtonEditDialog } from "./button-edit-dialog";
 import { LinkButtonEditDialog } from "./link-button-edit-dialog";
 import { SelectMenuEditDialog } from "./select-menu-edit-dialog";
+import { StatsCardEditDialog } from "./stats-card-edit-dialog";
 import type {
   C2TopLevelItem,
   C2ContainerChild,
@@ -32,6 +37,7 @@ import type {
   C2Text,
   C2Row,
   C2MediaGallery,
+  C2MediaGalleryItem,
   C2File,
   C2Separator,
   C2Button,
@@ -366,10 +372,12 @@ function RowLinkButtonItem({ btn, onChange, onDuplicate, onDelete }: RowLinkButt
               placeholder="https://example.com"
             />
           </div>
-          <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
-            <input type="checkbox" checked={btn.disabled} onChange={(e) => onChange({ ...btn, disabled: e.target.checked })} className="accent-[#5865F2]" />
-            Disabled
-          </label>
+          <DiscordCheckbox
+            checked={btn.disabled}
+            onChange={(v) => onChange({ ...btn, disabled: v })}
+            label="Disabled"
+            size="sm"
+          />
         </div>
       )}
     </>
@@ -578,22 +586,180 @@ function RowChildEditor({ child, onChange, serverId }: RowChildEditorProps) {
 interface MediaGalleryChildEditorProps {
   child: C2MediaGallery;
   onChange: (updated: C2MediaGallery) => void;
+  serverId?: string;
 }
 
 function MediaGalleryChildEditor({
   child,
   onChange,
+  serverId,
 }: MediaGalleryChildEditorProps) {
-  void child;
-  void onChange;
+  function addItem() {
+    onChange({ ...child, items: [...child.items, { url: "" }] });
+  }
+
+  function updateItem(index: number, item: C2MediaGalleryItem) {
+    const items = [...child.items];
+    items[index] = item;
+    onChange({ ...child, items });
+  }
+
+  function removeItem(index: number) {
+    onChange({ ...child, items: child.items.filter((_, i) => i !== index) });
+  }
+
   return (
-    <Button
-      variant="ghost"
-      size="sm"
-      className="h-7 text-xs text-[#5865F2] border border-[#5865F2]/40 hover:bg-[#5865F2]/10"
-    >
-      + Add Media
-    </Button>
+    <div className="space-y-2">
+      {child.items.map((item, idx) => (
+        <MediaGalleryItemEditor
+          key={idx}
+          item={item}
+          onChange={(updated) => updateItem(idx, updated)}
+          serverId={serverId}
+          onRemove={() => removeItem(idx)}
+        />
+      ))}
+      <div className="flex gap-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 text-xs text-[#5865F2] border border-[#5865F2]/40 hover:bg-[#5865F2]/10"
+          onClick={addItem}
+        >
+          + Add Image
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 text-xs text-[#5865F2] border border-[#5865F2]/40 hover:bg-[#5865F2]/10"
+          onClick={() =>
+            onChange({
+              ...child,
+              items: [
+                ...child.items,
+                {
+                  statCard: {
+                    layout: "standard",
+                    width: 600,
+                    height: 400,
+                    backgroundColor: "#1a1a2e",
+                    textColor: "#ffffff",
+                    accentColor: "#5865F2",
+                    borderRadius: 12,
+                    showTitle: true,
+                    title: "Server Statistics",
+                    titleSize: 24,
+                    showTimestamp: true,
+                    footerText: "",
+                    stats: [
+                      { element: "member_count", label: "Members", format: "compact" as const },
+                      { element: "online_count", label: "Online", format: "number" as const },
+                    ],
+                    showGraph: true,
+                    graphType: "line" as const,
+                    graphTimeRange: "30d" as const,
+                    graphColor: "#5865F2",
+                  },
+                },
+              ],
+            })
+          }
+        >
+          + Add Stats Card
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ── MediaGalleryItemEditor ───────────────────────────────────────────────────
+
+interface MediaGalleryItemEditorProps {
+  item: C2MediaGalleryItem;
+  onChange: (updated: C2MediaGalleryItem) => void;
+  serverId?: string;
+  onRemove: () => void;
+}
+
+function MediaGalleryItemEditor({
+  item,
+  onChange,
+  serverId,
+  onRemove,
+}: MediaGalleryItemEditorProps) {
+  const [editOpen, setEditOpen] = useState(false);
+
+  if (item.statCard) {
+    // Compact card display for stat cards — click to open editor dialog
+    const title = item.statCard?.title || "Stats Card";
+    const statCount = item.statCard?.stats?.length ?? 0;
+    return (
+      <>
+        <div
+          className="flex items-center gap-2 rounded border border-[#5865F2]/40 bg-[#5865F2]/10 px-3 py-2 cursor-pointer hover:bg-[#5865F2]/20 transition-colors"
+          onClick={() => setEditOpen(true)}
+        >
+          <BarChart3 className="h-4 w-4 text-[#5865F2] flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-[#DBDEE1] truncate">
+              {title}
+            </p>
+            <p className="text-xs text-[#B5BAC1]">
+              {statCount} stat{statCount !== 1 ? "s" : ""}
+              {item.statCard?.showGraph ? " · Graph" : ""}
+            </p>
+          </div>
+          <span className="text-xs text-[#80848E]">Click to edit</span>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onRemove(); }}
+            className="p-1 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded flex-shrink-0"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+        <StatsCardEditDialog
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          statCard={item.statCard}
+          serverId={serverId}
+          onChange={(statCard) => onChange({ url: undefined, statCard })}
+        />
+      </>
+    );
+  }
+
+  // Static URL mode
+  return (
+    <div className="flex items-center gap-2">
+      {item.url && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={item.url}
+          alt=""
+          className="h-8 w-8 rounded object-cover flex-shrink-0 border border-[#3f4147]"
+          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+        />
+      )}
+      <div className="flex-1">
+        <FileUploadZone
+          value={item.url}
+          onChange={(url) => onChange({ url: url || "", statCard: undefined })}
+          serverId={serverId}
+          accept="image/*"
+          placeholder="Upload an image or paste URL"
+        />
+      </div>
+      <button
+        type="button"
+        onClick={onRemove}
+        className="p-1 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded flex-shrink-0"
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+      </button>
+    </div>
   );
 }
 
@@ -602,26 +768,19 @@ function MediaGalleryChildEditor({
 interface FileChildEditorProps {
   child: C2File;
   onChange: (updated: C2File) => void;
+  serverId?: string;
 }
 
-function FileChildEditor({ child, onChange }: FileChildEditorProps) {
-  void child;
-  void onChange;
+function FileChildEditor({ child, onChange, serverId }: FileChildEditorProps) {
   return (
-    <div className="flex gap-2">
-      <Button
-        size="sm"
-        className="h-7 text-xs bg-[#5865F2] hover:bg-[#4752c4] text-white"
-      >
-        + Add File
-      </Button>
-      <Button
-        size="sm"
-        variant="outline"
-        className="h-7 text-xs border-[#3f4147] text-gray-300"
-      >
-        Paste File
-      </Button>
+    <div className="space-y-2">
+      <FileUploadZone
+        value={child.fileUrl}
+        onChange={(url) => onChange({ ...child, fileUrl: url })}
+        serverId={serverId}
+        accept="*/*"
+        placeholder="Upload a file to Discord CDN"
+      />
     </div>
   );
 }
@@ -653,15 +812,12 @@ function SeparatorChildEditor({ child, onChange }: SeparatorChildEditorProps) {
           </button>
         ))}
       </div>
-      <label className="flex items-center gap-1.5 text-xs text-gray-300 cursor-pointer">
-        <input
-          type="checkbox"
-          checked={child.dividerLine}
-          onChange={(e) => onChange({ ...child, dividerLine: e.target.checked })}
-          className="accent-[#5865F2]"
-        />
-        Divider Line
-      </label>
+      <DiscordCheckbox
+        checked={child.dividerLine}
+        onChange={(v) => onChange({ ...child, dividerLine: v })}
+        label="Divider Line"
+        size="sm"
+      />
     </div>
   );
 }
@@ -677,6 +833,7 @@ interface SectionEditorProps {
   onMoveDown: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
+  serverId?: string;
 }
 
 function SectionEditor({
@@ -688,6 +845,7 @@ function SectionEditor({
   onMoveDown,
   onDuplicate,
   onDelete,
+  serverId,
 }: SectionEditorProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [linkBtnDialogOpen, setLinkBtnDialogOpen] = useState(false);
@@ -922,30 +1080,22 @@ function SectionEditor({
 
                 {section.accessory.type === "thumbnail" && (
                   <div className="space-y-2">
-                    <input
+                    <FileUploadZone
                       value={section.accessory.url}
-                      onChange={(e) => updateThumbnailUrl(e.target.value)}
-                      className={cn(
-                        "w-full rounded bg-[#1e1f22] border px-2 py-1.5 text-xs text-white outline-none placeholder:text-gray-500",
-                        section.accessory.url === "" ? "border-red-500/70" : "border-[#3f4147]"
-                      )}
-                      placeholder="Image URL (jpg, png, webp, gif)"
+                      onChange={(url) => updateThumbnailUrl(url || "")}
+                      serverId={serverId}
+                      accept="image/*"
+                      placeholder="Upload thumbnail to Discord CDN"
                     />
-                    <div className="flex gap-1.5">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 flex-1 text-xs border-[#3f4147] text-gray-300"
-                      >
-                        Paste File
-                      </Button>
-                      <Button
-                        size="sm"
-                        className="h-7 flex-1 text-xs bg-[#5865F2] hover:bg-[#4752c4] text-white"
-                      >
-                        Add File
-                      </Button>
-                    </div>
+                    {section.accessory.url && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={section.accessory.url}
+                        alt="Thumbnail preview"
+                        className="h-16 w-16 rounded object-cover border border-[#3f4147]"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                      />
+                    )}
                     {gifDetected && (
                       <p className="text-xs text-yellow-400/90 bg-yellow-400/10 border border-yellow-400/20 rounded px-2 py-1">
                         GIF detected — consider converting the link so Discord displays it properly.
@@ -1003,6 +1153,7 @@ function ChildItemEditor({
         onMoveDown={onMoveDown}
         onDuplicate={onDuplicate}
         onDelete={onDelete}
+        serverId={serverId}
       />
     );
   }
@@ -1089,12 +1240,14 @@ function ChildItemEditor({
           <MediaGalleryChildEditor
             child={child}
             onChange={(updated) => onChange(updated)}
+            serverId={serverId}
           />
         )}
         {child.type === "file" && (
           <FileChildEditor
             child={child}
             onChange={(updated) => onChange(updated)}
+            serverId={serverId}
           />
         )}
         {child.type === "separator" && (
@@ -1194,7 +1347,7 @@ function ContainerEditor({
   onDelete,
   serverId,
 }: ContainerEditorProps) {
-  function toggleCollapse() {
+  function toggleChildrenCollapse() {
     onChange({ ...container, collapsed: !container.collapsed });
   }
 
@@ -1241,9 +1394,9 @@ function ContainerEditor({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={toggleCollapse}
+            onClick={toggleChildrenCollapse}
             className="text-gray-400 hover:text-white"
-            title={container.collapsed ? "Expand" : "Collapse"}
+            title={container.collapsed ? "Expand content" : "Collapse content"}
           >
             <ChevronRight
               className={cn(
@@ -1298,52 +1451,63 @@ function ContainerEditor({
         </div>
       </div>
 
-      {/* Body */}
-      {!container.collapsed && (
-        <div className="p-3 space-y-3">
-          {/* Spoiler */}
-          <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+      {/* Config — always visible */}
+      <div className="px-3 py-2 border-t border-[#3f4147]/50 space-y-2">
+        {/* Spoiler */}
+        <DiscordCheckbox
+          checked={container.spoiler}
+          onChange={(v) => onChange({ ...container, spoiler: v })}
+          label="Mark as spoiler"
+          size="md"
+        />
+
+        {/* Sidebar color */}
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-gray-300">Sidebar Color</span>
+          <div className="flex items-center gap-2">
             <input
-              type="checkbox"
-              checked={container.spoiler}
+              type="color"
+              value={container.accentColor ?? "#5865F2"}
               onChange={(e) =>
-                onChange({ ...container, spoiler: e.target.checked })
+                onChange({ ...container, accentColor: e.target.value })
               }
-              className="accent-[#5865F2]"
+              className="sr-only"
+              id={`color-${container.id}`}
             />
-            Mark as spoiler
-          </label>
-
-          {/* Sidebar color */}
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-300">Sidebar Color</span>
-            <div className="flex items-center gap-2">
-              <input
-                type="color"
-                value={container.accentColor ?? "#5865F2"}
-                onChange={(e) =>
-                  onChange({ ...container, accentColor: e.target.value })
-                }
-                className="sr-only"
-                id={`color-${container.id}`}
-              />
-              <label
-                htmlFor={`color-${container.id}`}
-                className="cursor-pointer flex items-center gap-2 rounded border border-[#3f4147] bg-[#1e1f22] px-3 py-1.5 text-sm text-gray-300 hover:bg-[#3f4147]"
-              >
-                Click to Set
-                {container.accentColor && (
-                  <span
-                    className="h-4 w-4 rounded-sm border border-[#3f4147] inline-block flex-shrink-0"
-                    style={{ backgroundColor: container.accentColor }}
-                  />
-                )}
-              </label>
-            </div>
+            <label
+              htmlFor={`color-${container.id}`}
+              className="cursor-pointer flex items-center gap-2 rounded border border-[#3f4147] bg-[#1e1f22] px-3 py-1.5 text-sm text-gray-300 hover:bg-[#3f4147]"
+            >
+              Click to Set
+              {container.accentColor && (
+                <span
+                  className="h-4 w-4 rounded-sm border border-[#3f4147] inline-block flex-shrink-0"
+                  style={{ backgroundColor: container.accentColor }}
+                />
+              )}
+            </label>
           </div>
+        </div>
+      </div>
 
-          {/* Children */}
-          <div className="space-y-2">
+      {/* Children — collapsible */}
+      <div className="border-t border-[#3f4147]/50">
+        <button
+          type="button"
+          onClick={toggleChildrenCollapse}
+          className="flex items-center gap-2 w-full px-3 py-2 text-xs text-gray-400 hover:text-white hover:bg-[#3f4147]/50 transition-colors"
+        >
+          <ChevronRight
+            className={cn("h-3 w-3 transition-transform", !container.collapsed && "rotate-90")}
+          />
+          Content
+          <span className="ml-auto text-[#5865F2]">
+            {container.children.length} item{container.children.length !== 1 ? "s" : ""}
+          </span>
+        </button>
+
+        {!container.collapsed && (
+          <div className="px-3 pb-3 space-y-2">
             {container.children.map((child, childIdx) => (
               <ChildItemEditor
                 key={child.id}
@@ -1358,14 +1522,14 @@ function ContainerEditor({
                 serverId={serverId}
               />
             ))}
-          </div>
 
-          <AddChildDropdown
-            onAdd={addChild}
-            sectionCount={container.children.filter((c) => c.type === "section").length}
-          />
-        </div>
-      )}
+            <AddChildDropdown
+              onAdd={addChild}
+              sectionCount={container.children.filter((c) => c.type === "section").length}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -1424,6 +1588,7 @@ function NonContainerTopLevelEditor({
       <MediaGalleryChildEditor
         child={item}
         onChange={(updated) => onChange(updated)}
+        serverId={serverId}
       />
     );
   }
@@ -1432,6 +1597,7 @@ function NonContainerTopLevelEditor({
       <FileChildEditor
         child={item}
         onChange={(updated) => onChange(updated)}
+        serverId={serverId}
       />
     );
   }
@@ -1482,6 +1648,7 @@ function TopLevelItemEditor({
         onMoveDown={onMoveDown}
         onDuplicate={onDuplicate}
         onDelete={onDelete}
+        serverId={serverId}
       />
     );
   }
@@ -1672,7 +1839,7 @@ export function EditorPanel({ items, onChange, serverId }: EditorPanelProps) {
   }
 
   return (
-    <div>
+    <ScrollArea className="h-full w-full">
       <div className="space-y-3 p-4">
         {items.length === 0 && (
           <div className="flex flex-col items-center gap-2 py-10 text-center text-gray-500">
@@ -1702,6 +1869,6 @@ export function EditorPanel({ items, onChange, serverId }: EditorPanelProps) {
           sectionCount={items.filter((i) => i.type === "section").length}
         />
       </div>
-    </div>
+    </ScrollArea>
   );
 }

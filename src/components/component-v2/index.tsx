@@ -103,21 +103,21 @@ export function ComponentV2BuilderV2({
   }, [jsonText]);
 
   return (
-    <div className="space-y-4">
-      <div className="grid max-w-[1000px] items-start gap-6 lg:grid-cols-2">
+    <div className="space-y-4 flex flex-col min-h-0">
+      <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
           {/* Left: Editor */}
-          <div>
-            <div className="mb-2">
+          <div className="flex flex-col self-start">
+            <div className="mb-1.5 h-6 flex items-center shrink-0">
               <h2 className="text-sm font-semibold text-foreground">Components</h2>
             </div>
-            <div className="overflow-hidden rounded-lg border border-border bg-card">
+            <div className="rounded-lg border border-border bg-card overflow-hidden">
               <EditorPanel items={items} onChange={setItems} serverId={serverId} />
             </div>
           </div>
 
           {/* Right: Preview */}
-          <div>
-            <div className="mb-2 flex items-center justify-between gap-3">
+          <div className="flex flex-col self-start">
+            <div className="mb-1.5 h-6 flex items-center justify-between gap-3 shrink-0">
               <h2 className="text-sm font-semibold text-foreground">
                 {sideView === "preview" ? "Preview" : "Elements"}
               </h2>
@@ -140,9 +140,11 @@ export function ComponentV2BuilderV2({
                 </div>
               ) : null}
             </div>
-            <div className="overflow-hidden rounded-lg border border-border">
+            <div className="rounded-lg border border-border bg-card overflow-hidden">
               {sideView === "elements" && sidebar ? (
-                <div className="p-4">{sidebar}</div>
+                <div className="h-full [&>*]:!w-full [&>*]:!border-0 [&>*]:!bg-transparent [&>*]:!shadow-none">
+                  {sidebar}
+                </div>
               ) : (
                 <PreviewPanel items={items} webhookUsername={webhookUsername} webhookAvatarUrl={webhookAvatarUrl} />
               )}

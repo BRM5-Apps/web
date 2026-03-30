@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -10,7 +8,9 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { DiscordCheckbox } from "@/components/shared/discord-checkbox";
 import { ChevronRight, ChevronUp, ChevronDown, Copy, Trash2 } from "lucide-react";
+import { EnhancedEmojiPicker } from "@/components/shared/enhanced-emoji-picker";
 import { ActionEditorWorkbench } from "./action-editor-workbench";
 import type { ActionGraphDocument, C2SelectMenu, SelectOption, FlowAction } from "./types";
 
@@ -190,9 +190,11 @@ function OptionCard({
           <div className="p-2.5 space-y-2.5 bg-[#313338]">
             {/* Emoji + Label row */}
             <div className="flex items-start gap-2">
-              <EmojiButton
+              <EnhancedEmojiPicker
                 value={option.emoji}
                 onChange={(v) => onChange({ ...option, emoji: v })}
+                size="sm"
+                serverId={serverId}
               />
               <div className="flex-1 space-y-1">
                 <div className="flex items-center justify-between">
@@ -220,17 +222,12 @@ function OptionCard({
             </div>
 
             {/* Default checkbox */}
-            <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={option.default}
-                onChange={(e) =>
-                  onChange({ ...option, default: e.target.checked })
-                }
-                className="accent-[#5865F2]"
-              />
-              Default (pre-selected)
-            </label>
+            <DiscordCheckbox
+              checked={option.default}
+              onChange={(v) => onChange({ ...option, default: v })}
+              label="Default (pre-selected)"
+              size="sm"
+            />
 
             {/* Description */}
             <div className="space-y-1">
@@ -253,7 +250,7 @@ function OptionCard({
               />
             </div>
 
-            {/* Value + Edit Flow */}
+            {/* Value + Edit Action */}
             <div className="space-y-1">
               <div className="flex items-center justify-between">
                 <label className="text-xs text-gray-400">
@@ -282,7 +279,7 @@ function OptionCard({
                   onClick={() => setFlowOpen(true)}
                   className="flex-shrink-0 rounded bg-[#5865F2] px-2.5 py-1 text-xs font-medium text-white hover:bg-[#4752c4] transition-colors"
                 >
-                  Edit Flow
+                  Edit Action
                 </button>
               </div>
             </div>
@@ -434,7 +431,7 @@ function SnowflakeBody({ defaultValues, flow, actionGraph, onChange, serverId }:
           onClick={() => setFlowOpen(true)}
           className="flex-1 rounded border border-[#3f4147] bg-[#1e1f22] hover:bg-[#3f4147] transition-colors px-3 py-1.5 text-xs font-medium text-gray-300"
         >
-          Edit Flow
+          Edit Action
         </button>
       </div>
 
@@ -534,20 +531,12 @@ export function SelectMenuEditDialog({
         </DiscordField>
 
         <DiscordField label="State">
-          <label className="flex items-center gap-3 cursor-pointer group">
-            <div className="relative flex items-center justify-center">
-              <input
-                type="checkbox"
-                checked={draft.disabled}
-                onChange={(e) => setDraft((d) => ({ ...d, disabled: e.target.checked }))}
-                className="peer appearance-none w-6 h-6 border-2 border-[#80848E] rounded-[4px] bg-transparent checked:bg-[#5865F2] checked:border-[#5865F2] transition-all"
-              />
-              <Check className="absolute h-4 w-4 text-white opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" strokeWidth={3} />
-            </div>
-            <span className="text-[15px] font-medium text-[#DBDEE1] group-hover:text-white transition-colors">
-              Disable menu
-            </span>
-          </label>
+          <DiscordCheckbox
+            checked={draft.disabled}
+            onChange={(v) => setDraft((d) => ({ ...d, disabled: v }))}
+            label="Disable menu"
+            size="md"
+          />
         </DiscordField>
 
         <div className="h-px bg-[#3F4147] w-full" />

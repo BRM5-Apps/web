@@ -20,6 +20,7 @@ export function usePermissions(serverId: string) {
     queryKey: queryKeys.permissions.user(serverId),
     queryFn: ({ signal }) => api.permissions.get(serverId, { signal }),
     enabled: !!serverId,
+    retry: false,
   });
 
   const permissions = useMemo(
@@ -42,8 +43,13 @@ export function usePermissions(serverId: string) {
 export function useHasPermissions(
   permissions: PermissionInput,
   mode: PermissionMode = "all"
-): boolean {
+): { allowed: boolean; isLoading: boolean } {
+  const activeServerId = useServerStore((state) => state.activeServerId);
   const userPermissions = useServerStore((state) => state.userPermissions);
+
+  // Check if permissions are loading - they're loading if we have a server but no permissions yet
+  const permissionsLoaded = userPermissions.length > 0 || !activeServerId;
+
   const userPermissionSet = useMemo(
     () => new Set(userPermissions.map(normalizePermissionKey)),
     [userPermissions]
@@ -58,18 +64,20 @@ export function useHasPermissions(
   );
 
   if (list.length === 0) {
-    return true;
+    return { allowed: true, isLoading: false };
   }
 
-  return mode === "any"
+  const allowed = mode === "any"
     ? list.some((permission) => userPermissionSet.has(permission))
     : list.every((permission) => userPermissionSet.has(permission));
+
+  return { allowed, isLoading: !permissionsLoaded };
 }
 
-export function useHasPermission(permission: string): boolean {
+export function useHasPermission(permission: string): { allowed: boolean; isLoading: boolean } {
   return useHasPermissions(permission, "all");
 }
 
-export function useHasAnyPermission(permissions: readonly string[]): boolean {
+export function useHasAnyPermission(permissions: readonly string[]): { allowed: boolean; isLoading: boolean } {
   return useHasPermissions(permissions, "any");
 }

@@ -291,7 +291,21 @@ function convertSelectOption(opt: SelectOption): object {
 function convertMediaGallery(mg: C2MediaGallery): object {
   return {
     type: 12,
-    items: mg.items.map((item) => ({ media: { url: item.url } })),
+    items: mg.items.map((item) => {
+      if (item.url) {
+        return { media: { url: item.url } };
+      }
+      if (item.statCard) {
+        // Stat cards are resolved server-side; embed config in token
+        const encoded = btoa(JSON.stringify(item.statCard));
+        return {
+          media: {
+            url: `{{stats_card:${encoded}}}`
+          }
+        };
+      }
+      return { media: { url: "" } };
+    }),
   };
 }
 
@@ -360,6 +374,9 @@ function convertAction(action: FlowAction): object {
       break;
     case "send_output":
       base.output_kind = action.outputKind;
+      if (action.channelId) {
+        base.channel_id = action.channelId;
+      }
       if (action.templateId) {
         base.template_id = action.templateId;
       }
@@ -368,6 +385,18 @@ function convertAction(action: FlowAction): object {
       }
       if (action.hidden) {
         base.hidden = true;
+      }
+      if (action.reply) {
+        base.reply = true;
+      }
+      if (action.replyEphemeral) {
+        base.reply_ephemeral = true;
+      }
+      if (action.edit) {
+        base.edit = true;
+      }
+      if (action.editOriginal) {
+        base.edit_original = true;
       }
       break;
     case "create_thread":
@@ -687,7 +716,20 @@ function parseMediaGallery(obj: Record<string, unknown>): C2MediaGallery {
     type: "media_gallery",
     items: rawItems.map((item) => {
       const media = item.media as Record<string, unknown> | undefined;
-      return { url: (media?.url as string) ?? "" };
+      const url = (media?.url as string) ?? "";
+
+      // Check for embedded stat card token: {{stats_card:<base64>}}
+      const statCardMatch = url.match(/^\{\{stats_card:(.+)\}\}$/);
+      if (statCardMatch) {
+        try {
+          const decoded = JSON.parse(atob(statCardMatch[1]));
+          return { statCard: decoded };
+        } catch {
+          return { url };
+        }
+      }
+
+      return { url };
     }),
   };
 }
@@ -821,6 +863,7 @@ function parseAction(raw: unknown): FlowAction | null {
         id,
         type: "send_output",
         outputKind: (obj.output_kind as "message" | "modal") ?? "message",
+        channelId: obj.channel_id as string | undefined,
         templateId: obj.template_id as string | undefined,
         templateType: obj.template_type as
           | "text"
@@ -829,6 +872,10 @@ function parseAction(raw: unknown): FlowAction | null {
           | "modal"
           | undefined,
         hidden: obj.hidden === true,
+        reply: obj.reply === true,
+        replyEphemeral: obj.reply_ephemeral === true,
+        edit: obj.edit === true,
+        editOriginal: obj.edit_original === true,
       };
 
     case "create_thread":

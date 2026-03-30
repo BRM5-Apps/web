@@ -2,8 +2,6 @@
 
 import { useMemo, useState, useCallback, useEffect } from "react";
 import {
-  ChevronLeft,
-  ChevronRight,
   ChevronDown,
   ChevronUp,
   Search,
@@ -11,25 +9,44 @@ import {
   Users,
   Shield,
   Hash,
-  MoreHorizontal,
   Copy,
   Check,
   MousePointerClick,
-  Variable,
   Plus,
   Trash2,
-  Edit,
+  Zap,
 } from "lucide-react";
+import { COMMON_ELEMENTS } from "@/lib/discord-events";
+
+// Common event elements that are useful across most event types
+const EVENT_ELEMENTS = [
+  { key: "event.user.id", label: "User ID", description: "The user's Discord ID", example: "123456789012345678" },
+  { key: "event.user.name", label: "User Name", description: "The user's username", example: "john_doe" },
+  { key: "event.user.mention", label: "User Mention", description: "Mention the user", example: "<@123456789012345678>" },
+  { key: "event.user.avatar", label: "User Avatar", description: "URL to user's avatar", example: "https://cdn.discordapp.com/..." },
+  { key: "event.channel.id", label: "Channel ID", description: "The channel's ID", example: "987654321098765432" },
+  { key: "event.channel.name", label: "Channel Name", description: "The channel's name", example: "general" },
+  { key: "event.channel.mention", label: "Channel Mention", description: "Mention the channel", example: "<#987654321098765432>" },
+  { key: "event.server.name", label: "Server Name", description: "The server's name", example: "My Server" },
+  { key: "event.server.id", label: "Server ID", description: "The server's ID", example: "123456789012345678" },
+  { key: "event.timestamp", label: "Timestamp", description: "When the event occurred", example: "2024-03-26T10:30:00Z" },
+  { key: "event.message.content", label: "Message Content", description: "The message content", example: "Hello world!" },
+  { key: "event.message.id", label: "Message ID", description: "The message's ID", example: "123456789012345678" },
+  { key: "event.role.name", label: "Role Name", description: "The role's name", example: "Moderator" },
+  { key: "event.role.id", label: "Role ID", description: "The role's ID", example: "987654321098765432" },
+  { key: "event.role.mention", label: "Role Mention", description: "Mention the role", example: "<@&987654321098765432>" },
+];
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { useServer } from "@/hooks/use-server";
 import { useDiscordGuildInventory } from "@/hooks/use-discord-guild-inventory";
 import { useElements } from "@/hooks/use-elements";
 import { useCustomVariables, generateVariableKey } from "@/hooks/use-custom-variables";
+import { useModalElements } from "@/hooks/use-modal-elements";
 import { useElementInsertion } from "./element-insertion-provider";
+import { useServer } from "@/hooks/use-server";
 import {
   Dialog,
   DialogContent,
@@ -42,6 +59,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { ElementCatalogItem } from "@/types/element";
 import type { DiscordGuildRole, DiscordGuildUser, DiscordGuildChannel } from "@/types/discord-inventory";
+import type { ModalElementRegistration } from "@/types/template";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -73,6 +91,7 @@ interface ChannelElement extends ElementCatalogItem {
 }
 
 const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  event: Zap,
   system: Shield,
   user: Users,
   server: Shield,
@@ -87,6 +106,7 @@ const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
+  event: "Event",
   system: "System",
   user: "User Data",
   server: "Server Stats",
@@ -101,6 +121,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 const DEFAULT_CATEGORY_ORDER = [
+  "event",
   "system",
   "user",
   "server",
@@ -147,7 +168,6 @@ export function ElementSidebar({
   className?: string;
 }) {
   const [query, setQuery] = useState("");
-  const [collapsed, setCollapsed] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isCreateVarOpen, setIsCreateVarOpen] = useState(false);
   const [newVarName, setNewVarName] = useState("");
@@ -158,16 +178,25 @@ export function ElementSidebar({
     STORAGE_KEY_EXPANDED,
     []
   );
+
   // Migrate from old Set format to array format
   const expandedCategories = Array.isArray(expandedCategoriesRaw)
     ? expandedCategoriesRaw
     : [];
 
-  const { data, isLoading } = useElements(serverId);
+  const { data, isLoading, error: elementsError } = useElements(serverId);
+
+  // Fetch modal element registrations
+  const { data: modalElements, isLoading: modalElementsLoading } = useModalElements(serverId);
+
   const server = useServer(serverId);
-  const guildInventory = useDiscordGuildInventory(server.data?.discordGuildId);
+  // API returns nested server object: { server: { server: Server }, member_count }
+  const discordGuildId = (server.data as { server?: { server?: { discordGuildId?: string } } })?.server?.server?.discordGuildId ?? undefined;
+
+  const guildInventory = useDiscordGuildInventory(discordGuildId);
   const { insertToken } = useElementInsertion();
   const customVars = useCustomVariables(serverId);
+  const customVarsLoading = !customVars.isLoaded;
 
   const toggleCategory = useCallback((category: string) => {
     setExpandedCategories((prev: unknown) => {
@@ -238,9 +267,29 @@ export function ElementSidebar({
     }));
   }, [guildInventory.data?.users]);
 
+  // Convert modal element registrations to ElementCatalogItem format
+  const modalFieldElements = useMemo((): ElementCatalogItem[] => {
+    return (modalElements ?? []).map((reg: ModalElementRegistration) => ({
+      id: reg.id,
+      name: reg.field_label,
+      variable_key: reg.element_key,
+      element_type: "MODULE_FIELD" as const,
+      description: `${reg.field_type.replace(/-/g, " ")} from ${reg.modal_name}`,
+      category: "module_fields",
+      source: "modal",
+      insertions: [`{{element:${reg.element_key}}}`],
+      config: {
+        modal_template_id: reg.modal_template_id,
+        field_id: reg.field_id,
+        field_type: reg.field_type,
+        is_required: reg.is_required,
+      },
+    }));
+  }, [modalElements]);
+
   const allItems = useMemo<ElementCatalogItem[]>(() => {
-    return [...(data ?? []), ...roleElements, ...channelElements, ...userElements, ...customVars.elementItems];
-  }, [data, roleElements, channelElements, userElements, customVars.elementItems]);
+    return [...(data ?? []), ...roleElements, ...channelElements, ...userElements, ...customVars.elementItems, ...modalFieldElements];
+  }, [data, roleElements, channelElements, userElements, customVars.elementItems, modalFieldElements]);
 
   const grouped = useMemo(() => {
     const items = allItems.filter((item) => {
@@ -255,13 +304,23 @@ export function ElementSidebar({
       return acc;
     }, {});
 
-    // Sort categories according to user preference
-    return categoryOrder
-      .filter((cat) => groups[cat] && groups[cat].length > 0)
-      .map((category) => ({
-        category,
-        items: groups[category],
-      }));
+    // Get all categories that have items
+    const allCategories = Object.keys(groups);
+
+    // Sort categories: first by user preference order, then any remaining categories alphabetically
+    const orderedCategories = [
+      // First, categories in the user's preferred order that exist
+      ...categoryOrder.filter((cat) => groups[cat] && groups[cat].length > 0),
+      // Then any other categories not in the order list, sorted alphabetically
+      ...allCategories
+        .filter((cat) => !categoryOrder.includes(cat))
+        .sort((a, b) => a.localeCompare(b)),
+    ];
+
+    return orderedCategories.map((category) => ({
+      category,
+      items: groups[category],
+    }));
   }, [allItems, query, categoryOrder]);
 
   async function copyToken(token: string, id: string) {
@@ -343,58 +402,104 @@ export function ElementSidebar({
   return (
     <aside
       className={cn(
-        "rounded-lg border border-border bg-card transition-all flex flex-col",
-        collapsed ? "w-[52px]" : "w-full lg:w-[340px]",
+        "flex flex-col rounded-lg border border-border bg-card overflow-hidden",
         className
       )}
+      style={{ height: "calc(100vh - 200px)" }}
     >
-      <div className="flex items-center justify-between border-b border-border px-3 py-3">
-        {!collapsed && (
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold">Elements</p>
-            <p className="text-xs text-muted-foreground truncate">
-              Drag or click to insert tokens
-            </p>
-          </div>
-        )}
-        <Button
-          type="button"
-          size="icon"
-          variant="ghost"
-          className="h-8 w-8 shrink-0"
-          onClick={() => setCollapsed((value) => !value)}
-          aria-label={collapsed ? "Expand element sidebar" : "Collapse element sidebar"}
-        >
-          {collapsed ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-        </Button>
+      <div className="flex items-center justify-between border-b border-border px-3 py-3 shrink-0">
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold">Elements</p>
+          <p className="text-xs text-muted-foreground truncate">
+            Drag or click to insert tokens
+          </p>
+        </div>
       </div>
 
-      {!collapsed && (
-        <>
-          <div className="border-b border-border px-3 py-3">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search elements..."
-                className="pl-8 h-9"
-              />
-            </div>
+      <div className="border-b border-border px-3 py-3 shrink-0">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search elements..."
+            className="pl-8 h-9"
+          />
+        </div>
+      </div>
+
+      <ScrollArea className="flex-1 min-h-0 h-0">
+        <div className="space-y-1 p-2">
+          {/* Event Elements - Always shown */}
+          <div className="rounded-md border border-border/50 overflow-hidden mb-2">
+            <button
+              type="button"
+              onClick={() => toggleCategory("event")}
+              className="w-full flex items-center gap-2 px-2 py-2 bg-muted/30 hover:bg-muted/50 transition-colors"
+            >
+              {expandedCategories.includes("event") ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronUp className="h-4 w-4" />
+              )}
+              <Zap className="h-4 w-4 shrink-0 text-[#5865F2]" />
+              <span className="flex-1 text-xs font-semibold uppercase tracking-wide">
+                Event
+              </span>
+              <span className="text-[10px] text-muted-foreground">({EVENT_ELEMENTS.length})</span>
+            </button>
+            {expandedCategories.includes("event") && (
+              <div className="p-1.5 space-y-1 bg-background">
+                {EVENT_ELEMENTS.map((element) => (
+                  <EventElementCard
+                    key={element.key}
+                    element={element}
+                    copiedId={copiedId}
+                    onCopy={copyToken}
+                    onInsert={insertAtCursor}
+                  />
+                ))}
+                {/* Common Variables */}
+                <div className="mt-2 pt-2 border-t border-border/50">
+                  <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1 px-1">
+                    Common
+                  </div>
+                  {COMMON_ELEMENTS.map((element) => (
+                    <EventElementCard
+                      key={element.key}
+                      element={element}
+                      copiedId={copiedId}
+                      onCopy={copyToken}
+                      onInsert={insertAtCursor}
+                      isCommon
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
-          <ScrollArea className="flex-1">
-            <div className="space-y-1 p-2">
-              {(isLoading || server.isLoading || guildInventory.isLoading) && (
+          {(isLoading || !discordGuildId || guildInventory.isLoading || customVarsLoading || modalElementsLoading) && (
                 <div className="py-8 text-center">
                   <div className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                   <p className="mt-2 text-sm text-muted-foreground">Loading elements...</p>
                 </div>
               )}
 
-              {!isLoading && !server.isLoading && !guildInventory.isLoading && grouped.length === 0 && (
-                <div className="py-8 text-center">
-                  <p className="text-sm text-muted-foreground">No elements match this search.</p>
+              {!isLoading && discordGuildId && !guildInventory.isLoading && !customVarsLoading && !modalElementsLoading && grouped.length === 0 && (
+                <div className="py-8 text-center space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    {query.trim() ? "No elements match this search." : "No elements available."}
+                  </p>
+                  {!query.trim() && (
+                    <p className="text-xs text-muted-foreground">
+                      {elementsError
+                        ? `Elements error: ${elementsError.message}`
+                        : guildInventory.error
+                          ? "Failed to load Discord data. Please refresh the page."
+                          : `Found ${data?.length ?? 0} system elements, ${guildInventory.data?.roles?.length ?? 0} roles, ${guildInventory.data?.channels?.length ?? 0} channels, ${guildInventory.data?.users?.length ?? 0} users.`}
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -479,7 +584,7 @@ export function ElementSidebar({
                     </div>
 
                     {isExpanded && (
-                      <div className="p-1.5 space-y-1 bg-background">
+                    <div className="p-1.5 space-y-1 bg-background">
                         {items.map((item) => {
                           const isRole = item.category === "discord_roles" && "roleData" in item;
                           const isUser = item.category === "discord_users" && "userData" in item;
@@ -574,8 +679,6 @@ export function ElementSidebar({
               </DialogFooter>
             </DialogContent>
           </Dialog>
-        </>
-      )}
     </aside>
   );
 }
@@ -997,6 +1100,82 @@ function ChannelCard({ channel, copiedId, onCopy, onInsert, getChannelInsertion 
             <MousePointerClick className="h-3 w-3" />
           </Button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────────────
+// Event Element Card - for event variables like {{event.user.name}}
+// ────────────────────────────────────────────────────────────────────────────────
+
+interface EventElement {
+  key: string;
+  label: string;
+  description: string;
+  example: string;
+}
+
+interface EventElementCardProps {
+  element: EventElement;
+  copiedId: string | null;
+  onCopy: (token: string, id: string) => void;
+  onInsert: (token: string) => void;
+  isCommon?: boolean;
+}
+
+function EventElementCard({ element, copiedId, onCopy, onInsert, isCommon = false }: EventElementCardProps) {
+  const token = `{{${element.key}}}`;
+  const isCopied = copiedId === element.key;
+
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData("text/plain", token);
+    e.dataTransfer.effectAllowed = "copy";
+  };
+
+  return (
+    <div
+      draggable
+      onDragStart={handleDragStart}
+      className={cn(
+        "group flex items-center gap-2 rounded-md px-2 py-1.5",
+        "bg-muted/30 hover:bg-muted/60",
+        "border border-transparent hover:border-border",
+        "transition-all cursor-grab active:cursor-grabbing"
+      )}
+      title={`${element.description}\nExample: ${element.example}`}
+    >
+      <GripVertical className="h-3 w-3 shrink-0 text-muted-foreground/50" />
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-medium truncate">{element.label}</div>
+        <div className={cn(
+          "font-mono text-[10px] truncate",
+          isCommon ? "text-[#7289DA]" : "text-[#5865F2]"
+        )}>
+          {token}
+        </div>
+      </div>
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          className="h-7 w-7"
+          onClick={() => onCopy(token, element.key)}
+          title="Copy"
+        >
+          {isCopied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
+        </Button>
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          className="h-7 w-7"
+          onClick={() => onInsert(token)}
+          title="Insert at cursor"
+        >
+          <MousePointerClick className="h-3.5 w-3.5" />
+        </Button>
       </div>
     </div>
   );

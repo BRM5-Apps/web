@@ -19,6 +19,11 @@ import {
   MessageSquarePlus,
   LayoutTemplate,
   Clock,
+  GitBranch,
+  BookOpen,
+  ShieldQuestion,
+  Pin,
+  Package,
   type LucideIcon,
 } from "lucide-react";
 
@@ -50,6 +55,12 @@ export const navConfig: NavSection[] = [
       { href: "/server", icon: Shield, label: "Servers" },
     ],
   },
+  {
+    label: "Help",
+    items: [
+      { href: "/documentation", icon: BookOpen, label: "Documentation" },
+    ],
+  },
 ];
 
 // Server-scoped navigation sections
@@ -75,19 +86,28 @@ export const serverNavConfig: NavSection[] = [
       { href: "/events", icon: Calendar, label: "Events", permission: "events.view" },
       { href: "/event-requests", icon: CalendarCheck, label: "Event Requests", permission: "events.request" },
       {
-        href: "/templates",
+        href: "/saved-content",
         icon: FileText,
-        label: "Templates",
+        label: "Saved Content",
         permission: "templates.view",
         children: [
-          { href: "/templates/embeds", icon: Code, label: "Embeds", permission: "templates.view" },
-          { href: "/templates/containers", icon: MessageSquare, label: "Containers", permission: "templates.view" },
-          { href: "/templates/text", icon: FileText, label: "Text", permission: "templates.view" },
+          { href: "/saved-content/embeds", icon: Code, label: "Embeds", permission: "templates.view" },
+          { href: "/saved-content/containers", icon: MessageSquare, label: "Containers", permission: "templates.view" },
+          { href: "/saved-content/text", icon: FileText, label: "Text", permission: "templates.view" },
+          { href: "/saved-content/modals", icon: LayoutTemplate, label: "Modals", permission: "templates.view" },
+          { href: "/saved-content/automations", icon: GitBranch, label: "Automations", permission: "templates.view" },
         ],
       },
       { href: "/message-builder", icon: MessageSquarePlus, label: "Message Builder", permission: "templates.view" },
-      { href: "/modal-builder", icon: LayoutTemplate, label: "Modal Builder", permission: "templates.view" },
       { href: "/schedule", icon: Clock, label: "Schedule", permission: "templates.view" },
+      { href: "/sticky-messages", icon: Pin, label: "Sticky Messages", permission: "templates.view" },
+      { href: "/message-kits", icon: Package, label: "Message Kits", permission: "templates.view" },
+    ],
+  },
+  {
+    label: "Automation",
+    items: [
+      { href: "/automations", icon: GitBranch, label: "Automations", permission: "templates.view" },
     ],
   },
   {
@@ -111,6 +131,7 @@ export const serverNavConfig: NavSection[] = [
       { href: "/settings/events", icon: CalendarCog, label: "Events Config", permission: "settings.edit" },
       { href: "/settings/permissions", icon: ShieldCheck, label: "Permissions", permission: "settings.edit" },
       { href: "/settings/blacklist", icon: ListChecks, label: "Blacklist Config", permission: "settings.edit" },
+      { href: "/settings/verification", icon: ShieldQuestion, label: "Roblox Verification", permission: "settings.edit" },
     ],
   },
   {

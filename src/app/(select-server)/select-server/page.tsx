@@ -24,9 +24,9 @@ function TopBar() {
     <div className="flex h-14 items-center justify-between border-b border-border px-6">
       <div className="flex items-center gap-2">
         <div className="flex h-7 w-7 items-center justify-center rounded-md bg-muted">
-          <span className="text-xs font-bold text-foreground">B</span>
+          <span className="text-xs font-bold text-foreground">H</span>
         </div>
-        <span className="text-[13px] font-semibold text-foreground">BRM5</span>
+        <span className="text-[13px] font-semibold text-foreground">Hafnium</span>
       </div>
 
       {user && (
@@ -196,7 +196,7 @@ export default function SelectServerPage() {
               <>
                 {guilds && guilds.length === 0 && (
                   <p className="mb-6 text-[13px] text-muted-foreground">
-                    No eligible servers found. You need Manage Server permission to use ServerHub.
+                    No eligible servers found. You need Manage Server permission to use Hafnium.
                   </p>
                 )}
 

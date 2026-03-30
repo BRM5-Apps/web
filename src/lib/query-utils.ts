@@ -15,7 +15,11 @@ type InvalidatableResource =
   | "units"
   | "templates"
   | "promotionPaths"
-  | "config";
+  | "config"
+  | "positions"
+  | "branches"
+  | "notifications"
+  | "memberProfile";
 
 /**
  * Invalidate a resource and all related queries that typically need refreshing.
@@ -74,6 +78,20 @@ export async function invalidateRelated(
       queryKeys.config.server(serverId),
       queryKeys.config.welcome(serverId),
       queryKeys.config.eventTypes(serverId),
+    ],
+    positions: [
+      queryKeys.positions.all(serverId),
+      queryKeys.members.all(serverId),
+    ],
+    branches: [
+      queryKeys.branches.all(serverId),
+      queryKeys.ranks.all(serverId),
+    ],
+    notifications: [queryKeys.notifications.all(serverId)],
+    memberProfile: [
+      queryKeys.memberProfile.detail(serverId, ""),
+      // Note: We can't invalidate specific member profiles without the userId,
+      // so callers should invalidate with specific keys when needed
     ],
   };
 

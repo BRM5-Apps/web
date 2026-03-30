@@ -24,6 +24,8 @@ import type {
   ModalTemplate,
   ScheduledMessage,
   MessageSend,
+  ModalElementRegistration,
+  CreateScheduledMessageRequest,
 } from "@/types/template";
 import type { ElementCatalogItem, ResolveElementsResponse } from "@/types/element";
 import type { ServerStats, DailyStats, LeaderboardEntry } from "@/types/stats";
@@ -38,9 +40,23 @@ import type {
   UserPoints,
   PromotionFlag,
 } from "@/types/points";
-import type { Unit, UnitMember } from "@/types/unit";
+import type { Unit, UnitMember, UnitTreeNode, UnitCapPayload, MoveUnitPayload } from "@/types/unit";
+import type { Position, PositionWithHolders, PositionAssignment, PositionPayload, AssignPositionPayload } from "@/types/position";
+import type { RankBranch, MemberBranchProgress, BranchPayload, PathOrderPayload } from "@/types/branch";
+import type { Notification, NotificationListResponse } from "@/types/notification";
 import type { Subscription, CheckoutSession } from "@/types/billing";
 import type { User, UserProfile } from "@/types/user";
+import type {
+  ContentFolder,
+  ContentFolderItem,
+  ContentFolderRating,
+  ContentFolderImport,
+  CreateContentFolderRequest,
+  UpdateContentFolderRequest,
+  AddItemToFolderRequest,
+  MoveContentFolderItemRequest,
+  CreateContentFolderRatingRequest,
+} from "@/types/content-folder";
 import { API_ROUTES } from "@/lib/constants";
 
 // ── Request options for signal/cancellation support ──
@@ -132,6 +148,17 @@ export const apiClient = {
     return res.data.data;
   },
 
+  async put<T>(
+    url: string,
+    body?: unknown,
+    options?: RequestOptions
+  ): Promise<T> {
+    const res = await axiosInstance.put<ApiResponse<T>>(url, body, {
+      signal: options?.signal,
+    });
+    return res.data.data;
+  },
+
   async delete<T>(url: string, options?: RequestOptions): Promise<T> {
     const res = await axiosInstance.delete<ApiResponse<T>>(url, {
       signal: options?.signal,
@@ -181,8 +208,10 @@ export const api = {
       }>(API_ROUTES.servers.list, undefined, opts);
       return view.items.map((item) => item.server);
     },
-    get: (serverId: string, opts?: RequestOptions) =>
-      apiClient.get<Server>(API_ROUTES.servers.get(serverId), undefined, opts),
+    get: (serverId: string, opts?: RequestOptions) => {
+      // Backend returns ServerWithMeta { server: Server, member_count }
+      return apiClient.get<{ server: Server; member_count: number }>(API_ROUTES.servers.get(serverId), undefined, opts);
+    },
     create: (data: Partial<Server>, opts?: RequestOptions) =>
       apiClient.post<Server>(API_ROUTES.servers.create, data, opts),
     update: (
@@ -603,6 +632,54 @@ export const api = {
       ),
   },
 
+  // ── Modal Elements ──
+  modalElements: {
+    list: (serverId: string, opts?: RequestOptions) =>
+      apiClient.get<ModalElementRegistration[]>(
+        API_ROUTES.servers.modalElements.list(serverId),
+        undefined,
+        opts
+      ),
+    listByModal: (
+      serverId: string,
+      modalTemplateId: string,
+      opts?: RequestOptions
+    ) =>
+      apiClient.get<ModalElementRegistration[]>(
+        API_ROUTES.servers.modalElements.listByModal(serverId, modalTemplateId),
+        undefined,
+        opts
+      ),
+    sync: (
+      serverId: string,
+      data: {
+        modal_template_id: string;
+        modal_name: string;
+        fields: Array<{
+          field_id: string;
+          field_type: string;
+          field_label: string;
+          is_required: boolean;
+        }>;
+      },
+      opts?: RequestOptions
+    ) =>
+      apiClient.post<ModalElementRegistration[]>(
+        API_ROUTES.servers.modalElements.sync(serverId),
+        data,
+        opts
+      ),
+    deleteByModal: (
+      serverId: string,
+      modalTemplateId: string,
+      opts?: RequestOptions
+    ) =>
+      apiClient.delete<void>(
+        API_ROUTES.servers.modalElements.deleteByModal(serverId, modalTemplateId),
+        opts
+      ),
+  },
+
   // ── Elements ──
   elements: {
     list: (serverId: string, opts?: RequestOptions) =>
@@ -868,6 +945,258 @@ export const api = {
         API_ROUTES.servers.units.removeMember(serverId, unitId, serverUserId),
         opts
       ),
+    getTree: (serverId: string, opts?: RequestOptions) =>
+      apiClient.get<UnitTreeNode[]>(
+        API_ROUTES.servers.units.tree(serverId),
+        undefined,
+        opts
+      ),
+    setCap: (
+      serverId: string,
+      unitId: string,
+      data: UnitCapPayload,
+      opts?: RequestOptions
+    ) =>
+      apiClient.patch<Unit>(
+        API_ROUTES.servers.units.setCap(serverId, unitId),
+        data,
+        opts
+      ),
+    move: (
+      serverId: string,
+      unitId: string,
+      data: MoveUnitPayload,
+      opts?: RequestOptions
+    ) =>
+      apiClient.patch<Unit>(
+        API_ROUTES.servers.units.move(serverId, unitId),
+        data,
+        opts
+      ),
+  },
+
+  // ── Positions ──
+  positions: {
+    list: (serverId: string, opts?: RequestOptions) =>
+      apiClient.get<PositionWithHolders[]>(
+        API_ROUTES.servers.positions.list(serverId),
+        undefined,
+        opts
+      ),
+    get: (serverId: string, positionId: string, opts?: RequestOptions) =>
+      apiClient.get<PositionWithHolders>(
+        API_ROUTES.servers.positions.get(serverId, positionId),
+        undefined,
+        opts
+      ),
+    create: (serverId: string, data: PositionPayload, opts?: RequestOptions) =>
+      apiClient.post<Position>(
+        API_ROUTES.servers.positions.create(serverId),
+        data,
+        opts
+      ),
+    update: (
+      serverId: string,
+      positionId: string,
+      data: PositionPayload,
+      opts?: RequestOptions
+    ) =>
+      apiClient.patch<Position>(
+        API_ROUTES.servers.positions.update(serverId, positionId),
+        data,
+        opts
+      ),
+    delete: (serverId: string, positionId: string, opts?: RequestOptions) =>
+      apiClient.delete<void>(
+        API_ROUTES.servers.positions.delete(serverId, positionId),
+        opts
+      ),
+    assign: (
+      serverId: string,
+      positionId: string,
+      data: AssignPositionPayload,
+      opts?: RequestOptions
+    ) =>
+      apiClient.post<PositionAssignment>(
+        API_ROUTES.servers.positions.assign(serverId, positionId),
+        data,
+        opts
+      ),
+    unassign: (serverId: string, assignmentId: string, opts?: RequestOptions) =>
+      apiClient.delete<void>(
+        API_ROUTES.servers.positions.unassign(serverId, assignmentId),
+        opts
+      ),
+    getHolders: (
+      serverId: string,
+      positionId: string,
+      opts?: RequestOptions
+    ) =>
+      apiClient.get<PositionAssignment[]>(
+        API_ROUTES.servers.positions.holders(serverId, positionId),
+        undefined,
+        opts
+      ),
+    getMemberPositions: (
+      serverId: string,
+      serverUserId: string,
+      opts?: RequestOptions
+    ) =>
+      apiClient.get<PositionAssignment[]>(
+        API_ROUTES.servers.positions.memberPositions(serverId, serverUserId),
+        undefined,
+        opts
+      ),
+  },
+
+  // ── Branches (RankBranch) ──
+  branches: {
+    list: (serverId: string, opts?: RequestOptions) =>
+      apiClient.get<RankBranch[]>(
+        API_ROUTES.servers.branches.list(serverId),
+        undefined,
+        opts
+      ),
+    get: (serverId: string, branchId: string, opts?: RequestOptions) =>
+      apiClient.get<RankBranch>(
+        API_ROUTES.servers.branches.get(serverId, branchId),
+        undefined,
+        opts
+      ),
+    create: (serverId: string, data: BranchPayload, opts?: RequestOptions) =>
+      apiClient.post<RankBranch>(
+        API_ROUTES.servers.branches.create(serverId),
+        data,
+        opts
+      ),
+    update: (
+      serverId: string,
+      branchId: string,
+      data: BranchPayload,
+      opts?: RequestOptions
+    ) =>
+      apiClient.patch<RankBranch>(
+        API_ROUTES.servers.branches.update(serverId, branchId),
+        data,
+        opts
+      ),
+    delete: (serverId: string, branchId: string, opts?: RequestOptions) =>
+      apiClient.delete<void>(
+        API_ROUTES.servers.branches.delete(serverId, branchId),
+        opts
+      ),
+    updatePathOrder: (
+      serverId: string,
+      branchId: string,
+      data: PathOrderPayload,
+      opts?: RequestOptions
+    ) =>
+      apiClient.patch<RankBranch>(
+        API_ROUTES.servers.branches.updatePathOrder(serverId, branchId),
+        data,
+        opts
+      ),
+    getMemberProgress: (
+      serverId: string,
+      serverUserId: string,
+      opts?: RequestOptions
+    ) =>
+      apiClient.get<MemberBranchProgress[]>(
+        API_ROUTES.servers.branches.memberProgress(serverId, serverUserId),
+        undefined,
+        opts
+      ),
+  },
+
+  // ── Notifications ──
+  notifications: {
+    list: (
+      serverId: string,
+      params?: { page?: number; limit?: number; unreadOnly?: boolean },
+      opts?: RequestOptions
+    ) =>
+      apiClient.get<NotificationListResponse>(
+        API_ROUTES.servers.notifications.list(serverId),
+        params,
+        opts
+      ),
+    markRead: (serverId: string, notificationId: string, opts?: RequestOptions) =>
+      apiClient.patch<Notification>(
+        API_ROUTES.servers.notifications.markRead(serverId, notificationId),
+        undefined,
+        opts
+      ),
+    markAllRead: (serverId: string, opts?: RequestOptions) =>
+      apiClient.post<void>(
+        API_ROUTES.servers.notifications.markAllRead(serverId),
+        undefined,
+        opts
+      ),
+  },
+
+  // ── Member Profile ──
+  memberProfile: {
+    get: (serverId: string, serverUserId: string, opts?: RequestOptions) =>
+      apiClient.get<{
+        member: ServerMember;
+        profile: {
+          joinedAt: string;
+          lastActiveAt?: string;
+          totalPoints: number;
+          currentRankId?: string;
+          currentRank?: { id: string; name: string };
+          primaryUnitId?: string;
+          primaryUnit?: { id: string; name: string };
+        };
+      }>(
+        API_ROUTES.servers.memberProfile.get(serverId, serverUserId),
+        undefined,
+        opts
+      ),
+    getRankHistory: (
+      serverId: string,
+      serverUserId: string,
+      opts?: RequestOptions
+    ) =>
+      apiClient.get<
+        Array<{
+          id: string;
+          fromRankId?: string;
+          toRankId: string;
+          fromRank?: { id: string; name: string };
+          toRank: { id: string; name: string };
+          reason?: string;
+          changedBy: string;
+          changedByUser?: { id: string; username: string };
+          createdAt: string;
+        }>
+      >(
+        API_ROUTES.servers.memberProfile.rankHistory(serverId, serverUserId),
+        undefined,
+        opts
+      ),
+    getUnitHistory: (
+      serverId: string,
+      serverUserId: string,
+      opts?: RequestOptions
+    ) =>
+      apiClient.get<
+        Array<{
+          id: string;
+          fromUnitId?: string;
+          toUnitId: string;
+          fromUnit?: { id: string; name: string };
+          toUnit: { id: string; name: string };
+          reason?: string;
+          changedBy: string;
+          changedByUser?: { id: string; username: string };
+          createdAt: string;
+        }>
+      >(
+        API_ROUTES.servers.memberProfile.unitHistory(serverId, serverUserId),
+        undefined,
+        opts
+      ),
   },
 
   // ── Billing ──
@@ -922,6 +1251,23 @@ export const api = {
         data,
         opts
       ),
+    quickSend: (
+      serverId: string,
+      data: {
+        channel_id?: string;
+        webhook_urls?: string[];
+        webhook_username?: string;
+        webhook_avatar_url?: string;
+        message_type: string;
+        content: unknown;
+      },
+      opts?: RequestOptions
+    ) =>
+      apiClient.post<MessageSend>(
+        API_ROUTES.servers.messageQuickSend(serverId),
+        data,
+        opts
+      ),
     history: (serverId: string, opts?: RequestOptions) =>
       apiClient.get<MessageSend[]>(
         API_ROUTES.servers.messageHistory(serverId),
@@ -938,9 +1284,15 @@ export const api = {
         undefined,
         opts
       ),
-    create: (serverId: string, data: Partial<ScheduledMessage>, opts?: RequestOptions) =>
+    create: (serverId: string, data: CreateScheduledMessageRequest, opts?: RequestOptions) =>
       apiClient.post<ScheduledMessage>(
         API_ROUTES.servers.schedule.list(serverId),
+        data,
+        opts
+      ),
+    update: (serverId: string, id: string, data: Partial<CreateScheduledMessageRequest>, opts?: RequestOptions) =>
+      apiClient.patch<ScheduledMessage>(
+        API_ROUTES.servers.schedule.detail(serverId, id),
         data,
         opts
       ),
@@ -1056,6 +1408,12 @@ export const api = {
       ),
     delete: (serverId: string, sequenceId: string, opts?: RequestOptions) =>
       apiClient.delete<void>(`/servers/${serverId}/scheduled-sequences/${sequenceId}`, opts),
+    duplicate: (serverId: string, sequenceId: string, opts?: RequestOptions) =>
+      apiClient.post<import("@/types/platform-extensions").ScheduledSequence>(
+        `/servers/${serverId}/scheduled-sequences/${sequenceId}/duplicate`,
+        undefined,
+        opts
+      ),
     execute: (serverId: string, sequenceId: string, opts?: RequestOptions) =>
       apiClient.post<void>(`/servers/${serverId}/scheduled-sequences/${sequenceId}/execute`, undefined, opts),
     history: (serverId: string, sequenceId: string, opts?: RequestOptions) =>
@@ -1230,6 +1588,631 @@ export const api = {
     getMyTemplates: (opts?: RequestOptions) =>
       apiClient.get<import("@/types/platform-extensions").MarketplaceTemplate[]>(
         `/marketplace/my-templates`,
+        undefined,
+        opts
+      ),
+  },
+
+  // ── Components (Buttons & Select Menus) ──
+  components: {
+    // Button Templates
+    listButtons: (serverId: string, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/component").ButtonTemplate[]>(
+        `/servers/${serverId}/buttons`,
+        undefined,
+        opts
+      ),
+    getButton: (serverId: string, templateId: string, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/component").ButtonTemplate>(
+        `/servers/${serverId}/buttons/${templateId}`,
+        undefined,
+        opts
+      ),
+    createButton: (
+      serverId: string,
+      data: import("@/types/component").CreateButtonTemplateRequest,
+      opts?: RequestOptions
+    ) =>
+      apiClient.post<import("@/types/component").ButtonTemplate>(
+        `/servers/${serverId}/buttons`,
+        data,
+        opts
+      ),
+    updateButton: (
+      serverId: string,
+      templateId: string,
+      data: import("@/types/component").UpdateButtonTemplateRequest,
+      opts?: RequestOptions
+    ) =>
+      apiClient.patch<import("@/types/component").ButtonTemplate>(
+        `/servers/${serverId}/buttons/${templateId}`,
+        data,
+        opts
+      ),
+    deleteButton: (serverId: string, templateId: string, opts?: RequestOptions) =>
+      apiClient.delete<void>(`/servers/${serverId}/buttons/${templateId}`, opts),
+
+    // Select Menu Templates
+    listSelectMenus: (serverId: string, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/component").SelectMenuTemplate[]>(
+        `/servers/${serverId}/select-menus`,
+        undefined,
+        opts
+      ),
+    getSelectMenu: (serverId: string, templateId: string, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/component").SelectMenuTemplate>(
+        `/servers/${serverId}/select-menus/${templateId}`,
+        undefined,
+        opts
+      ),
+    createSelectMenu: (
+      serverId: string,
+      data: import("@/types/component").CreateSelectMenuTemplateRequest,
+      opts?: RequestOptions
+    ) =>
+      apiClient.post<import("@/types/component").SelectMenuTemplate>(
+        `/servers/${serverId}/select-menus`,
+        data,
+        opts
+      ),
+    updateSelectMenu: (
+      serverId: string,
+      templateId: string,
+      data: import("@/types/component").UpdateSelectMenuTemplateRequest,
+      opts?: RequestOptions
+    ) =>
+      apiClient.patch<import("@/types/component").SelectMenuTemplate>(
+        `/servers/${serverId}/select-menus/${templateId}`,
+        data,
+        opts
+      ),
+    deleteSelectMenu: (serverId: string, templateId: string, opts?: RequestOptions) =>
+      apiClient.delete<void>(`/servers/${serverId}/select-menus/${templateId}`, opts),
+
+    // Component Attachments
+    getAttachments: (serverId: string, containerId: string, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/component").ComponentAttachment[]>(
+        `/servers/${serverId}/containers/${containerId}/components`,
+        undefined,
+        opts
+      ),
+    attachComponent: (
+      serverId: string,
+      data: import("@/types/component").CreateComponentAttachmentRequest,
+      opts?: RequestOptions
+    ) =>
+      apiClient.post<import("@/types/component").ComponentAttachment>(
+        `/servers/${serverId}/containers/${data.container_template_id}/components`,
+        data,
+        opts
+      ),
+    detachComponent: (serverId: string, attachmentId: string, opts?: RequestOptions) =>
+      apiClient.delete<void>(`/servers/${serverId}/components/${attachmentId}`, opts),
+    detachAllComponents: (serverId: string, containerId: string, opts?: RequestOptions) =>
+      apiClient.delete<void>(
+        `/servers/${serverId}/containers/${containerId}/components`,
+        opts
+      ),
+    reorderComponents: (
+      serverId: string,
+      data: import("@/types/component").ReorderComponentsRequest,
+      opts?: RequestOptions
+    ) =>
+      apiClient.patch<void>(
+        `/servers/${serverId}/containers/${data.container_template_id}/components/reorder`,
+        data,
+        opts
+      ),
+  },
+
+  // ── Default Messages ──
+  defaultMessages: {
+    list: (serverId: string, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/default-message").DefaultMessage[]>(
+        `/servers/${serverId}/default-messages`,
+        undefined,
+        opts
+      ),
+    get: (serverId: string, id: string, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/default-message").DefaultMessage>(
+        `/servers/${serverId}/default-messages/${id}`,
+        undefined,
+        opts
+      ),
+    getByKey: (serverId: string, key: string, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/default-message").DefaultMessage>(
+        `/servers/${serverId}/default-messages/by-key/${key}`,
+        undefined,
+        opts
+      ),
+    listByCategory: (
+      serverId: string,
+      category: import("@/types/default-message").MessageCategory,
+      opts?: RequestOptions
+    ) =>
+      apiClient.get<import("@/types/default-message").DefaultMessage[]>(
+        `/servers/${serverId}/default-messages/category/${category}`,
+        undefined,
+        opts
+      ),
+    create: (
+      serverId: string,
+      data: import("@/types/default-message").CreateDefaultMessageRequest,
+      opts?: RequestOptions
+    ) =>
+      apiClient.post<import("@/types/default-message").DefaultMessage>(
+        `/servers/${serverId}/default-messages`,
+        data,
+        opts
+      ),
+    update: (
+      serverId: string,
+      id: string,
+      data: import("@/types/default-message").UpdateDefaultMessageRequest,
+      opts?: RequestOptions
+    ) =>
+      apiClient.patch<import("@/types/default-message").DefaultMessage>(
+        `/servers/${serverId}/default-messages/${id}`,
+        data,
+        opts
+      ),
+    delete: (serverId: string, id: string, opts?: RequestOptions) =>
+      apiClient.delete<void>(`/servers/${serverId}/default-messages/${id}`, opts),
+  },
+
+  // ── Sticky Messages ──
+  stickyMessages: {
+    list: (serverId: string, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/sticky-message").StickyMessage[]>(
+        `/servers/${serverId}/sticky-messages`,
+        undefined,
+        opts
+      ),
+    get: (serverId: string, id: string, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/sticky-message").StickyMessage>(
+        `/servers/${serverId}/sticky-messages/${id}`,
+        undefined,
+        opts
+      ),
+    listByChannel: (serverId: string, channelId: string, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/sticky-message").StickyMessage[]>(
+        `/servers/${serverId}/sticky-messages/channel/${channelId}`,
+        undefined,
+        opts
+      ),
+    create: (
+      serverId: string,
+      data: import("@/types/sticky-message").CreateStickyMessageRequest,
+      opts?: RequestOptions
+    ) =>
+      apiClient.post<import("@/types/sticky-message").StickyMessage>(
+        `/servers/${serverId}/sticky-messages`,
+        data,
+        opts
+      ),
+    update: (
+      serverId: string,
+      id: string,
+      data: import("@/types/sticky-message").UpdateStickyMessageRequest,
+      opts?: RequestOptions
+    ) =>
+      apiClient.patch<import("@/types/sticky-message").StickyMessage>(
+        `/servers/${serverId}/sticky-messages/${id}`,
+        data,
+        opts
+      ),
+    delete: (serverId: string, id: string, opts?: RequestOptions) =>
+      apiClient.delete<void>(`/servers/${serverId}/sticky-messages/${id}`, opts),
+    incrementCount: (serverId: string, id: string, opts?: RequestOptions) =>
+      apiClient.post<{ current_count: number; incremented: number }>(
+        `/servers/${serverId}/sticky-messages/${id}/increment`,
+        undefined,
+        opts
+      ),
+    resetCount: (serverId: string, id: string, opts?: RequestOptions) =>
+      apiClient.post<{ current_count: number }>(
+        `/servers/${serverId}/sticky-messages/${id}/reset`,
+        undefined,
+        opts
+      ),
+  },
+
+  // ── Message Kits ──
+  messageKits: {
+    listPublic: (serverId: string, limit = 20, offset = 0, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/message-kit").MessageKit[]>(
+        `/servers/${serverId}/message-kits`,
+        { limit, offset },
+        opts
+      ),
+    listFeatured: (serverId: string, limit = 10, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/message-kit").MessageKit[]>(
+        `/servers/${serverId}/message-kits/featured`,
+        { limit },
+        opts
+      ),
+    search: (serverId: string, query: string, tags?: string[], opts?: RequestOptions) =>
+      apiClient.get<import("@/types/message-kit").MessageKit[]>(
+        `/servers/${serverId}/message-kits/search`,
+        { q: query, tags },
+        opts
+      ),
+    get: (serverId: string, id: string, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/message-kit").MessageKit>(
+        `/servers/${serverId}/message-kits/${id}`,
+        undefined,
+        opts
+      ),
+    getContents: (serverId: string, id: string, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/message-kit").MessageKitContent[]>(
+        `/servers/${serverId}/message-kits/${id}/contents`,
+        undefined,
+        opts
+      ),
+    getRatings: (serverId: string, id: string, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/message-kit").MessageKitRating[]>(
+        `/servers/${serverId}/message-kits/${id}/ratings`,
+        undefined,
+        opts
+      ),
+    getStats: (serverId: string, id: string, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/message-kit").KitStats>(
+        `/servers/${serverId}/message-kits/${id}/stats`,
+        undefined,
+        opts
+      ),
+    getMyTemplates: (serverId: string, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/message-kit").MessageKit[]>(
+        `/servers/${serverId}/message-kits/my-templates`,
+        undefined,
+        opts
+      ),
+    create: (
+      serverId: string,
+      data: import("@/types/message-kit").CreateMessageKitRequest,
+      opts?: RequestOptions
+    ) =>
+      apiClient.post<import("@/types/message-kit").MessageKit>(
+        `/servers/${serverId}/message-kits`,
+        data,
+        opts
+      ),
+    update: (
+      serverId: string,
+      id: string,
+      data: import("@/types/message-kit").UpdateMessageKitRequest,
+      opts?: RequestOptions
+    ) =>
+      apiClient.patch<import("@/types/message-kit").MessageKit>(
+        `/servers/${serverId}/message-kits/${id}`,
+        data,
+        opts
+      ),
+    delete: (serverId: string, id: string, opts?: RequestOptions) =>
+      apiClient.delete<void>(`/servers/${serverId}/message-kits/${id}`, opts),
+    addContent: (
+      serverId: string,
+      kitId: string,
+      data: import("@/types/message-kit").AddContentRequest,
+      opts?: RequestOptions
+    ) =>
+      apiClient.post<import("@/types/message-kit").MessageKitContent>(
+        `/servers/${serverId}/message-kits/${kitId}/contents`,
+        data,
+        opts
+      ),
+    deleteContent: (serverId: string, contentId: string, opts?: RequestOptions) =>
+      apiClient.delete<void>(
+        `/servers/${serverId}/message-kits/contents/${contentId}`,
+        opts
+      ),
+    import: (serverId: string, kitId: string, opts?: RequestOptions) =>
+      apiClient.post<import("@/types/message-kit").MessageKitImport>(
+        `/servers/${serverId}/message-kits/${kitId}/import`,
+        undefined,
+        opts
+      ),
+    getImportHistory: (serverId: string, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/message-kit").MessageKitImport[]>(
+        `/servers/${serverId}/message-kits/import-history`,
+        undefined,
+        opts
+      ),
+    getMyRating: (serverId: string, kitId: string, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/message-kit").MessageKitRating | null>(
+        `/servers/${serverId}/message-kits/${kitId}/ratings/my-rating`,
+        undefined,
+        opts
+      ),
+    createRating: (
+      serverId: string,
+      kitId: string,
+      data: import("@/types/message-kit").CreateRatingRequest,
+      opts?: RequestOptions
+    ) =>
+      apiClient.post<import("@/types/message-kit").MessageKitRating>(
+        `/servers/${serverId}/message-kits/${kitId}/ratings`,
+        data,
+        opts
+      ),
+    updateRating: (
+      serverId: string,
+      kitId: string,
+      data: import("@/types/message-kit").UpdateRatingRequest,
+      opts?: RequestOptions
+    ) =>
+      apiClient.patch<import("@/types/message-kit").MessageKitRating>(
+        `/servers/${serverId}/message-kits/${kitId}/ratings`,
+        data,
+        opts
+      ),
+  },
+
+  // ── Send Command ──
+  sendCommand: {
+    // Config
+    getConfig: (serverId: string, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/send-command").SendCommandConfig | null>(
+        `/servers/${serverId}/send-command/config`,
+        undefined,
+        opts
+      ),
+    createConfig: (
+      serverId: string,
+      data: import("@/types/send-command").CreateSendCommandConfigRequest,
+      opts?: RequestOptions
+    ) =>
+      apiClient.post<import("@/types/send-command").SendCommandConfig>(
+        `/servers/${serverId}/send-command/config`,
+        data,
+        opts
+      ),
+    updateConfig: (
+      serverId: string,
+      data: import("@/types/send-command").UpdateSendCommandConfigRequest,
+      opts?: RequestOptions
+    ) =>
+      apiClient.patch<import("@/types/send-command").SendCommandConfig>(
+        `/servers/${serverId}/send-command/config`,
+        data,
+        opts
+      ),
+    deleteConfig: (serverId: string, opts?: RequestOptions) =>
+      apiClient.delete<void>(`/servers/${serverId}/send-command/config`, opts),
+
+    // Permissions
+    getPermissions: (serverId: string, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/send-command").SendCommandPermission[]>(
+        `/servers/${serverId}/send-command/permissions`,
+        undefined,
+        opts
+      ),
+    createPermission: (
+      serverId: string,
+      data: import("@/types/send-command").CreateSendCommandPermissionRequest,
+      opts?: RequestOptions
+    ) =>
+      apiClient.post<import("@/types/send-command").SendCommandPermission>(
+        `/servers/${serverId}/send-command/permissions`,
+        data,
+        opts
+      ),
+    updatePermission: (
+      permissionId: string,
+      data: import("@/types/send-command").UpdateSendCommandPermissionRequest,
+      opts?: RequestOptions
+    ) =>
+      apiClient.patch<import("@/types/send-command").SendCommandPermission>(
+        `/servers/send-command/permissions/${permissionId}`,
+        data,
+        opts
+      ),
+    deletePermission: (permissionId: string, opts?: RequestOptions) =>
+      apiClient.delete<void>(
+        `/servers/send-command/permissions/${permissionId}`,
+        opts
+      ),
+    batchUpdatePermissions: (
+      serverId: string,
+      permissions: import("@/types/send-command").CreateSendCommandPermissionRequest[],
+      opts?: RequestOptions
+    ) =>
+      apiClient.put<import("@/types/send-command").SendCommandPermission[]>(
+        `/servers/${serverId}/send-command/permissions/batch`,
+        { permissions },
+        opts
+      ),
+
+    // Pending Requests
+    listPendingRequests: (
+      serverId: string,
+      status?: import("@/types/send-command").SendCommandStatus,
+      limit = 50,
+      offset = 0,
+      opts?: RequestOptions
+    ) =>
+      apiClient.get<{
+        requests: import("@/types/send-command").PendingSendRequest[];
+        total: number;
+        limit: number;
+        offset: number;
+      }>(
+        `/servers/${serverId}/send-command/pending`,
+        { status, limit, offset },
+        opts
+      ),
+    getPendingRequest: (requestId: string, opts?: RequestOptions) =>
+      apiClient.get<import("@/types/send-command").PendingSendRequest>(
+        `/servers/send-command/pending/${requestId}`,
+        undefined,
+        opts
+      ),
+    createPendingRequest: (
+      serverId: string,
+      data: import("@/types/send-command").CreatePendingSendRequestRequest,
+      opts?: RequestOptions
+    ) =>
+      apiClient.post<import("@/types/send-command").PendingSendRequest>(
+        `/servers/${serverId}/send-command/pending`,
+        data,
+        opts
+      ),
+    approveRequest: (requestId: string, opts?: RequestOptions) =>
+      apiClient.post<import("@/types/send-command").PendingSendRequest>(
+        `/servers/send-command/pending/${requestId}/approve`,
+        undefined,
+        opts
+      ),
+    denyRequest: (
+      requestId: string,
+      data?: import("@/types/send-command").DenySendRequestRequest,
+      opts?: RequestOptions
+    ) =>
+      apiClient.post<import("@/types/send-command").PendingSendRequest>(
+        `/servers/send-command/pending/${requestId}/deny`,
+        data,
+        opts
+      ),
+    markAsSent: (
+      requestId: string,
+      data: import("@/types/send-command").MarkAsSentRequest,
+      opts?: RequestOptions
+    ) =>
+      apiClient.post<import("@/types/send-command").PendingSendRequest>(
+        `/servers/send-command/pending/${requestId}/sent`,
+        data,
+        opts
+      ),
+    deletePendingRequest: (requestId: string, opts?: RequestOptions) =>
+      apiClient.delete<void>(
+        `/servers/send-command/pending/${requestId}`,
+        opts
+      ),
+  },
+
+  // ── Content Folders ──
+  contentFolders: {
+    // Server-scoped CRUD
+    list: (serverId: string, parentId?: string, opts?: RequestOptions) =>
+      apiClient.get<ContentFolder[]>(
+        `/servers/${serverId}/content/folders`,
+        parentId ? { parentId } : undefined,
+        opts
+      ),
+    get: (serverId: string, folderId: string, opts?: RequestOptions) =>
+      apiClient.get<ContentFolder>(
+        `/servers/${serverId}/content/folders/${folderId}`,
+        undefined,
+        opts
+      ),
+    create: (serverId: string, data: CreateContentFolderRequest, opts?: RequestOptions) =>
+      apiClient.post<ContentFolder>(
+        `/servers/${serverId}/content/folders`,
+        data,
+        opts
+      ),
+    update: (
+      serverId: string,
+      folderId: string,
+      data: UpdateContentFolderRequest,
+      opts?: RequestOptions
+    ) =>
+      apiClient.patch<ContentFolder>(
+        `/servers/${serverId}/content/folders/${folderId}`,
+        data,
+        opts
+      ),
+    delete: (serverId: string, folderId: string, opts?: RequestOptions) =>
+      apiClient.delete<void>(`/servers/${serverId}/content/folders/${folderId}`, opts),
+
+    // Items
+    getItems: (serverId: string, folderId: string, opts?: RequestOptions) =>
+      apiClient.get<ContentFolderItem[]>(
+        `/servers/${serverId}/content/folders/${folderId}/items`,
+        undefined,
+        opts
+      ),
+    addItem: (
+      serverId: string,
+      folderId: string,
+      data: AddItemToFolderRequest,
+      opts?: RequestOptions
+    ) =>
+      apiClient.post<ContentFolderItem>(
+        `/servers/${serverId}/content/folders/${folderId}/items`,
+        data,
+        opts
+      ),
+    removeItem: (
+      serverId: string,
+      folderId: string,
+      itemId: string,
+      itemType: string,
+      opts?: RequestOptions
+    ) =>
+      apiClient.delete<void>(
+        `/servers/${serverId}/content/folders/${folderId}/items/${itemId}?type=${itemType}`,
+        opts
+      ),
+    moveItem: (serverId: string, data: MoveContentFolderItemRequest, opts?: RequestOptions) =>
+      apiClient.post<void>(
+        `/servers/${serverId}/content/folders/move-item`,
+        data,
+        opts
+      ),
+
+    // Public marketplace
+    listPublic: (limit = 20, offset = 0, opts?: RequestOptions) =>
+      apiClient.get<ContentFolder[]>(
+        `/content/folders/public`,
+        { limit, offset },
+        opts
+      ),
+    listFeatured: (limit = 10, opts?: RequestOptions) =>
+      apiClient.get<ContentFolder[]>(
+        `/content/folders/featured`,
+        { limit },
+        opts
+      ),
+    search: (query: string, opts?: RequestOptions) =>
+      apiClient.get<ContentFolder[]>(
+        `/content/folders/search`,
+        { q: query },
+        opts
+      ),
+    getPublic: (folderId: string, opts?: RequestOptions) =>
+      apiClient.get<ContentFolder>(
+        `/content/folders/${folderId}`,
+        undefined,
+        opts
+      ),
+    import: (folderId: string, serverId: string, opts?: RequestOptions) =>
+      apiClient.post<ContentFolderImport>(
+        `/content/folders/${folderId}/import`,
+        { serverId },
+        opts
+      ),
+
+    // Ratings
+    getRatings: (folderId: string, opts?: RequestOptions) =>
+      apiClient.get<ContentFolderRating[]>(
+        `/content/folders/${folderId}/ratings`,
+        undefined,
+        opts
+      ),
+    createRating: (
+      folderId: string,
+      data: CreateContentFolderRatingRequest,
+      opts?: RequestOptions
+    ) =>
+      apiClient.post<ContentFolderRating>(
+        `/content/folders/${folderId}/ratings`,
+        data,
+        opts
+      ),
+    getStats: (folderId: string, opts?: RequestOptions) =>
+      apiClient.get<{ average_rating: number; rating_count: number }>(
+        `/content/folders/${folderId}/stats`,
         undefined,
         opts
       ),

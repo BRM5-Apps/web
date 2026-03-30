@@ -207,6 +207,14 @@ export function useModalTemplates(serverId: string) {
   });
 }
 
+export function useModalTemplate(serverId: string, id: string) {
+  return useQuery({
+    queryKey: qk.modal(serverId, id),
+    queryFn: () => api.templates.getModal(serverId, id),
+    enabled: Boolean(serverId && id),
+  });
+}
+
 export function useCreateModalTemplate(serverId: string) {
   const qc = useQueryClient();
   return useMutation({

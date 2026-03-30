@@ -179,6 +179,14 @@ export const API_ROUTES = {
       modal: (serverId: string, templateId: string) =>
         `/servers/${serverId}/modals/${templateId}`,
     },
+    modalElements: {
+      list: (serverId: string) => `/servers/${serverId}/modal-elements`,
+      listByModal: (serverId: string, modalTemplateId: string) =>
+        `/servers/${serverId}/modal-elements/by-modal/${modalTemplateId}`,
+      sync: (serverId: string) => `/servers/${serverId}/modal-elements/sync`,
+      deleteByModal: (serverId: string, modalTemplateId: string) =>
+        `/servers/${serverId}/modal-elements/by-modal/${modalTemplateId}`,
+    },
     elements: {
       list: (serverId: string) => `/servers/${serverId}/elements`,
       detail: (serverId: string, key: string) => `/servers/${serverId}/elements/${key}`,
@@ -235,10 +243,62 @@ export const API_ROUTES = {
         unitId: string,
         serverUserId: string
       ) => `/servers/${serverId}/units/${unitId}/members/${serverUserId}`,
+      tree: (serverId: string) => `/servers/${serverId}/units/tree`,
+      setCap: (serverId: string, unitId: string) =>
+        `/servers/${serverId}/units/${unitId}/cap`,
+      move: (serverId: string, unitId: string) =>
+        `/servers/${serverId}/units/${unitId}/move`,
+    },
+    positions: {
+      list: (serverId: string) => `/servers/${serverId}/positions`,
+      create: (serverId: string) => `/servers/${serverId}/positions`,
+      get: (serverId: string, positionId: string) =>
+        `/servers/${serverId}/positions/${positionId}`,
+      update: (serverId: string, positionId: string) =>
+        `/servers/${serverId}/positions/${positionId}`,
+      delete: (serverId: string, positionId: string) =>
+        `/servers/${serverId}/positions/${positionId}`,
+      assign: (serverId: string, positionId: string) =>
+        `/servers/${serverId}/positions/${positionId}/assign`,
+      unassign: (serverId: string, assignmentId: string) =>
+        `/servers/${serverId}/positions/assignments/${assignmentId}`,
+      holders: (serverId: string, positionId: string) =>
+        `/servers/${serverId}/positions/${positionId}/holders`,
+      memberPositions: (serverId: string, serverUserId: string) =>
+        `/servers/${serverId}/members/${serverUserId}/positions`,
+    },
+    branches: {
+      list: (serverId: string) => `/servers/${serverId}/branches`,
+      create: (serverId: string) => `/servers/${serverId}/branches`,
+      get: (serverId: string, branchId: string) =>
+        `/servers/${serverId}/branches/${branchId}`,
+      update: (serverId: string, branchId: string) =>
+        `/servers/${serverId}/branches/${branchId}`,
+      delete: (serverId: string, branchId: string) =>
+        `/servers/${serverId}/branches/${branchId}`,
+      updatePathOrder: (serverId: string, branchId: string) =>
+        `/servers/${serverId}/branches/${branchId}/paths/order`,
+      memberProgress: (serverId: string, serverUserId: string) =>
+        `/servers/${serverId}/members/${serverUserId}/branch-progress`,
+    },
+    notifications: {
+      list: (serverId: string) => `/servers/${serverId}/notifications`,
+      markRead: (serverId: string, notificationId: string) =>
+        `/servers/${serverId}/notifications/${notificationId}/read`,
+      markAllRead: (serverId: string) => `/servers/${serverId}/notifications/read-all`,
+    },
+    memberProfile: {
+      get: (serverId: string, serverUserId: string) =>
+        `/servers/${serverId}/members/${serverUserId}/profile`,
+      rankHistory: (serverId: string, serverUserId: string) =>
+        `/servers/${serverId}/members/${serverUserId}/rank-history`,
+      unitHistory: (serverId: string, serverUserId: string) =>
+        `/servers/${serverId}/members/${serverUserId}/unit-history`,
     },
     welcomeConfig: (serverId: string) =>
       `/servers/${serverId}/welcome-config`,
     messageSend: (serverId: string) => `/servers/${serverId}/messages/send`,
+    messageQuickSend: (serverId: string) => `/servers/${serverId}/messages/quick-send`,
     messageHistory: (serverId: string) => `/servers/${serverId}/messages/history`,
     schedule: {
       list: (serverId: string) => `/servers/${serverId}/scheduled-messages`,

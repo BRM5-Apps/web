@@ -2,8 +2,12 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { Sidebar } from "@/components/layout/sidebar";
 
+/**
+ * Layout for /dashboard routes.
+ * This layout only handles auth - no sidebar needed since all pages redirect.
+ * The main app layout with Sidebar is in (dashboard)/layout.tsx
+ */
 export default async function DashboardLayout({
   children,
 }: {
@@ -16,10 +20,6 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
-  return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar />
-      <main className="flex-1 overflow-y-auto pl-14 p-6">{children}</main>
-    </div>
-  );
+  // Just render children - no sidebar since /dashboard just redirects to /select-server
+  return <>{children}</>;
 }

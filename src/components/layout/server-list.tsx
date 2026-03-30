@@ -1,10 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { Plus, Home } from "lucide-react";
-import { useAdminGuildsWithServers, type GuildWithServerStatus } from "@/hooks/use-admin-guilds";
-import { useServerStore } from "@/stores/server-store";
+import { usePathname } from "next/navigation";
+import { Plus, Home, BookOpen } from "lucide-react";
+import type { GuildWithServerStatus } from "@/hooks/use-admin-guilds";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -103,7 +102,7 @@ function ServerIcon({ guild, isActive, onSelect }: ServerIconProps) {
 
 // ─── Separator Component ──────────────────────────────────────────────────────
 
-function ServerSeparator({ label }: { label?: string }) {
+function ServerSeparator() {
   return (
     <div className="flex items-center justify-center py-2">
       <div className="h-[2px] w-8 rounded-full bg-[#35363C]" />
@@ -140,6 +139,39 @@ function HomeButton() {
         </Link>
       </TooltipTrigger>
       <TooltipContent side="right">Dashboard</TooltipContent>
+    </Tooltip>
+  );
+}
+
+// ─── Documentation Button ──────────────────────────────────────────────────────
+
+function DocumentationButton() {
+  const pathname = usePathname();
+  const isActive = pathname === "/documentation";
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Link
+          href="/documentation"
+          className={cn(
+            "group relative flex h-12 w-12 items-center justify-center rounded-[24px] transition-all duration-200",
+            "hover:rounded-[16px]",
+            isActive
+              ? "rounded-[16px] bg-[#5865F2] text-white"
+              : "bg-[#313338] text-[#DBDEE1] hover:bg-[#5865F2]"
+          )}
+        >
+          <span
+            className={cn(
+              "absolute -left-[4px] w-[4px] rounded-r-full bg-white transition-all duration-200",
+              isActive ? "h-10" : "h-0 group-hover:h-5"
+            )}
+          />
+          <BookOpen className="h-5 w-5" />
+        </Link>
+      </TooltipTrigger>
+      <TooltipContent side="right">Documentation</TooltipContent>
     </Tooltip>
   );
 }
@@ -183,69 +215,88 @@ function ServerListSkeleton() {
   );
 }
 
-// ─── Main Component ─────────────────────────────────────────────────────────────
+// ─── Server List Content (receives data, no hooks) ─────────────────────────────────
 
-export function ServerList() {
-  const router = useRouter();
-  const { data: guilds, isLoading } = useAdminGuildsWithServers();
-  const { activeServerId, setActiveServer } = useServerStore();
+interface ServerListContentProps {
+  guilds: GuildWithServerStatus[] | undefined;
+  isLoading: boolean;
+  activeServerId: string | null;
+  onSelect: (guild: GuildWithServerStatus) => void;
+}
 
-  const handleSelect = (guild: GuildWithServerStatus) => {
-    if (!guild.server) return;
-    setActiveServer(guild.server.id, guild.server);
-    router.push(`/server/${guild.server.id}`);
-  };
-
-  // Split guilds into those with and without bot
+export function ServerListContent({ guilds, isLoading, activeServerId, onSelect }: ServerListContentProps) {
   const guildsWithBot = guilds?.filter((g) => g.hasBot) ?? [];
   const guildsWithoutBot = guilds?.filter((g) => !g.hasBot) ?? [];
 
   return (
     <TooltipProvider delayDuration={0}>
-      <aside className="fixed left-0 top-0 z-50 flex h-screen w-[72px] flex-col bg-[#1E1F22] py-3">
-        <ScrollArea className="flex-1">
-          <div className="flex flex-col items-center gap-2 px-3">
-            {/* Home / Dashboard */}
-            <HomeButton />
-            <ServerSeparator />
+      <ScrollArea className="flex-1">
+        <div className="flex flex-col items-center gap-2 px-3">
+          <HomeButton />
+          <DocumentationButton />
+          <ServerSeparator />
 
-            {isLoading && <ServerListSkeleton />}
+          {isLoading && <ServerListSkeleton />}
 
-            {!isLoading && guilds && (
-              <>
-                {/* Servers with bot (active) */}
-                {guildsWithBot.map((guild) => (
-                  <ServerIcon
-                    key={guild.id}
-                    guild={guild}
-                    isActive={activeServerId === guild.server?.id}
-                    onSelect={handleSelect}
-                  />
-                ))}
+          {!isLoading && guilds && (
+            <>
+              {/* Servers with bot (active) */}
+              {guildsWithBot.map((guild) => (
+                <ServerIcon
+                  key={guild.id}
+                  guild={guild}
+                  isActive={activeServerId === guild.server?.id}
+                  onSelect={onSelect}
+                />
+              ))}
 
-                {/* Separator between active and inactive */}
-                {guildsWithBot.length > 0 && guildsWithoutBot.length > 0 && (
-                  <ServerSeparator />
-                )}
-
-                {/* Servers without bot (greyed out) */}
-                {guildsWithoutBot.map((guild) => (
-                  <ServerIcon
-                    key={guild.id}
-                    guild={guild}
-                    isActive={false}
-                    onSelect={() => {}}
-                  />
-                ))}
-
-                {/* Add Server Button */}
+              {/* Separator between active and inactive */}
+              {guildsWithBot.length > 0 && guildsWithoutBot.length > 0 && (
                 <ServerSeparator />
-                <AddServerButton />
-              </>
-            )}
-          </div>
-        </ScrollArea>
-      </aside>
+              )}
+
+              {/* Servers without bot (greyed out) */}
+              {guildsWithoutBot.map((guild) => (
+                <ServerIcon
+                  key={guild.id}
+                  guild={guild}
+                  isActive={false}
+                  onSelect={() => {}}
+                />
+              ))}
+
+              {/* Add Server Button */}
+              <ServerSeparator />
+              <AddServerButton />
+            </>
+          )}
+        </div>
+      </ScrollArea>
     </TooltipProvider>
+  );
+}
+
+// ─── Desktop Sidebar ────────────────────────────────────────────────────────────
+
+export function ServerListDesktop(props: Omit<ServerListContentProps, "activeServerId"> & { activeServerId: string | null }) {
+  return (
+    <aside className="fixed left-0 top-0 z-50 hidden h-screen w-[72px] flex-col bg-[#1E1F22] py-3 md:flex">
+      <ServerListContent {...props} />
+    </aside>
+  );
+}
+
+// ─── Mobile Sidebar ──────────────────────────────────────────────────────────────
+
+interface ServerListMobileProps extends ServerListContentProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function ServerListMobile({ isOpen, onClose, ...props }: ServerListMobileProps) {
+  return (
+    <div className="w-[72px] bg-[#1E1F22] md:hidden">
+      <ServerListContent {...props} />
+    </div>
   );
 }

@@ -6,7 +6,16 @@ export type ElementType =
   | "MODULE_FIELD"
   | "CUSTOM_COUNTER"
   | "CUSTOM_VARIABLE"
-  | "STATIC";
+  | "STATIC"
+  | "DISCORD_ROLE"
+  | "DISCORD_CHANNEL"
+  | "DISCORD_USER"
+  | "DISCORD_AUDIT"
+  | "SERVER_STAT"
+  | "DYNAMIC_STATS_CARD"
+  | "ROBLOX_USER"
+  | "ROBLOX_GROUP"
+  | "VERIFICATION";
 
 export interface CustomVariable {
   id: string;

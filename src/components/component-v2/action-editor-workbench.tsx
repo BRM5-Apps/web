@@ -57,7 +57,7 @@ export function ActionEditorWorkbench({
   onSave,
 }: ActionEditorWorkbenchProps) {
   const [mode, setMode] = useState<"linear" | "node">("linear");
-  const [draftGraph, setDraftGraph] = useState<ActionGraphDocument>(() => ensureActionGraph(actions, graph));
+  const [draftGraph, setDraftGraph] = useState<ActionGraphDocument>(() => ensureActionGraph(actions, graph, { skipTrigger: true }));
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>(graph?.entry_node_id);
   const [leftPanelOpen, setLeftPanelOpen] = useState(() => {
     if (typeof window !== "undefined") {
@@ -73,7 +73,7 @@ export function ActionEditorWorkbench({
 
   useEffect(() => {
     if (!open) return;
-    const nextGraph = ensureActionGraph(actions, graph);
+    const nextGraph = ensureActionGraph(actions, graph, { skipTrigger: true });
     setDraftGraph(nextGraph);
     setSelectedNodeId(nextGraph.entry_node_id);
     setMode(isLinearizableGraph(nextGraph) ? "linear" : "node");
@@ -181,9 +181,9 @@ export function ActionEditorWorkbench({
               gridTemplateColumns:
                 mode === "node"
                   ? leftPanelOpen
-                    ? "320px 1fr"
-                    : "48px 1fr"
-                  : "320px 1fr 320px",
+                    ? "320px 1fr 320px"
+                    : "48px 1fr 320px"
+                  : "320px 1fr",
             }}
           >
             {/* Left Panel - Elements */}
@@ -222,8 +222,8 @@ export function ActionEditorWorkbench({
               )}
             </div>
 
-            {/* Right Panel - Only in linear mode */}
-            {mode === "linear" && (
+            {/* Right Panel - Only in node mode */}
+            {mode === "node" && (
               <div className="min-h-0 bg-[#232428]">
                 <NodeInspector
                   serverId={serverId}
@@ -401,7 +401,7 @@ function NodeInspector({
                 serverId={serverId}
               />
             </div>
-          ) : (
+          ) : selectedNode.kind === "condition" ? (
             <div className="space-y-3">
               <div className="bg-[#8b5cf6]/10 border border-[#8b5cf6]/30 rounded-md p-3">
                 <div className="flex items-center gap-2 text-[#8b5cf6] mb-1">
@@ -416,6 +416,7 @@ function NodeInspector({
                 <ConditionBuilder
                   condition={selectedNode.condition ?? createCondition("equal")}
                   onChange={(updated) => updated && onNodeChange({ ...selectedNode, condition: updated })}
+                  serverId={serverId}
                 />
               </div>
               {!selectedNode.condition && (
@@ -431,6 +432,11 @@ function NodeInspector({
                   </Button>
                 </div>
               )}
+            </div>
+          ) : (
+            // trigger node — no action config
+            <div className="text-sm text-[#b5bac1]">
+              Configure the trigger in the left panel.
             </div>
           )}
         </div>

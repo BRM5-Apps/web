@@ -58,7 +58,14 @@ export function useAdminGuildsWithServers() {
   const guildIds = guildsQuery.data?.map((g) => g.id) ?? [];
   const serversQuery = useServersByGuildIds(guildIds);
 
-  const isLoading = guildsQuery.isLoading || (guildIds.length > 0 && serversQuery.isLoading);
+  // Loading is true if:
+  // - Guilds are loading (initial fetch)
+  // - OR we have guild IDs and servers are still fetching (initial or refetch)
+  const isLoading =
+    guildsQuery.isLoading ||
+    (guildIds.length > 0 && serversQuery.isLoading) ||
+    (guildIds.length > 0 && serversQuery.isFetching);
+
   const isError = guildsQuery.isError || serversQuery.isError;
   const error = guildsQuery.error ?? serversQuery.error;
 

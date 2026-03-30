@@ -39,6 +39,7 @@ export function useElements(serverId: string) {
     },
     staleTime: 1000 * 60 * 2,
     enabled: Boolean(serverId),
+    retry: false,
   });
 }
 

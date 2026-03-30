@@ -1,14 +1,17 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { format, formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow, isValid, parseISO } from "date-fns";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
 /** Format an ISO date string to a readable format */
-export function formatDate(date: string | Date, pattern = "MMM d, yyyy"): string {
-  return format(new Date(date), pattern);
+export function formatDate(date: string | Date | null | undefined, pattern = "MMM d, yyyy"): string {
+  if (!date) return "Unknown date";
+  const parsed = typeof date === "string" ? parseISO(date) : new Date(date);
+  if (!isValid(parsed)) return "Unknown date";
+  return format(parsed, pattern);
 }
 
 /** Format an ISO date string to relative time (e.g. "3 hours ago") */

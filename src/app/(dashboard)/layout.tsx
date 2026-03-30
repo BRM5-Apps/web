@@ -7,6 +7,7 @@ import { useServers } from "@/hooks/use-server";
 import { useServerStore } from "@/stores/server-store";
 import { usePermissions } from "@/hooks/use-permissions";
 import { Sidebar } from "@/components/layout/sidebar";
+import { Header } from "@/components/layout/header";
 import { Loading } from "@/components/shared/loading";
 import { WebSocketProvider } from "@/providers/websocket-provider";
 
@@ -62,6 +63,7 @@ export default function DashboardLayout({
       <div className="flex h-screen overflow-hidden bg-background">
         <Sidebar />
         <main className="flex-1 overflow-y-auto bg-background md:pl-[312px]">
+          <Header />
           <div className="mx-auto max-w-screen-xl px-4 py-4 md:px-6 md:py-6">
             {children}
           </div>

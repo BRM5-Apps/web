@@ -24,6 +24,8 @@ import {
   GitBranch,
   ArrowRight,
   HelpCircle,
+  Zap,
+  FileText,
 } from "lucide-react";
 import type {
   ActionGraphDocument,
@@ -32,6 +34,7 @@ import type {
   FlowActionType,
   FlowAction,
 } from "./types";
+import { getActionsForFlow, type ActionDefinition } from "@/components/shared/action-definitions";
 import { makeAction, actionLabel } from "./flow-editor";
 import { ActionFields } from "./action-fields";
 import { ConditionBuilder, createCondition } from "./condition-builder";
@@ -49,6 +52,72 @@ interface Position {
   y: number;
 }
 
+// Grid configuration
+const GRID_SIZE = 20; // pixels per grid cell
+const NODE_WIDTH = 280;
+const NODE_HEIGHT = 140;
+
+// Snap position to grid
+function snapToGrid(pos: Position): Position {
+  return {
+    x: Math.round(pos.x / GRID_SIZE) * GRID_SIZE,
+    y: Math.round(pos.y / GRID_SIZE) * GRID_SIZE,
+  };
+}
+
+// Calculate the best connection point on a node based on direction from source
+type ConnectionSide = "top" | "bottom" | "left" | "right";
+
+function getConnectionSide(fromNode: Position, toNode: Position): ConnectionSide {
+  const dx = toNode.x - fromNode.x;
+  const dy = toNode.y - fromNode.y;
+
+  // Determine primary direction based on angle
+  const angle = Math.atan2(dy, dx) * (180 / Math.PI); // -180 to 180
+
+  // Map angle to side:
+  // Right: -45 to 45
+  // Bottom: 45 to 135
+  // Left: 135 to 180 or -180 to -135
+  // Top: -135 to -45
+  if (angle >= -45 && angle < 45) {
+    return "right";
+  } else if (angle >= 45 && angle < 135) {
+    return "bottom";
+  } else if (angle >= -135 && angle < -45) {
+    return "top";
+  } else {
+    return "left";
+  }
+}
+
+// Get connection point position on a node edge
+function getNodeConnectionPoint(
+  nodePos: Position,
+  side: ConnectionSide,
+  nodeWidth: number = NODE_WIDTH,
+  nodeHeight: number = NODE_HEIGHT
+): Position {
+  switch (side) {
+    case "top":
+      return { x: nodePos.x + nodeWidth / 2, y: nodePos.y };
+    case "bottom":
+      return { x: nodePos.x + nodeWidth / 2, y: nodePos.y + nodeHeight };
+    case "left":
+      return { x: nodePos.x, y: nodePos.y + nodeHeight / 2 };
+    case "right":
+      return { x: nodePos.x + nodeWidth, y: nodePos.y + nodeHeight / 2 };
+  }
+}
+
+// Connection point configuration for sides
+const SIDE_CONNECTION_POINTS: { side: ConnectionSide; label: string }[] = [
+  { side: "top", label: "" },
+  { side: "right", label: "" },
+  { side: "bottom", label: "" },
+  { side: "left", label: "" },
+];
+
 type NodeData = ActionGraphNode & {
   position: Position;
 };
@@ -57,23 +126,18 @@ interface VisualActionEditorProps {
   graph: ActionGraphDocument;
   onChange: (graph: ActionGraphDocument) => void;
   serverId?: string;
+  hidePalette?: boolean;
 }
 
 // ── Action Palette Items ─────────────────────────────────────────────────────
 
-const ACTION_PALETTE = [
-  { type: "do_nothing", label: "Do Nothing", icon: MousePointer2, color: "#6b7280" },
-  { type: "wait", label: "Wait", icon: Clock, color: "#f59e0b" },
-  { type: "check", label: "Check Condition", icon: Check, color: "#8b5cf6" },
-  { type: "add_role", label: "Add Role", icon: Shield, color: "#10b981" },
-  { type: "remove_role", label: "Remove Role", icon: Shield, color: "#ef4444" },
-  { type: "toggle_role", label: "Toggle Role", icon: Shield, color: "#3b82f6" },
-  { type: "send_output", label: "Send Output", icon: MessageSquare, color: "#5865F2" },
-  { type: "create_thread", label: "Create Thread", icon: Plus, color: "#ec4899" },
-  { type: "set_variable", label: "Set Variable", icon: Settings, color: "#14b8a6" },
-  { type: "delete_message", label: "Delete Message", icon: Trash2, color: "#dc2626" },
-  { type: "stop", label: "Stop Flow", icon: X, color: "#991b1b" },
-] as const;
+// Get actions available in flow context
+const ACTION_PALETTE = getActionsForFlow().map(a => ({
+  type: a.type as FlowActionType,
+  label: a.label,
+  icon: a.icon,
+  color: a.color,
+}));
 
 // ── Helper Functions ─────────────────────────────────────────────────────────
 
@@ -111,6 +175,7 @@ export function VisualActionEditor({
   graph,
   onChange,
   serverId,
+  hidePalette = false,
 }: VisualActionEditorProps) {
   // Canvas state
   const [zoom, setZoom] = useState(1);
@@ -122,10 +187,11 @@ export function VisualActionEditor({
   const [draggingNode, setDraggingNode] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState<Position>({ x: 0, y: 0 });
 
-  // Connection state - improved with drag-to-connect
+  // Connection state - supports both kind-based (bottom outputs) and side-based connections
   const [connectingFrom, setConnectingFrom] = useState<{
     nodeId: string;
-    kind: "next" | "pass" | "fail";
+    kind: "next" | "pass" | "fail" | null;
+    side: ConnectionSide | null;
   } | null>(null);
   const [connectingMousePos, setConnectingMousePos] = useState<Position | null>(null);
   const [draggingToConnect, setDraggingToConnect] = useState(false);
@@ -139,15 +205,25 @@ export function VisualActionEditor({
   const canvasRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Ensure all nodes have positions
+  // Ensure all nodes have positions (snap to grid)
   const nodesWithPositions = useMemo(() => {
-    return graph.nodes.map((node, index) => ({
-      ...node,
-      position: node.position || {
-        x: 100 + (index % 3) * 300,
-        y: 100 + Math.floor(index / 3) * 150,
-      },
-    }));
+    return graph.nodes.map((node, index) => {
+      // If node has a position, snap it to grid
+      if (node.position) {
+        return {
+          ...node,
+          position: snapToGrid(node.position),
+        };
+      }
+      // Default position with grid snapping
+      return {
+        ...node,
+        position: snapToGrid({
+          x: 100 + (index % 3) * 300,
+          y: 100 + Math.floor(index / 3) * 200,
+        }),
+      };
+    });
   }, [graph.nodes]);
 
   // ── Canvas Interactions ────────────────────────────────────────────────────
@@ -208,7 +284,9 @@ export function VisualActionEditor({
       const x = (e.clientX - rect.left - pan.x) / zoom - dragOffset.x;
       const y = (e.clientY - rect.top - pan.y) / zoom - dragOffset.y;
 
-      updateNodePosition(draggingNode, { x, y });
+      // Snap to grid
+      const snapped = snapToGrid({ x, y });
+      updateNodePosition(draggingNode, snapped);
     }
   }, [isPanning, pan, draggingNode, zoom, dragOffset, panStart, connectingFrom]);
 
@@ -272,15 +350,21 @@ export function VisualActionEditor({
 
   // ── Edge Operations ─────────────────────────────────────────────────────────
 
-  const addEdge = useCallback((source: string, target: string, kind: "next" | "pass" | "fail") => {
-    // Remove existing edge of same kind from source
-    const filteredEdges = graph.edges.filter(
-      (e) => !(e.source === source && e.kind === kind)
+  const addEdge = useCallback((
+    source: string,
+    target: string,
+    kind: "next" | "pass" | "fail"
+  ) => {
+    // Check if this exact edge already exists
+    const existingEdge = graph.edges.find(
+      (e) => e.source === source && e.target === target && e.kind === kind
     );
+    if (existingEdge) return; // Don't add duplicate edges
 
+    // Sides are calculated dynamically based on node positions, not stored
     onChange({
       ...graph,
-      edges: [...filteredEdges, { id: uid(), source, target, kind }],
+      edges: [...graph.edges, { id: uid(), source, target, kind }],
     });
   }, [graph, onChange]);
 
@@ -306,13 +390,21 @@ export function VisualActionEditor({
     const x = (e.clientX - rect.left - pan.x) / zoom;
     const y = (e.clientY - rect.top - pan.y) / zoom;
 
-    addNode(type, { x, y });
+    // Snap to grid
+    const snapped = snapToGrid({ x, y });
+    addNode(type, snapped);
   }, [addNode, pan, zoom]);
 
   // ── Connection Helpers ─────────────────────────────────────────────────────
 
-  const startConnection = useCallback((nodeId: string, kind: "next" | "pass" | "fail") => {
-    setConnectingFrom({ nodeId, kind });
+  // Start connection from output (kind-based) or from side (side-based)
+  const startConnectionFromKind = useCallback((nodeId: string, kind: "next" | "pass" | "fail") => {
+    setConnectingFrom({ nodeId, kind, side: null });
+    setDraggingToConnect(true);
+  }, []);
+
+  const startConnectionFromSide = useCallback((nodeId: string, side: ConnectionSide) => {
+    setConnectingFrom({ nodeId, kind: null, side });
     setDraggingToConnect(true);
   }, []);
 
@@ -327,18 +419,27 @@ export function VisualActionEditor({
     if (nodeEl) {
       const targetNodeId = nodeEl.dataset.nodeId;
       if (targetNodeId && targetNodeId !== connectingFrom.nodeId) {
-        addEdge(connectingFrom.nodeId, targetNodeId, connectingFrom.kind);
+        const sourceNode = nodesWithPositions.find(n => n.id === connectingFrom.nodeId);
+        const targetNode = nodesWithPositions.find(n => n.id === targetNodeId);
+
+        if (sourceNode && targetNode) {
+          // Calculate sides based on direction
+          // Connections default to "next" kind
+          const edgeKind = connectingFrom.kind ?? "next";
+          addEdge(connectingFrom.nodeId, targetNodeId, edgeKind);
+        }
       }
     }
 
     setConnectingFrom(null);
     setConnectingMousePos(null);
     setDraggingToConnect(false);
-  }, [connectingFrom, addEdge]);
+  }, [connectingFrom, addEdge, nodesWithPositions]);
 
   const completeConnection = useCallback((targetNodeId: string) => {
     if (connectingFrom && connectingFrom.nodeId !== targetNodeId) {
-      addEdge(connectingFrom.nodeId, targetNodeId, connectingFrom.kind);
+      const edgeKind = connectingFrom.kind ?? "next";
+      addEdge(connectingFrom.nodeId, targetNodeId, edgeKind);
     }
     setConnectingFrom(null);
     setConnectingMousePos(null);
@@ -383,6 +484,9 @@ export function VisualActionEditor({
   // ── Render Helpers ──────────────────────────────────────────────────────────
 
   const getNodeOutputs = (node: NodeData) => {
+    if (node.kind === "trigger") {
+      return [{ kind: "next" as const, label: "Start", color: "#5865F2", description: "Entry — automation starts here" }];
+    }
     if (node.kind === "condition") {
       return [
         { kind: "pass" as const, label: "True", color: "#10b981", description: "Runs when condition is true" },
@@ -393,6 +497,10 @@ export function VisualActionEditor({
     return [{ kind: "next" as const, label: "Next", color: "#6b7280", description: "Continues to next action" }];
   };
 
+  const getConnectedEdges = (nodeId: string, kind: "next" | "pass" | "fail") => {
+    return graph.edges.filter((e) => e.source === nodeId && e.kind === kind);
+  };
+
   const getConnectedEdge = (nodeId: string, kind: "next" | "pass" | "fail") => {
     return graph.edges.find((e) => e.source === nodeId && e.kind === kind);
   };
@@ -401,59 +509,98 @@ export function VisualActionEditor({
     return nodesWithPositions.find((n) => n.id === nodeId);
   };
 
-  // Get connection point position for a node
-  const getConnectionPointPos = (node: NodeData, kind: "next" | "pass" | "fail") => {
-    const outputs = getNodeOutputs(node);
+  // Get connection point position for a node - uses stored sides or calculates based on direction
+  const getConnectionPointPos = (
+    sourceNode: NodeData,
+    targetNode: NodeData,
+    kind: "next" | "pass" | "fail",
+    storedSourceSide?: "top" | "bottom" | "left" | "right",
+    storedTargetSide?: "top" | "bottom" | "left" | "right"
+  ) => {
+    // Use stored sides if available, otherwise calculate from direction
+    const sourceSide = storedSourceSide ?? getConnectionSide(sourceNode.position, targetNode.position);
+    const targetSide = storedTargetSide ?? getConnectionSide(targetNode.position, sourceNode.position);
+
+    // Get the output point position offset based on kind (for multiple outputs like pass/fail)
+    const outputs = getNodeOutputs(sourceNode);
     const index = outputs.findIndex((o) => o.kind === kind);
     const total = outputs.length;
-    const nodeWidth = 280;
-    const spacing = nodeWidth / (total + 1);
+
+    // Calculate offset for multiple outputs on the same side
+    // This spreads pass/fail/next outputs horizontally or vertically depending on side
+    let sourceOffset = { x: 0, y: 0 };
+    if (total > 1) {
+      const spacing = (kind === "pass" ? -1 : kind === "fail" ? 1 : 0) * 30;
+      // Adjust offset based on which side the connection exits
+      if (sourceSide === "bottom" || sourceSide === "top") {
+        sourceOffset = { x: spacing, y: 0 };
+      } else {
+        sourceOffset = { x: 0, y: spacing };
+      }
+    }
+
+    // Get base connection points on appropriate sides
+    const baseSourcePos = getNodeConnectionPoint(
+      sourceNode.position,
+      sourceSide,
+      NODE_WIDTH,
+      NODE_HEIGHT
+    );
+    const targetPos = getNodeConnectionPoint(
+      targetNode.position,
+      targetSide,
+      NODE_WIDTH,
+      NODE_HEIGHT
+    );
+
     return {
-      x: node.position.x + spacing * (index + 1),
-      y: node.position.y + 140, // Approximate bottom of node
+      sourcePos: { x: baseSourcePos.x + sourceOffset.x, y: baseSourcePos.y + sourceOffset.y },
+      targetPos
     };
   };
 
   return (
     <div ref={containerRef} className="flex h-full bg-[#1e1f22]">
-      {/* Left Palette */}
-      <div className="w-64 border-r border-[#3f4147] bg-[#2b2d31] flex flex-col">
-        <div className="p-4 border-b border-[#3f4147]">
-          <h3 className="text-sm font-semibold text-white">Actions</h3>
-          <p className="text-xs text-[#b5bac1] mt-1">Drag to canvas</p>
-        </div>
-        <ScrollArea className="flex-1" data-scrollable="true">
-          <div className="p-3 space-y-2">
-            {ACTION_PALETTE.map(({ type, label, icon: Icon, color }) => (
-              <div
-                key={type}
-                draggable
-                onDragStart={(e) => handlePaletteDragStart(e, type as FlowActionType)}
-                className="flex items-center gap-3 p-3 rounded-lg bg-[#1e1f22] border border-[#3f4147] cursor-move hover:border-[#5865F2] hover:bg-[#2b2d31] transition-colors group"
-              >
-                <div
-                  className="w-8 h-8 rounded flex items-center justify-center"
-                  style={{ backgroundColor: `${color}20` }}
-                >
-                  <Icon className="w-4 h-4" style={{ color }} />
-                </div>
-                <span className="text-sm text-white group-hover:text-[#5865F2]">
-                  {label}
-                </span>
-              </div>
-            ))}
+      {/* Left Palette - only shown when hidePalette is false */}
+      {!hidePalette && (
+        <div className="w-64 border-r border-[#3f4147] bg-[#2b2d31] flex flex-col">
+          <div className="p-4 border-b border-[#3f4147]">
+            <h3 className="text-sm font-semibold text-white">Actions</h3>
+            <p className="text-xs text-[#b5bac1] mt-1">Drag to canvas</p>
           </div>
-        </ScrollArea>
-        <div className="p-3 border-t border-[#3f4147]">
-          <button
-            onClick={() => setShowHelp(true)}
-            className="flex items-center gap-2 text-xs text-[#b5bac1] hover:text-white transition-colors"
-          >
-            <HelpCircle className="w-4 h-4" />
-            How to connect nodes
-          </button>
+          <ScrollArea className="flex-1" data-scrollable="true">
+            <div className="p-3 space-y-2">
+              {ACTION_PALETTE.map(({ type, label, icon: Icon, color }) => (
+                <div
+                  key={type}
+                  draggable
+                  onDragStart={(e) => handlePaletteDragStart(e, type as FlowActionType)}
+                  className="flex items-center gap-3 p-3 rounded-lg bg-[#1e1f22] border border-[#3f4147] cursor-move hover:border-[#5865F2] hover:bg-[#2b2d31] transition-colors group"
+                >
+                  <div
+                    className="w-8 h-8 rounded flex items-center justify-center"
+                    style={{ backgroundColor: `${color}20` }}
+                  >
+                    <Icon className="w-4 h-4" style={{ color }} />
+                  </div>
+                  <span className="text-sm text-white group-hover:text-[#5865F2]">
+                    {label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+          <div className="p-3 border-t border-[#3f4147]">
+            <button
+              onClick={() => setShowHelp(true)}
+              className="flex items-center gap-2 text-xs text-[#b5bac1] hover:text-white transition-colors"
+            >
+              <HelpCircle className="w-4 h-4" />
+              How to connect nodes
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Canvas Area */}
       <div className="flex-1 flex flex-col relative overflow-hidden">
@@ -538,12 +685,13 @@ export function VisualActionEditor({
             className="absolute inset-0 pointer-events-none"
             style={{
               backgroundImage: `
-                linear-gradient(to right, #3f4147 1px, transparent 1px),
-                linear-gradient(to bottom, #3f4147 1px, transparent 1px)
+                linear-gradient(to right, #3f414733 1px, transparent 1px),
+                linear-gradient(to bottom, #3f414733 1px, transparent 1px),
+                linear-gradient(to right, #3f414766 1px, transparent 1px),
+                linear-gradient(to bottom, #3f414766 1px, transparent 1px)
               `,
-              backgroundSize: `${20 * zoom}px ${20 * zoom}px`,
+              backgroundSize: `${GRID_SIZE * zoom}px ${GRID_SIZE * zoom}px, ${GRID_SIZE * zoom}px ${GRID_SIZE * zoom}px, ${GRID_SIZE * 5 * zoom}px ${GRID_SIZE * 5 * zoom}px, ${GRID_SIZE * 5 * zoom}px ${GRID_SIZE * 5 * zoom}px`,
               backgroundPosition: `${pan.x}px ${pan.y}px`,
-              opacity: 0.2,
             }}
           />
 
@@ -577,23 +725,85 @@ export function VisualActionEditor({
               </defs>
 
               {/* Existing edges */}
-              {graph.edges.map((edge) => {
+              {graph.edges.map((edge, edgeIndex) => {
                 const sourceNode = getNodeById(edge.source);
                 const targetNode = getNodeById(edge.target);
                 if (!sourceNode || !targetNode) return null;
 
-                const startPos = getConnectionPointPos(sourceNode, edge.kind);
-                const endPos = {
-                  x: targetNode.position.x + 140, // Center of node
-                  y: targetNode.position.y,
-                };
+                // Calculate offset for fan-out (multiple edges from same source/kind)
+                const siblingEdges = graph.edges.filter(
+                  (e) => e.source === edge.source && e.kind === edge.kind
+                );
+                const siblingIndex = siblingEdges.findIndex((e) => e.id === edge.id);
+                const totalSiblings = siblingEdges.length;
+
+                // Always calculate sides dynamically based on current node positions
+                const sourceSide = getConnectionSide(sourceNode.position, targetNode.position);
+                const targetSide = getConnectionSide(targetNode.position, sourceNode.position);
+
+                // Get smart connection points based on dynamically calculated sides
+                const { sourcePos: baseStartPos, targetPos: baseEndPos } = getConnectionPointPos(
+                  sourceNode,
+                  targetNode,
+                  edge.kind,
+                  sourceSide,
+                  targetSide
+                );
+
+                // Offset start position for multiple edges based on connection side
+                const siblingOffset = totalSiblings > 1
+                  ? (siblingIndex - (totalSiblings - 1) / 2) * 8
+                  : 0;
+
+                let startPos = { ...baseStartPos };
+                let endPos = { ...baseEndPos };
+
+                // Apply offset perpendicular to the connection direction
+                if (sourceSide === "top" || sourceSide === "bottom") {
+                  startPos.x += siblingOffset;
+                } else {
+                  startPos.y += siblingOffset;
+                }
+
+                if (targetSide === "top" || targetSide === "bottom") {
+                  endPos.x += siblingOffset;
+                } else {
+                  endPos.y += siblingOffset;
+                }
 
                 const color = getEdgeColor(edge.kind);
                 const markerId = edge.kind === "pass" ? "url(#arrowhead-pass)" : edge.kind === "fail" ? "url(#arrowhead-fail)" : "url(#arrowhead)";
 
-                // Calculate control points for bezier curve
-                const midY = (startPos.y + endPos.y) / 2;
-                const path = `M ${startPos.x} ${startPos.y} C ${startPos.x} ${midY}, ${endPos.x} ${midY}, ${endPos.x} ${endPos.y}`;
+                // Control point offsets based on connection sides
+                const curveOffset = 50;
+                let cp1x = startPos.x;
+                let cp1y = startPos.y;
+                let cp2x = endPos.x;
+                let cp2y = endPos.y;
+
+                // Source control point extends outward from source side
+                if (sourceSide === "bottom") {
+                  cp1y += curveOffset;
+                } else if (sourceSide === "top") {
+                  cp1y -= curveOffset;
+                } else if (sourceSide === "right") {
+                  cp1x += curveOffset;
+                } else {
+                  cp1x -= curveOffset;
+                }
+
+                // Target control point extends outward from target side
+                if (targetSide === "top") {
+                  cp2y -= curveOffset;
+                } else if (targetSide === "bottom") {
+                  cp2y += curveOffset;
+                } else if (targetSide === "right") {
+                  cp2x += curveOffset;
+                } else {
+                  cp2x -= curveOffset;
+                }
+
+                const path = `M ${startPos.x} ${startPos.y} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${endPos.x} ${endPos.y}`;
 
                 return (
                   <g key={edge.id}>
@@ -622,41 +832,103 @@ export function VisualActionEditor({
               })}
 
               {/* Connecting line while dragging */}
-              {connectingFrom && connectingMousePos && (
-                <g>
+              {connectingFrom && connectingMousePos && (() => {
+                const sourceNode = getNodeById(connectingFrom.nodeId);
+                if (!sourceNode) return null;
+
+                let startPos: Position;
+
+                if (connectingFrom.side) {
+                  // Side-based connection - start from the center of that side
+                  startPos = getNodeConnectionPoint(sourceNode.position, connectingFrom.side);
+                } else if (connectingFrom.kind) {
+                  // Kind-based connection - start from the output button position
+                  const outputs = getNodeOutputs(sourceNode);
+                  const index = outputs.findIndex((o) => o.kind === connectingFrom.kind);
+                  const total = outputs.length;
+                  const spacing = NODE_WIDTH / (total + 1);
+                  startPos = {
+                    x: sourceNode.position.x + spacing * (index + 1),
+                    y: sourceNode.position.y + NODE_HEIGHT,
+                  };
+                } else {
+                  // Default to center of node
+                  startPos = {
+                    x: sourceNode.position.x + NODE_WIDTH / 2,
+                    y: sourceNode.position.y + NODE_HEIGHT / 2,
+                  };
+                }
+
+                const strokeColor = connectingFrom.kind ? getEdgeColor(connectingFrom.kind) : "#5865F2";
+
+                return (
                   <line
-                    x1={getConnectionPointPos(getNodeById(connectingFrom.nodeId)!, connectingFrom.kind).x}
-                    y1={getConnectionPointPos(getNodeById(connectingFrom.nodeId)!, connectingFrom.kind).y}
+                    x1={startPos.x}
+                    y1={startPos.y}
                     x2={connectingMousePos.x}
                     y2={connectingMousePos.y}
-                    stroke={getEdgeColor(connectingFrom.kind)}
+                    stroke={strokeColor}
                     strokeWidth="2"
                     strokeDasharray="5,5"
                     markerEnd="url(#arrowhead)"
                   />
-                </g>
-              )}
+                );
+              })()}
             </svg>
 
             {/* Nodes */}
             {nodesWithPositions.map((node) => {
               const isSelected = selectedNodeId === node.id;
               const isEntry = graph.entry_node_id === node.id;
-              const actionType = node.kind === "action" ? node.action.type : "check";
-              const paletteItem = ACTION_PALETTE.find((a) => a.type === actionType);
-              const Icon = paletteItem?.icon || Play;
-              const color = paletteItem?.color || "#6b7280";
+              const isTrigger = node.kind === "trigger";
+              const isAction = node.kind === "action";
+              const isCondition = node.kind === "condition";
+              const isModalField = node.kind === "modal_field";
+
+              // Determine action type based on node kind
+              let actionType: string;
+              if (isTrigger) {
+                actionType = "trigger";
+              } else if (isCondition) {
+                actionType = "check";
+              } else if (isAction && node.action) {
+                actionType = node.action.type;
+              } else if (isModalField) {
+                actionType = "modal_field";
+              } else {
+                actionType = "unknown";
+              }
+
+              // Get icon and color for each node type
+              let Icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
+              let color: string;
+              if (isTrigger) {
+                Icon = Zap;
+                color = "#5865F2";
+              } else if (isCondition) {
+                Icon = GitBranch;
+                color = "#f59e0b";
+              } else if (isModalField) {
+                Icon = FileText;
+                color = "#5865F2";
+              } else {
+                const paletteItem = ACTION_PALETTE.find((a) => a.type === actionType);
+                Icon = paletteItem?.icon || Play;
+                color = paletteItem?.color || "#6b7280";
+              }
+
               const outputs = getNodeOutputs(node);
               const isConnectionTarget = connectingFrom && connectingFrom.nodeId !== node.id;
 
-              const nodeWidth = 280;
+              // Count incoming edges to show input indicators
+              const incomingEdges = graph.edges.filter((e) => e.target === node.id);
 
               return (
                 <div
                   key={node.id}
                   data-node-id={node.id}
                   className={cn(
-                    "absolute rounded-lg border-2 transition-all select-none",
+                    "absolute rounded-lg border-2 transition-all select-none group",
                     isSelected
                       ? "border-[#5865F2] shadow-lg shadow-[#5865F2]/20"
                       : "border-[#3f4147] hover:border-[#5865F2]/50",
@@ -666,7 +938,7 @@ export function VisualActionEditor({
                   style={{
                     left: node.position.x,
                     top: node.position.y,
-                    width: `${nodeWidth}px`,
+                    width: `${NODE_WIDTH}px`,
                     backgroundColor: "#2b2d31",
                     zIndex: isSelected ? 10 : 1,
                   }}
@@ -701,29 +973,60 @@ export function VisualActionEditor({
                   >
                     <Icon className="w-4 h-4" style={{ color }} />
                     <span className="text-sm font-medium text-white flex-1">
-                      {node.kind === "action" ? actionLabel(node.action) : "Check Condition"}
+                      {isTrigger
+                        ? node.label || (node.triggerType === "TIME" ? `Trigger: ${node.cronExpression ?? "Time-based"}` : `Trigger: ${node.eventType ?? "Event"}`)
+                        : isCondition
+                          ? "Check Condition"
+                          : isModalField
+                            ? node.fieldLabel || `Field: ${node.fieldId}`
+                            : isAction && node.action
+                              ? actionLabel(node.action)
+                              : "Action"}
                     </span>
                     {isEntry && (
-                      <span className="text-[10px] bg-[#f59e0b] text-black px-1.5 py-0.5 rounded font-semibold">
-                        START
+                      <span className="text-[10px] bg-[#5865F2] text-white px-1.5 py-0.5 rounded font-semibold">
+                        {isTrigger ? "TRIGGER" : "START"}
                       </span>
                     )}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removeNode(node.id);
-                      }}
-                      className="text-[#b5bac1] hover:text-red-400 p-1"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
+                    {!isTrigger && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeNode(node.id);
+                        }}
+                        className="text-[#b5bac1] hover:text-red-400 p-1"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
                   </div>
 
                   {/* Node Body */}
                   <div className="p-3">
-                    {node.kind === "action" && (
+                    {node.kind === "trigger" && (
+                      <div className="space-y-1">
+                        <div className="text-xs text-[#b5bac1]">
+                          {node.triggerType === "TIME" ? (
+                            <span className="font-mono">{node.cronExpression ?? "—"}</span>
+                          ) : (
+                            <span>{node.eventType ?? "—"}</span>
+                          )}
+                        </div>
+                        {node.filters && node.filters.length > 0 && (
+                          <div className="text-[10px] text-[#5865F2]">
+                            {node.filters.length} filter{node.filters.length !== 1 ? "s" : ""}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {node.kind === "action" && node.action && (
                       <div className="text-xs text-[#b5bac1] truncate">
                         {getActionSummary(node.action)}
+                      </div>
+                    )}
+                    {node.kind === "action" && !node.action && (
+                      <div className="text-xs text-[#b5bac1]">
+                        No action configured
                       </div>
                     )}
                     {node.kind === "condition" && (
@@ -731,12 +1034,21 @@ export function VisualActionEditor({
                         {node.condition ? getConditionSummary(node.condition) : "No condition configured"}
                       </div>
                     )}
+                    {node.kind === "modal_field" && (
+                      <div className="space-y-1">
+                        <div className="text-xs text-[#b5bac1]">
+                          {node.fieldType || "text"}
+                          {node.isRequired && <span className="text-[#f23f42] ml-1">*</span>}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Connection Points */}
+                  {/* Output Connection Points (bottom) - for kind-based connections */}
                   <div className="flex justify-around pb-2">
                     {outputs.map(({ kind, label, color: outputColor, description }) => {
-                      const existingEdge = getConnectedEdge(node.id, kind);
+                      const connectedEdges = getConnectedEdges(node.id, kind);
+                      const hasConnections = connectedEdges.length > 0;
                       const isConnecting = connectingFrom?.nodeId === node.id && connectingFrom?.kind === kind;
                       return (
                         <div
@@ -749,7 +1061,7 @@ export function VisualActionEditor({
                             if (isConnecting) {
                               cancelConnection();
                             } else {
-                              startConnection(node.id, kind);
+                              startConnectionFromKind(node.id, kind);
                             }
                           }}
                           title={description}
@@ -757,7 +1069,7 @@ export function VisualActionEditor({
                           <div
                             className={cn(
                               "w-4 h-4 rounded-full border-2 transition-all cursor-crosshair select-none",
-                              existingEdge
+                              hasConnections
                                 ? "bg-current border-current"
                                 : "bg-[#1e1f22] border-current group-hover:scale-125 group-hover:shadow-lg",
                               isConnecting && "animate-pulse scale-125"
@@ -767,14 +1079,90 @@ export function VisualActionEditor({
                           {label && (
                             <span className="text-[10px] text-[#b5bac1] font-medium select-none pointer-events-none">{label}</span>
                           )}
-                          {/* Connection status indicator */}
-                          {existingEdge && (
-                            <span className="absolute -top-1 -right-1 w-2 h-2 bg-[#5865F2] rounded-full pointer-events-none" />
+                          {/* Connection count indicator - show count when multiple edges */}
+                          {hasConnections && (
+                            <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 bg-[#5865F2] rounded-full pointer-events-none flex items-center justify-center text-[10px] text-white font-semibold">
+                              {connectedEdges.length > 1 ? connectedEdges.length : ""}
+                            </span>
                           )}
                         </div>
                       );
                     })}
                   </div>
+
+                  {/* Side Connection Points - draw.io style */}
+                  {/* Top connection point */}
+                  <div
+                    className="absolute left-1/2 -translate-x-1/2 -top-2 w-4 h-4 rounded-full bg-[#1e1f22] border-2 border-[#5865F2] opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair flex items-center justify-center"
+                    style={{ pointerEvents: isConnectionTarget ? 'none' : 'auto' }}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      startConnectionFromSide(node.id, "top");
+                    }}
+                  >
+                    <ArrowRight className="w-2.5 h-2.5 text-[#5865F2] -rotate-90" />
+                  </div>
+
+                  {/* Bottom connection point */}
+                  <div
+                    className="absolute left-1/2 -translate-x-1/2 -bottom-2 w-4 h-4 rounded-full bg-[#1e1f22] border-2 border-[#5865F2] opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair flex items-center justify-center"
+                    style={{ pointerEvents: isConnectionTarget ? 'none' : 'auto' }}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      startConnectionFromSide(node.id, "bottom");
+                    }}
+                  >
+                    <ArrowRight className="w-2.5 h-2.5 text-[#5865F2] rotate-90" />
+                  </div>
+
+                  {/* Left connection point */}
+                  <div
+                    className="absolute top-1/2 -translate-y-1/2 -left-2 w-4 h-4 rounded-full bg-[#1e1f22] border-2 border-[#5865F2] opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair flex items-center justify-center"
+                    style={{ pointerEvents: isConnectionTarget ? 'none' : 'auto' }}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      startConnectionFromSide(node.id, "left");
+                    }}
+                  >
+                    <ArrowRight className="w-2.5 h-2.5 text-[#5865F2] -rotate-180" />
+                  </div>
+
+                  {/* Right connection point */}
+                  <div
+                    className="absolute top-1/2 -translate-y-1/2 -right-2 w-4 h-4 rounded-full bg-[#1e1f22] border-2 border-[#5865F2] opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair flex items-center justify-center"
+                    style={{ pointerEvents: isConnectionTarget ? 'none' : 'auto' }}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      startConnectionFromSide(node.id, "right");
+                    }}
+                  >
+                    <ArrowRight className="w-2.5 h-2.5 text-[#5865F2]" />
+                  </div>
+
+                  {/* Input Connection Indicators - shows where connections can land */}
+                  {isConnectionTarget && (
+                    <>
+                      {/* Top input */}
+                      <div
+                        className="absolute left-1/2 -translate-x-1/2 -top-2 w-4 h-4 rounded-full bg-[#5865F2] border-2 border-white shadow-lg animate-pulse"
+                        style={{ pointerEvents: 'none' }}
+                      />
+                      {/* Left input */}
+                      <div
+                        className="absolute top-1/2 -translate-y-1/2 -left-2 w-4 h-4 rounded-full bg-[#5865F2] border-2 border-white shadow-lg animate-pulse"
+                        style={{ pointerEvents: 'none' }}
+                      />
+                      {/* Right input */}
+                      <div
+                        className="absolute top-1/2 -translate-y-1/2 -right-2 w-4 h-4 rounded-full bg-[#5865F2] border-2 border-white shadow-lg animate-pulse"
+                        style={{ pointerEvents: 'none' }}
+                      />
+                    </>
+                  )}
                 </div>
               );
             })}
@@ -825,6 +1213,7 @@ export function VisualActionEditor({
                           <ConditionBuilder
                             condition={node.condition ?? createCondition("equal")}
                             onChange={(updated) => updated && updateNodeCondition(node.id, updated)}
+                            serverId={serverId}
                           />
                         </div>
                       </div>

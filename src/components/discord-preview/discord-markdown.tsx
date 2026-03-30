@@ -8,7 +8,7 @@ interface DiscordMarkdownProps {
 }
 
 const INLINE_TOKEN_REGEX =
-  /(\*\*[^*]+?\*\*|__[^_]+?__|~~[^~]+?~~|\*[^*\n]+?\*|`[^`\n]+?`|\[[^\]]+?\]\((https?:\/\/[^\s)]+)\)|<t:\d{1,13}(?::[tTdDfFR])?>|<@!?\d+>|<@&\d+>|<#\d+>|:[a-zA-Z0-9_+\-]+:)/g;
+  /(\*\*\*[^*]+?\*\*\*|__\*\*[^*]+?\*\*__|__\*[^*]+?\*__|__[^_]+?__|\*\*[^*]+?\*\*|~~[^~]+?~~|\*[^*\n]+?\*|`[^`\n]+?`|\[[^\]]+?\]\((https?:\/\/[^\s)]+)\)|<t:\d{1,13}(?::[tTdDfFR])?>|<@!?\d+>|<@&\d+>|<#\d+>|:[a-zA-Z0-9_+\-]+:)/g;
 
 const CODE_BLOCK_REGEX = /```([a-zA-Z0-9_+-]+)?\n?([\s\S]*?)```/g;
 
@@ -116,10 +116,16 @@ function parseInline(content: string): ReactNode[] {
 
     const token = match[0];
 
-    if (token.startsWith("**") && token.endsWith("**")) {
-      nodes.push(<strong key={`${match.index}-b`}>{token.slice(2, -2)}</strong>);
+    if (token.startsWith("***") && token.endsWith("***")) {
+      nodes.push(<strong key={`${match.index}-bi`}><em>{token.slice(3, -3)}</em></strong>);
+    } else if (token.startsWith("__**") && token.endsWith("**__")) {
+      nodes.push(<strong key={`${match.index}-ub`} className="underline">{token.slice(4, -4)}</strong>);
+    } else if (token.startsWith("__*") && token.endsWith("*__")) {
+      nodes.push(<em key={`${match.index}-ui`} className="underline">{token.slice(3, -3)}</em>);
     } else if (token.startsWith("__") && token.endsWith("__")) {
       nodes.push(<span key={`${match.index}-u`} className="underline">{token.slice(2, -2)}</span>);
+    } else if (token.startsWith("**") && token.endsWith("**")) {
+      nodes.push(<strong key={`${match.index}-b`}>{token.slice(2, -2)}</strong>);
     } else if (token.startsWith("~~") && token.endsWith("~~")) {
       nodes.push(<span key={`${match.index}-s`} className="line-through">{token.slice(2, -2)}</span>);
     } else if (token.startsWith("*") && token.endsWith("*")) {
@@ -183,12 +189,71 @@ function parseInline(content: string): ReactNode[] {
 
 function renderPlainBlock(content: string, keyPrefix: string): ReactNode[] {
   return content.split("\n").map((line, lineIndex) => {
-    const isQuote = line.trimStart().startsWith(">");
-    const text = isQuote ? line.replace(/^\s*>\s?/, "") : line;
-    const inline = parseInline(text);
+    const trimmed = line.trimStart();
 
+    // Quote block
+    if (trimmed.startsWith(">")) {
+      const text = trimmed.replace(/^>\s?/, "");
+      const inline = parseInline(text);
+      return (
+        <div key={`${keyPrefix}-${lineIndex}`} className="border-l-4 border-[#4e5058] pl-3 text-[#b5bac1]">
+          {inline.length > 0 ? inline : "\u00A0"}
+        </div>
+      );
+    }
+
+    // Headers: # ## ### at start of line
+    const headerMatch = trimmed.match(/^(#{1,3})\s(.+)$/);
+    if (headerMatch) {
+      const level = headerMatch[1].length;
+      const text = headerMatch[2];
+      const inline = parseInline(text);
+      const sizes = ["text-[16px] font-semibold", "text-[14px] font-semibold", "text-[12px] font-semibold"];
+      return (
+        <div
+          key={`${keyPrefix}-${lineIndex}`}
+          className={`text-[#dbdee1] ${sizes[level - 1]}`}
+        >
+          {inline}
+        </div>
+      );
+    }
+
+    // Subtext: -# text (must be after > check to avoid conflict)
+    const subtextMatch = trimmed.match(/^-\#\s(.+)$/);
+    if (subtextMatch) {
+      const inline = parseInline(subtextMatch[1]);
+      return (
+        <div key={`${keyPrefix}-${lineIndex}`} className="text-[12px] text-[#b5bac1] italic">
+          {inline}
+        </div>
+      );
+    }
+
+    // List items: - or * or numbered (1.)
+    const listMatch = trimmed.match(/^([-*]|\d+\.)\s(.+)$/);
+    if (listMatch) {
+      const bullet = listMatch[1];
+      const text = listMatch[2];
+      const inline = parseInline(text);
+      const isOrdered = /^\d+$/.test(bullet);
+      const indent = line.search(/[-*]|\d/);
+      return (
+        <div
+          key={`${keyPrefix}-${lineIndex}`}
+          className="flex gap-2 text-[14px] text-[#dbdee1]"
+          style={{ paddingLeft: `${indent * 8}px` }}
+        >
+          <span className="text-[#b5bac1]">{bullet} </span>
+          <span>{inline}</span>
+        </div>
+      );
+    }
+
+    // Plain text
+    const inline = parseInline(trimmed);
     return (
-      <div key={`${keyPrefix}-${lineIndex}`} className={cn("whitespace-pre-wrap", isQuote && "border-l-4 border-[#4e5058] pl-3 text-[#b5bac1]")}>
+      <div key={`${keyPrefix}-${lineIndex}`} className="whitespace-pre-wrap text-[14px] leading-[1.375] text-[#dbdee1]">
         {inline.length > 0 ? inline : "\u00A0"}
       </div>
     );
