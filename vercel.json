@@ -2,10 +2,5 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
   "installCommand": "npm install --legacy-peer-deps",
-  "outputDirectory": ".next",
-  "functions": {
-    "src/app/**/*": {
-      "memory": 1024
-    }
-  }
+  "buildCommand": "npm run build"
 }
