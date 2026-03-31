@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 function LoginContent() {
   const { status, data: session } = useSession();
   const [exchanging, setExchanging] = useState(false);
+  const [exchangeError, setExchangeError] = useState<string | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
   const exchangeStarted = useRef(false);
@@ -25,13 +26,30 @@ function LoginContent() {
       try {
         exchangeStarted.current = true;
         setExchanging(true);
+        setExchangeError(null);
         const res = await fetch("/api/auth/exchange", { method: "POST" });
         if (!res.ok) {
-          // Stay on login; error UI below will show generic message
+          // Try to parse the error message
+          try {
+            const data = await res.json();
+            setExchangeError(data?.error?.message || `Exchange failed (${res.status})`);
+          } catch {
+            setExchangeError(`Exchange failed (${res.status})`);
+          }
           exchangeStarted.current = false; // Allow retry on failure
           return;
         }
+        // Verify the cookie was set
+        const cookieMatch = document.cookie.match(/(?:^|; )backendToken=([^;]+)/);
+        if (!cookieMatch) {
+          setExchangeError("Exchange succeeded but no token was set");
+          exchangeStarted.current = false;
+          return;
+        }
         router.replace(callbackUrl);
+      } catch (err) {
+        setExchangeError(err instanceof Error ? err.message : "Exchange failed");
+        exchangeStarted.current = false;
       } finally {
         setExchanging(false);
       }
@@ -66,6 +84,15 @@ function LoginContent() {
       </div>
 
       {error && <AuthError error={error} />}
+      {exchangeError && (
+        <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <p className="font-medium">Authentication Error</p>
+          <p>{exchangeError}</p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Check that JWT_SECRET and NEXTAUTH_SECRET are set correctly on the backend.
+          </p>
+        </div>
+      )}
 
       <Button
         size="lg"
