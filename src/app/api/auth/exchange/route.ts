@@ -67,19 +67,19 @@ export async function POST(req: NextRequest) {
     console.log("[exchange] Token length:", backendToken.length);
     console.log("[exchange] NODE_ENV:", process.env.NODE_ENV);
 
-    const resp = NextResponse.json({ success: true });
-    resp.cookies.set("backendToken", backendToken, {
-      httpOnly: false,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      maxAge: 60 * 60, // 1 hour
-    });
+    // Calculate cookie expiration date for manual header
+    const expiresDate = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
+    const expiresString = expiresDate.toUTCString();
 
-    // Log the Set-Cookie header for debugging
-    const setCookieHeader = resp.headers.get("set-cookie");
-    console.log("[exchange] Set-Cookie header present:", !!setCookieHeader);
-    console.log("[exchange] Set-Cookie value:", setCookieHeader ? "present" : "missing");
+    // Build Set-Cookie header value manually for maximum compatibility
+    // Using direct header manipulation instead of cookies.set() to ensure proper cookie persistence
+    const secureFlag = process.env.NODE_ENV === "production" ? "; Secure" : "";
+    const setCookieValue = `backendToken=${encodeURIComponent(backendToken)}; Path=/; SameSite=Lax${secureFlag}; Expires=${expiresString}`;
+
+    console.log("[exchange] Set-Cookie header (first 80 chars):", setCookieValue.substring(0, 80));
+
+    const resp = NextResponse.json({ success: true });
+    resp.headers.set("Set-Cookie", setCookieValue);
 
     return resp;
   } catch (err: any) {

@@ -29,7 +29,10 @@ function LoginContent() {
         setExchangeError(null);
         console.log("[login] Starting exchange...");
         console.log("[login] Cookies before exchange:", document.cookie);
-        const res = await fetch("/api/auth/exchange", { method: "POST" });
+        const res = await fetch("/api/auth/exchange", {
+          method: "POST",
+          credentials: "include", // Ensure cookies are handled
+        });
         console.log("[login] Exchange response status:", res.status);
         console.log("[login] Response headers:", [...res.headers.entries()]);
         console.log("[login] Cookies after exchange:", document.cookie);
