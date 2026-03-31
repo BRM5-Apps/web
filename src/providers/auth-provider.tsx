@@ -58,6 +58,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         cookieLength: cookieStr?.length || 0,
         sessionStatus: status,
         hasSessionBackendToken: !!session?.backendToken,
+        // Log all cookie names for debugging
+        allCookies: cookieStr ? cookieStr.split(';').map(c => c.trim().split('=')[0]) : [],
       });
 
       if (!backendToken && backendTokenMatch) {

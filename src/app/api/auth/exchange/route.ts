@@ -64,6 +64,8 @@ export async function POST(req: NextRequest) {
     }
 
     console.log("[exchange] Successfully obtained backend token, setting cookie");
+    console.log("[exchange] Token length:", backendToken.length);
+    console.log("[exchange] NODE_ENV:", process.env.NODE_ENV);
 
     const resp = NextResponse.json({ success: true });
     resp.cookies.set("backendToken", backendToken, {
@@ -73,6 +75,12 @@ export async function POST(req: NextRequest) {
       path: "/",
       maxAge: 60 * 60, // 1 hour
     });
+
+    // Log the Set-Cookie header for debugging
+    const setCookieHeader = resp.headers.get("set-cookie");
+    console.log("[exchange] Set-Cookie header present:", !!setCookieHeader);
+    console.log("[exchange] Set-Cookie value:", setCookieHeader ? "present" : "missing");
+
     return resp;
   } catch (err: any) {
     console.error("[exchange] Unexpected error:", err);

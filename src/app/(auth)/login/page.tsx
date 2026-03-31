@@ -27,7 +27,12 @@ function LoginContent() {
         exchangeStarted.current = true;
         setExchanging(true);
         setExchangeError(null);
+        console.log("[login] Starting exchange...");
+        console.log("[login] Cookies before exchange:", document.cookie);
         const res = await fetch("/api/auth/exchange", { method: "POST" });
+        console.log("[login] Exchange response status:", res.status);
+        console.log("[login] Response headers:", [...res.headers.entries()]);
+        console.log("[login] Cookies after exchange:", document.cookie);
         if (!res.ok) {
           // Try to parse the error message
           try {
@@ -41,13 +46,16 @@ function LoginContent() {
         }
         // Verify the cookie was set
         const cookieMatch = document.cookie.match(/(?:^|; )backendToken=([^;]+)/);
+        console.log("[login] Cookie check after exchange:", { hasCookie: !!cookieMatch, allCookies: document.cookie });
         if (!cookieMatch) {
           setExchangeError("Exchange succeeded but no token was set");
           exchangeStarted.current = false;
           return;
         }
+        console.log("[login] Token set successfully, redirecting to", callbackUrl);
         router.replace(callbackUrl);
       } catch (err) {
+        console.error("[login] Exchange error:", err);
         setExchangeError(err instanceof Error ? err.message : "Exchange failed");
         exchangeStarted.current = false;
       } finally {
