@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/providers/auth-provider";
 import { api } from "@/lib/api-client";
 import { queryKeys } from "@/lib/query-keys";
 import type { Server } from "@/types/server";
@@ -34,10 +35,11 @@ function useAdminGuilds() {
 
 /** Fetch BRM5 server data for the given guild IDs */
 function useServersByGuildIds(guildIds: string[]) {
+  const { isAuthenticated } = useAuth();
   return useQuery<Server[]>({
     queryKey: queryKeys.discordGuilds.serversByGuildIds(guildIds),
     queryFn: ({ signal }) => api.servers.byGuildIds(guildIds, { signal }),
-    enabled: guildIds.length > 0,
+    enabled: guildIds.length > 0 && isAuthenticated,
     staleTime: 5 * 60 * 1000,
     // Don't retry — surface errors immediately so the UI shows them
     // rather than stalling on skeletons for 7+ seconds
