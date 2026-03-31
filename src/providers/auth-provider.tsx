@@ -48,9 +48,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const isLoading = sessionLoading || !hydrated;
     const discordId = session?.discordId;
     let backendToken = session?.backendToken;
-    if (!backendToken && typeof document !== "undefined") {
-      const m = document.cookie.match(/(?:^|; )backendToken=([^;]+)/);
-      backendToken = m ? decodeURIComponent(m[1]) : undefined;
+
+    // Debug: log cookie state
+    if (typeof document !== "undefined") {
+      const cookieStr = document.cookie;
+      const backendTokenMatch = cookieStr.match(/(?:^|; )backendToken=([^;]+)/);
+      console.log("[auth-provider] Cookie check:", {
+        hasCookie: !!backendTokenMatch,
+        cookieLength: cookieStr?.length || 0,
+        sessionStatus: status,
+        hasSessionBackendToken: !!session?.backendToken,
+      });
+
+      if (!backendToken && backendTokenMatch) {
+        backendToken = decodeURIComponent(backendTokenMatch[1]);
+        console.log("[auth-provider] Token from cookie, length:", backendToken?.length);
+      }
     }
 
     const user: AuthUser | null = discordId
@@ -61,13 +74,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       : null;
 
-    return {
+    const result = {
       user,
       isAuthenticated: !!backendToken,
       isLoading,
       backendToken,
       authError: session?.authError,
     };
+
+    console.log("[auth-provider] Result:", { isAuthenticated: result.isAuthenticated, isLoading: result.isLoading });
+
+    return result;
   }, [session, status, hydrated]);
 
   return (

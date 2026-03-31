@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/providers/auth-provider";
 import { api } from "@/lib/api-client";
 import { queryKeys } from "@/lib/query-keys";
 import { invalidateRelated } from "@/lib/query-utils";
@@ -11,10 +12,12 @@ export function useNotifications(
   serverId: string,
   params?: { page?: number; limit?: number; unreadOnly?: boolean }
 ) {
+  const { isAuthenticated } = useAuth();
   return useQuery<NotificationListResponse>({
     queryKey: queryKeys.notifications.list(serverId, params),
     queryFn: ({ signal }) => api.notifications.list(serverId, params, { signal }),
-    enabled: !!serverId,
+    enabled: !!serverId && isAuthenticated,
+    retry: false,
   });
 }
 
