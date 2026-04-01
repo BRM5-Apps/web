@@ -111,7 +111,7 @@ export function StatsCardEditDialog({
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
         <DialogPrimitive.Content
-          className="fixed left-[50%] top-[50%] z-50 w-full max-w-[720px] translate-x-[-50%] translate-y-[-50%] rounded-lg bg-[#313338] text-white p-0 overflow-hidden shadow-2xl duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+          className="fixed left-[50%] top-[50%] z-50 w-[95vw] max-w-[720px] translate-x-[-50%] translate-y-[-50%] rounded-lg bg-[#313338] text-white p-0 overflow-hidden shadow-2xl duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
         >
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-[#3f4147]">
@@ -174,7 +174,7 @@ export function StatsCardEditDialog({
           </div>
 
           {/* Footer */}
-          <div className="bg-[#2B2D31] px-5 py-3 flex items-center justify-end gap-3 border-t border-[#3f4147]">
+          <div className="bg-[#2B2D31] px-5 py-3 flex flex-wrap items-center justify-end gap-3 border-t border-[#3f4147]">
             <button
               type="button"
               onClick={() => onOpenChange(false)}
